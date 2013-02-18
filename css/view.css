@@ -1,0 +1,12 @@
+.engine_view {
+  box-shadow: 0px 0px 5px rgba(1,1,1,.5);
+  border-radius: 5px;
+  min-height: 600px;
+}
+.engine_view_fullsize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
