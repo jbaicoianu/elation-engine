@@ -105,7 +105,7 @@ elation.extend("engine.systems.controls", function(args) {
 
   this.initcontrols = function() {
     if (!this.container) this.container = window;
-    elation.events.add(this.container, "mousedown,mousemove,mouseup", this);
+    elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel", this);
     elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
 
     if (args) {
@@ -388,6 +388,12 @@ this.fuh = [ev.clientX, ev.clientY];
         this.changes.push("mouse_drag_y");
       }
     }
+  }
+  this.mousewheel = function(ev) {
+    var bindid = "mouse_wheel_" + (ev.wheelDeltaY < 0 ? "down" : "up");;
+    this.state[bindid] = 1;
+    this.changes.push(bindid);
+    //ev.preventDefault();
   }
   this.keydown = function(ev) {
     var keyname = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
