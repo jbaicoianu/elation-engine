@@ -1,0 +1,27 @@
+.style_box {
+  background-image: -webkit-linear-gradient(top, rgba(64,64,64,.9) 0, rgba(0,0,0,.9) 2.5em);
+  border-radius: 5px;
+  border: 1px solid #666;
+  box-shadow: 4px 4px 4px rgba(0,0,0,.5);
+  margin: .5em;
+  vertical-align: top;
+  color: white;
+  position: fixed;
+  z-index: 5;
+}
+
+.style_box .style_box {
+  position: relative;
+}
+.style_box h1,
+.style_box h2 {
+  margin: 0;
+  padding: 0 .5em;
+  border-bottom: 1px solid #666;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.style_box h2 {
+  font-size: 1em;
+}

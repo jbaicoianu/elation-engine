@@ -11,6 +11,9 @@ elation.extend("engine.systems", function(args) {
     }
     return this.active[name];
   }
+  this.get = function(name) {
+    return this.active[name];
+  }
   this.shutdown = function() {
     console.log("shut down all the systems!");
   }
