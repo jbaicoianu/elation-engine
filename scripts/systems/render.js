@@ -23,8 +23,7 @@ elation.extend("engine.systems.render", function(args) {
     //console.log('FRAME: render');
     this.renderer.clear();
     for (var k in this.views) {
-      this.views[k].render(ev.delta);
+      this.views[k].render(ev.data.delta);
     }
   }
 });
-
