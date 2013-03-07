@@ -202,7 +202,7 @@ cam.rotation.x = -Math.PI/24;
   }
   this.pick = function(x, y) {
     // ratelimit to once every n frames, for performance reasons
-    if (this.picknum++ % 3 != 0) return;
+    if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
 
     var objects = [];
     var realmaterials = [];

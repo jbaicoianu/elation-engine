@@ -1,0 +1,104 @@
+.engine_admin {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  min-height: 2em;
+  background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,.8) 66%, rgba(64,64,64,.5) 98%);
+  z-index: 10;
+}
+.engine_admin_scenetree {
+  position: fixed;
+  top: 4em;
+  left: 1em;
+  width: 14em;
+}
+.engine_admin_scenetree ul {
+  list-style: none;
+  padding-left: .5em;
+  margin: 0;
+}
+.engine_admin_scenetree ul li {
+  cursor: pointer;
+}
+.engine_admin_scenetree>ul {
+  overflow: auto;
+  height: 20em;
+}
+.engine_admin_scenetree ul li:before {
+  content: '├';
+  display: inline-block;
+  float: left;
+  clear: left;
+  padding-right: .5em;
+  color: white;
+}
+.engine_admin_scenetree ul li.state_disabled:before,
+.engine_admin_scenetree ul li.state_disabled,
+.engine_admin_scenetree ul li.state_hover li.state_disabled,
+.engine_admin_scenetree ul li.state_selected li.state_disabled {
+  color: #666;
+}
+.engine_admin_scenetree ul li.state_hover,
+.engine_admin_scenetree ul li.state_selected li.state_hover {
+  color: yellow;
+  background: rgba(1,1,0,.5);
+}
+.engine_admin_scenetree ul li.state_selected,
+.engine_admin_scenetree ul li.state_hover li.state_selected {
+  color: red;
+}
+.engine_admin_scenetree ul li.state_hover li,
+.engine_admin_scenetree ul li.state_selected li {
+  color: white;
+  background: transparent;
+}
+.engine_admin_scenetree ul li:last-child:before {
+  content: '└';
+}
+.engine_admin_scenetree>ul>li:first-child:before {
+  content: '';
+}
+.engine_admin_scenetree h2 {
+  font-size: 1em;
+  margin: 0;
+}
+
+.engine_admin_inspector {
+  position: fixed;
+  top: 28em;
+  left: 1em;
+  width: 14em;
+  color: white;
+  min-height: 5em;
+}
+.engine_admin_inspector ul {
+  list-style: none;
+  padding-left: .5em;
+  margin: .5 0;
+}
+.engine_admin_inspector .engine_admin_inspector_contents {
+  overflow: auto;
+  max-height: 15em;
+}
+.engine_admin_inspector ul li {
+  white-space: nowrap;
+}
+.engine_admin_inspector ul li h3 {
+  margin: 0;
+  font-size: 1em;
+}
+.engine_admin_inspector ul li label {
+  display: inline-block;
+  width: 45%;
+}
+.engine_admin_inspector ul li input {
+  width: 50%;
+  border: 1px solid #ccc;
+  background: #999;
+  font-size: .8em;
+}
+.engine_admin_inspector ul li input:focus {
+  background: #eee;
+}
+
