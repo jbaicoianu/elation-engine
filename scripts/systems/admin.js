@@ -1,7 +1,7 @@
 elation.extend("engine.systems.admin", function(args) {
   elation.implement(this, elation.engine.systems.system);
   this.system_attach = function(ev) {
-    console.log('INIT: admin', this);
+    console.log('INIT: admin');
 
     elation.html.addclass(this.container, "engine_admin");
     this.world = this.engine.systems.get('world');
@@ -13,7 +13,6 @@ elation.extend("engine.systems.admin", function(args) {
     setTimeout(elation.bind(this, function() {
       var controls = this.engine.systems.get('controls');
       var view = this.engine.systems.get('render').views['main'];
-  console.log('BLOOOO', controls, view);
       controls.addCommands('admin', {
         'move_left': elation.bind(view.camera, function() { this.position.x -= 1; }),
         'move_right': elation.bind(view.camera, function() { this.position.x += 1; }),
@@ -160,7 +159,6 @@ elation.component.add("engine.systems.admin.inspector", function() {
     elation.events.add(this.tabs, 'ui_tabs_change', this);
   }
   this.ui_tabs_change = function(ev) {
-    console.log('changey change', ev);
     var newtab = ev.data;
     if (this.tabcontents[newtab.name]) {
       this.contentarea.innerHTML = '';
@@ -209,7 +207,6 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
     if (!root) root = this.container;
 
     var ul = elation.html.create({tag: 'ul', append: root});
-console.log(objects);
     for (var k in objects) {
       //var htmlid = 'engine_admin_inspector_property_' + k + '_' + k;
       if (objects[k] && objects[k] instanceof THREE.Object3D) {
