@@ -11,7 +11,7 @@
   position: fixed;
   top: 4em;
   left: 1em;
-  width: 14em;
+  width: 18em;
 }
 .engine_admin_scenetree ul {
   list-style: none;
@@ -25,6 +25,7 @@
   overflow: auto;
   height: 20em;
 }
+/*
 .engine_admin_scenetree ul li:before {
   content: '├';
   display: inline-block;
@@ -59,6 +60,7 @@
 .engine_admin_scenetree>ul>li:first-child:before {
   content: '';
 }
+*/
 .engine_admin_scenetree h2 {
   font-size: 1em;
   margin: 0;
@@ -68,7 +70,7 @@
   position: fixed;
   top: 28em;
   left: 1em;
-  width: 14em;
+  width: 18em;
   color: white;
   min-height: 5em;
 }
@@ -90,7 +92,7 @@
 }
 .engine_admin_inspector ul li label {
   display: inline-block;
-  width: 45%;
+  width: 40%;
 }
 .engine_admin_inspector ul li input {
   width: 50%;
@@ -102,3 +104,58 @@
   background: #eee;
 }
 
+
+.engine_thing {
+  margin-left: .2em;
+}
+.engine_thing>span:before {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url(/images/engine/objecticons-small.png) 0px -60px;
+  content: ' ';
+  margin: -3px .4em -3px 0;
+  vertical-align: baseline;
+}
+.engine_thing_mesh>span:before {
+  background: url(/images/engine/objecticons-small.png) -21px -60px;
+}
+.engine_thing_geometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -21px -40px;
+}
+.engine_thing_spheregeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -63px -20px;
+}
+.engine_thing_planegeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -0px -20px;
+}
+.engine_thing_cubegeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -21px -20px;
+}
+.engine_thing_torusgeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -168px -20px;
+}
+.engine_thing_cylindergeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -147px -20px;
+}
+.engine_thing_textgeometry>span:before {
+  background: url(/images/engine/objecticons-small.png) -168px -40px;
+}
+.engine_thing_material>span:before {
+  background: url(/images/engine/objecticons-small.png) -126px -60px;
+}
+.engine_thing_material>span:before,
+.engine_thing_meshbasicmaterial>span:before,
+.engine_thing_meshlambertmaterial>span:before,
+.engine_thing_meshphongmaterial>span:before,
+.engine_thing_shadermaterial>span:before {
+  background: url(/images/engine/objecticons-small.png) -168px 0px;
+}
+.engine_thing_pointlight>span:before {
+  background: url(/images/engine/objecticons-small.png) -251px -20px;
+}
+.engine_thing_perspectivecamera>span:before,
+.engine_thing_orthographiccamera>span:before,
+.engine_thing_camera>span:before {
+  background: url(/images/engine/objecticons-small.png) -126px -60px;
+}
