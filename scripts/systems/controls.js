@@ -105,7 +105,7 @@ elation.extend("engine.systems.controls", function(args) {
 
   this.initcontrols = function() {
     if (!this.container) this.container = window;
-    elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel", this);
+    elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll", this);
     elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
 
     if (args) {
@@ -389,8 +389,14 @@ this.fuh = [ev.clientX, ev.clientY];
       }
     }
   }
+  this.DOMMouseScroll = function(ev) {
+    this.mousewheel(ev);
+  }
+
   this.mousewheel = function(ev) {
-    var bindid = "mouse_wheel_" + (ev.wheelDeltaY < 0 ? "down" : "up");;
+    var delta = Math.max(-1, Math.min(1, (ev.wheelDelta || -ev.detail)));
+
+    var bindid = "mouse_wheel_" + (delta < 0 ? "down" : "up");;
     this.state[bindid] = 1;
     this.changes.push(bindid);
     //ev.preventDefault();
