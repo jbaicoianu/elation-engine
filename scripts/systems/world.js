@@ -48,6 +48,10 @@ elation.extend("engine.systems.world", function(args) {
     if (typeof root == 'undefined') root = this;
     var currentobj = false;
     try {
+      if (typeof elation.engine.things[thing.type] != 'function') {
+        thing.type = 'generic';
+      }
+
       if (typeof elation.engine.things[thing.type] == 'function') {
         thing.engine = this.engine;
         currentobj = elation.engine.things[thing.type](thing.name, elation.html.create(), thing);
