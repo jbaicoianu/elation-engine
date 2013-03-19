@@ -10,6 +10,7 @@ elation.extend("engine.systems.admin", function(args) {
     this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world});
 
 
+/*
     setTimeout(elation.bind(this, function() {
       var controls = this.engine.systems.get('controls');
       var view = this.engine.systems.get('render').views['main'];
@@ -31,16 +32,21 @@ elation.extend("engine.systems.admin", function(args) {
       });
       controls.activateContext('admin');
     }), 1000);
+*/
   }
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
     this.container.innerHTML = '<h2>Scene</h2>';
-    elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
+    elation.html.addclass(this.container, 'engine_admin_scenetree ui_treeview style_box');
     elation.events.add(this.container, "mousewheel", function(ev) { ev.stopPropagation(); }); // FIXME - hack for mousewheel
     elation.events.add(this.world, 'item_create', this);
-    setTimeout(elation.bind(this, function() { this.add(this.world); }), 1000);
+    if (this.world.loaded) {
+      this.add(this.world);
+    } else {
+      elation.events.add(this.world, "engine_world_init", elation.bind(this, function() { this.add(this.world); }));
+    }
     this.create();
   }
   this.create = function() {
@@ -139,7 +145,7 @@ elation.component.add("engine.systems.admin.inspector", function() {
       this.createTabs();
     }
     this.label.innerHTML = thing.id;
-    this.tabs.setActiveTab("properties");
+    this.tabs.setActiveTab(this.activetab || "properties");
     //this.properties.setThing(thingwrapper);
     //this.objects.setThing(thingwrapper);
   }
@@ -161,6 +167,7 @@ elation.component.add("engine.systems.admin.inspector", function() {
   this.ui_tabs_change = function(ev) {
     var newtab = ev.data;
     if (this.tabcontents[newtab.name]) {
+      this.activetab = newtab.name;
       this.contentarea.innerHTML = '';
       this.tabcontents[newtab.name].reparent(this.contentarea);
       this.tabcontents[newtab.name].setThing(this.thing);
@@ -169,34 +176,44 @@ elation.component.add("engine.systems.admin.inspector", function() {
 });
 elation.component.add("engine.systems.admin.inspector.properties", function() {
   this.init = function() {
-    elation.html.addclass(this.container, 'engine_admin_inspector_properties');
+    elation.html.addclass(this.container, 'engine_admin_inspector_properties ui_treeview');
     this.propul = elation.html.create({tag: 'ul', append: this.container});
   }
   this.setThing = function(thingwrapper) {
+    this.thingwrapper = thingwrapper;
     var thing = thingwrapper.thing;
     this.propul.innerHTML = '';
     for (var k in thing.properties) {
       var li = elation.html.create({tag: 'li', append: this.propul, content: '<h3>' + k + '</h3>'});
-      this.addProperties(thing.properties[k], li);
+      this.addProperties(thing.properties[k], li, "engine_admin_inspector_properties_" + k);
     }
   }
-  this.addProperties = function(properties, root) {
-      if (!root) root = this.container;
-      var propul = elation.html.create({tag: 'ul', append: root});
-      for (var k in properties) {
-        //var htmlid = 'engine_admin_inspector_property_' + k + '_' + k;
-        if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
-          var li = elation.html.create({tag: 'li', append: propul, content: '<span>' + k + '</span>'});
-          this.addProperties(properties[k], li);
-        } else {
-          var li = elation.html.create({tag: 'li', append: propul, content: '<label for="' + 'huh' + '">' + k + '</label> <input id="' + 'huh' + '" value="' + properties[k] + '"/>'});
-        }
+  this.addProperties = function(properties, root, idprefix) {
+    if (!root) root = this.container;
+    var propul = elation.html.create({tag: 'ul', append: root});
+    for (var k in properties) {
+      var htmlid = idprefix + "_" + k;
+      if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
+        var li = elation.html.create({tag: 'li', append: propul, content: '<span>' + k + '</span>'});
+        this.addProperties(properties[k], li, htmlid);
+      } else {
+        var li = elation.html.create({tag: 'li', append: propul});
+        var label = elation.html.create({tag: 'label', attributes: { htmlFor: htmlid }, content: k, append: li});
+        var input = elation.html.create({tag: 'input', id: htmlid, attributes: { value: properties[k] }, append: li});
+        elation.events.add(input, 'change', this);
       }
+    }
+  }
+  this.change = function(ev) {
+    var propname = ev.target.id.replace(/^engine_admin_inspector_properties_/, "").replace(/_/g, ".");
+    var thing = this.thingwrapper.thing;
+    thing.set(propname, ev.target.value);
   }
 });
 elation.component.add("engine.systems.admin.inspector.objects", function() {
-  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'Object3D'];
+  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'CubeGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
   this.init = function() {
+    elation.html.addclass(this.container, 'engine_admin_inspector_objects ui_treeview');
   }
   this.setThing = function(thingwrapper) {
     this.thing = thingwrapper.thing;
@@ -209,8 +226,10 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
     var ul = elation.html.create({tag: 'ul', append: root});
     for (var k in objects) {
       //var htmlid = 'engine_admin_inspector_property_' + k + '_' + k;
-      if (objects[k] && objects[k] instanceof THREE.Object3D) {
-        if (!objects[k].thing || objects[k]._thing == this.thing) {
+      if (!elation.utils.isNull(objects[k])) {
+        if (objects[k] instanceof elation.physics.rigidbody) {
+          // TODO - show physics object to allow editing
+        } else if (!objects[k]._thing || objects[k]._thing == this.thing) {
           var type = 'Object3D';
   //console.log('object ' + objects[k].name + ': ', objects[k]);
           for (var i = 0; i < this.types.length; i++) {
@@ -221,8 +240,11 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
           }
       
           var objname = objects[k].name || objects[k].id;
-          var li = elation.html.create({tag: 'li', append: ul, content: '<span>' + objname + ' (' + type + ')</span>'});
-          if (objects[k].children.length > 0) {
+          var li = elation.html.create({tag: 'li', classname: 'engine_thing engine_thing_' + type.toLowerCase(), append: ul, content: '<span>' + objname + ' (' + type + ')</span>'});
+          if (type == 'Mesh') {
+            this.addObjects([objects[k].geometry, objects[k].material], li);
+          }
+          if (objects[k].children && objects[k].children.length > 0) {
             this.addObjects(objects[k].children, li);
           }
         }
