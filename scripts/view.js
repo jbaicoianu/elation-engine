@@ -11,7 +11,7 @@ elation.component.add("engine.view", function() {
       elation.html.addclass(this.container, "engine_view_fullsize");
     }
     elation.events.add(window, "resize", this);
-    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,click", this);
+    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,click,touchstart,touchmove,touchend", this);
     if (!this.args.engine) {
       console.log("ERROR: couldn't create view, missing engine parameter");
     } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
@@ -184,6 +184,22 @@ cam.rotation.x = -Math.PI/24;
       elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject)});
     }
     ev.preventDefault();
+  }
+  this.touchstart = function(ev) {
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousedown();
+  }
+  this.touchmove = function(ev) {
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousemove();
+  }
+  this.touchmove = function(ev) {
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousemove();
+  }
+  this.touchend = function(ev) {
+    this.mouseup();
+    this.click();
   }
   this.getParentThing = function(obj) {
     while (obj) {
