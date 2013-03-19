@@ -9,6 +9,7 @@ elation.extend("engine.systems.world", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: world', this);
+    this.loaded = false;
 /*
     if (this.loadonstart) {
       this.load(this.loadonstart);
@@ -26,11 +27,11 @@ elation.extend("engine.systems.world", function(args) {
     this.children[thing.name] = thing;
     if (thing.objects['3d']) {
       this.scene['world-3d'].add(thing.objects['3d']);
-      elation.events.add(thing, 'engine_thing_create', this);
     }
     if (thing.container) {
       //this.renderer['world-dom'].domElement.appendChild(thing.container);
     }
+    elation.events.fire({type: 'engine_thing_create', element: thing});
   }
   this.remove = function(thing) {
     if (this.children[thing.name]) {
@@ -40,6 +41,7 @@ elation.extend("engine.systems.world", function(args) {
       if (thing.container) {
         this.renderer['world-dom'].domElement.removeChild(thing.container);
       }
+      elation.events.fire({type: 'engine_thing_destroy', element: thing});
       delete this.children[thing.name];
     }
   }
@@ -68,6 +70,10 @@ elation.extend("engine.systems.world", function(args) {
       }
     } catch (e) {
       console.error(e.stack);
+    }
+    if (root == this) {
+      this.loaded = true;
+      elation.events.fire({type: 'engine_world_init', element: this});
     }
   }
 });
