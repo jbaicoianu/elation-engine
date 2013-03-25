@@ -51,14 +51,13 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.container.innerHTML = '<h2>Scene</h2>';
     elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
     elation.events.add(this.world, 'engine_thing_create', this);
-/*
     if (this.world.loaded) {
-      this.add(this.world);
+      this.create();
     } else {
-      elation.events.add(this.world, "engine_world_init", elation.bind(this, function() { this.add(this.world); }));
+      elation.events.add(this.world, "engine_world_init", elation.bind(this, this.create));
     }
-    this.create();
-*/
+  }
+  this.create = function() {
     this.treeview = elation.ui.treeview(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_list', append: this.container}), {
       items: this.world.children,
       attrs: {
@@ -67,9 +66,6 @@ elation.component.add("engine.systems.admin.scenetree", function() {
       }
     });
     elation.events.add(this.treeview, 'ui_treeview_select,ui_treeview_hover', this);
-  }
-  this.create = function() {
-    //this.add(this.world);
   }
   this.ui_treeview_hover = function(ev) {
   }

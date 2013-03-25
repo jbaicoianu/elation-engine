@@ -1,21 +1,19 @@
 elation.extend("engine.systems.world", function(args) {
   elation.implement(this, elation.engine.systems.system);
+
   this.children = {};
   this.scene = {
     'world-3d': new THREE.Scene(),
     'world-dom': new THREE.Scene()
   };
-//this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
+  //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
 
   this.system_attach = function(ev) {
-    console.log('INIT: world', this);
+    console.log('INIT: world', this, args);
     this.loaded = false;
-/*
-    if (this.loadonstart) {
-      this.load(this.loadonstart);
-      this.loadonstart = false;
+    if (!elation.utils.isEmpty(args)) {
+      this.load(args);
     }
-*/
   }
   this.engine_frame = function(ev) {
     //console.log('FRAME: world');
@@ -25,6 +23,7 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.add = function(thing) {
     this.children[thing.name] = thing;
+    thing.parent = this;
     if (thing.objects['3d']) {
       this.scene['world-3d'].add(thing.objects['3d']);
     }
@@ -39,7 +38,7 @@ elation.extend("engine.systems.world", function(args) {
         this.scene['world-3d'].remove(thing.objects['3d']);
       }
       if (thing.container) {
-        this.renderer['world-dom'].domElement.removeChild(thing.container);
+        //this.renderer['world-dom'].domElement.removeChild(thing.container);
       }
       elation.events.fire({type: 'engine_thing_destroy', element: thing});
       delete this.children[thing.name];
