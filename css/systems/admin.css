@@ -21,7 +21,7 @@
 .engine_admin_scenetree ul li {
   cursor: pointer;
 }
-.engine_admin_scenetree>ul {
+.engine_admin_scenetree>.engine_admin_scenetree_list {
   overflow: auto;
   height: 20em;
 }

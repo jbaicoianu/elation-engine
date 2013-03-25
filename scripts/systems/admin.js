@@ -9,7 +9,6 @@ elation.extend("engine.systems.admin", function(args) {
     this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {world: this.world});
     this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world});
 
-
 /*
     setTimeout(elation.bind(this, function() {
       var controls = this.engine.systems.get('controls');
@@ -34,98 +33,49 @@ elation.extend("engine.systems.admin", function(args) {
     }), 1000);
 */
   }
+  this.engine_frame = function(ev) {
+    if (!this.flycontrols) {
+      var view = this.engine.systems.get('render').views['main'];
+      this.flycontrols = new THREE.FlyControls(view.camera, view.container);
+      this.flycontrols.movementSpeed = 10;
+      this.flycontrols.rollSpeed = Math.PI/4;
+      this.flycontrols.dragToLook = true;
+    }
+
+    this.flycontrols.update(ev.data.delta);
+  }
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
     this.container.innerHTML = '<h2>Scene</h2>';
-    elation.html.addclass(this.container, 'engine_admin_scenetree ui_treeview style_box');
-    elation.events.add(this.container, "mousewheel", function(ev) { ev.stopPropagation(); }); // FIXME - hack for mousewheel
-    elation.events.add(this.world, 'item_create', this);
+    elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
+    elation.events.add(this.world, 'engine_thing_create', this);
+/*
     if (this.world.loaded) {
       this.add(this.world);
     } else {
       elation.events.add(this.world, "engine_world_init", elation.bind(this, function() { this.add(this.world); }));
     }
     this.create();
+*/
+    this.treeview = elation.ui.treeview(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_list', append: this.container}), {
+      items: this.world.children,
+      attrs: {
+        children: 'children',
+        label: 'id',
+      }
+    });
+    elation.events.add(this.treeview, 'ui_treeview_select,ui_treeview_hover', this);
   }
   this.create = function() {
     //this.add(this.world);
   }
-  this.add = function(item, root) {
-    if (!root) root = this.container;
-    var header = elation.html.create({tag: 'span', append: root, content: item.id});
-    
-    if (item.children) {
-      var ul = elation.html.create({tag: 'ul'});
-      var i = 0;
-      for (var k in item.children) {
-        var f = elation.engine.systems.admin.thing(null, elation.html.create({tag: 'li', append: ul}), {thing: item.children[k]});;
-        elation.events.add(f, 'engine_admin_thing_select,engine_admin_thing_hover', this);
-        this.add(item.children[k], f.container);
-        i++;
-      }
-      if (i > 0) {
-        root.appendChild(ul);
-      }
-    }
+  this.ui_treeview_hover = function(ev) {
   }
-  this.engine_admin_thing_hover = function(ev) {
-    if (this.hoverthing && this.hoverthing != ev.target) {
-      this.hoverthing.unhover();
-    }
-    this.hoverthing = ev.target;
-  }
-  this.engine_admin_thing_select = function(ev) {
-    if (this.selectedthing) {
-      this.selectedthing.unselect();
-    }
-    this.selectedthing = ev.target;
+  this.ui_treeview_select = function(ev) {
+    this.selectedthing = ev.data;
     elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
-  }
-});
-elation.component.add("engine.systems.admin.thing", function() {
-  this.init = function() {
-    this.thing = this.args.thing;
-    if (!this.thing.exists) {
-      elation.html.addclass(this.container, "state_disabled");
-    }
-    elation.events.add(this.container, "mouseover,mouseout,click", this);
-    elation.events.add(this.thing, "mouseover,mouseout,click", this);
-  }
-  this.hover = function() {
-    elation.html.addclass(this.container, 'state_hover');
-    elation.events.fire({type: 'engine_admin_thing_hover', element: this});
-    //this.container.scrollIntoView();
-  }
-  this.unhover = function() {
-    elation.html.removeclass(this.container, 'state_hover');
-    elation.events.fire({type: 'engine_admin_thing_unhover', element: this});
-  }
-  this.select = function() {
-    elation.events.fire({type: 'engine_admin_thing_select', element: this});
-    //this.container.scrollIntoView();
-    elation.html.addclass(this.container, 'state_selected');
-  }
-  this.unselect = function() {
-    elation.html.removeclass(this.container, 'state_selected');
-    elation.events.fire({type: 'engine_admin_thing_unselect', element: this});
-  }
-  this.mouseover = function(ev) {
-    this.hover();
-    ev.stopPropagation();
-  }
-  this.mouseout = function(ev) {
-    this.unhover();
-    ev.stopPropagation();
-  }
-  this.mousedown = function(ev) {
-  }
-  this.mouseup = function(ev) {
-  }
-  this.click = function(ev) {
-    this.select();
-    ev.stopPropagation();
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
@@ -139,8 +89,8 @@ elation.component.add("engine.systems.admin.inspector", function() {
     };
   }
   this.setThing = function(thingwrapper) {
-    this.thing = thingwrapper;
-    var thing = thingwrapper.thing;
+    this.thingwrapper = thingwrapper;
+    var thing = thingwrapper.value;
     if (!this.tabs) {
       this.createTabs();
     }
@@ -170,7 +120,7 @@ elation.component.add("engine.systems.admin.inspector", function() {
       this.activetab = newtab.name;
       this.contentarea.innerHTML = '';
       this.tabcontents[newtab.name].reparent(this.contentarea);
-      this.tabcontents[newtab.name].setThing(this.thing);
+      this.tabcontents[newtab.name].setThing(this.thingwrapper);
     }
   }
 });
@@ -181,7 +131,7 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
   }
   this.setThing = function(thingwrapper) {
     this.thingwrapper = thingwrapper;
-    var thing = thingwrapper.thing;
+    var thing = thingwrapper.value;
     this.propul.innerHTML = '';
     for (var k in thing.properties) {
       var li = elation.html.create({tag: 'li', append: this.propul, content: '<h3>' + k + '</h3>'});
@@ -206,8 +156,8 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
   }
   this.change = function(ev) {
     var propname = ev.target.id.replace(/^engine_admin_inspector_properties_/, "").replace(/_/g, ".");
-    var thing = this.thingwrapper.thing;
-    thing.set(propname, ev.target.value);
+    //var thing = this.thingwrapper.thing;
+    this.thing.set(propname, ev.target.value);
   }
 });
 elation.component.add("engine.systems.admin.inspector.objects", function() {
@@ -216,7 +166,7 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_objects ui_treeview');
   }
   this.setThing = function(thingwrapper) {
-    this.thing = thingwrapper.thing;
+    this.thing = thingwrapper.value;
     this.container.innerHTML = '';
     this.addObjects(this.thing.objects);
   }
@@ -231,7 +181,7 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
           // TODO - show physics object to allow editing
         } else if (!objects[k]._thing || objects[k]._thing == this.thing) {
           var type = 'Object3D';
-  //console.log('object ' + objects[k].name + ': ', objects[k]);
+          //console.log('object ' + objects[k].name + ': ', objects[k]);
           for (var i = 0; i < this.types.length; i++) {
             if (objects[k] instanceof THREE[this.types[i]]) {
               type = this.types[i];
