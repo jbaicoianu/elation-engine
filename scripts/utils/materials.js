@@ -30,7 +30,6 @@ elation.extend("engine.utils.materials", new function() {
     return this.texturecache[url];
   }
   this.addShader = function(shadername, shader) {
-console.log('NEW SHADER:', shadername, shader);
     this.shaders[shadername] = shader;
   }
   this.getShaderMaterial = function(shadername, uniforms, defines, lights) {
@@ -94,7 +93,6 @@ console.log('NEW SHADER:', shadername, shader);
   }
 
   this.addChunk = function(chunkname, chunkargs) {
-console.log('addchunk', chunkname);
     this.shaderchunks[chunkname] = chunkargs;
   }
   this.setChunk = function(chunkname, chunktype, value) {
@@ -103,7 +101,6 @@ console.log('addchunk', chunkname);
       chunkargs[chunktype] = value;
       this.addChunk(chunkname, chunkargs);
     } else {
-console.log('setchunk', chunkname, chunktype);
       this.shaderchunks[chunkname][chunktype] = value;
     }
   }
@@ -159,7 +156,8 @@ console.log(chunks[k], chunks[k].uniforms);
     if (!shaders) shaders = this.shaderdefs;
 
     for (var k in shaders) {
-      var root = elation.html.create({type: 'div', classname: 'engine_material style_box', content: '<h1>' + k + '</h1>', append: document.body});
+      var root = elation.html.create({type: 'div', classname: 'engine_material style_box', append: document.body});
+      elation.ui.window(null, root, {title: k});
     
       var uniformcontainer = elation.html.create({classname: 'engine_materials_uniforms style_box', content: '<h2>Uniforms</h2>', append: root});
       var vertexcontainer = elation.html.create({classname: 'engine_materials_vertex style_box', content: '<h2>Vertex Shader</h2>', append: root});
@@ -263,12 +261,12 @@ console.log('component', component);
   }
   this.handleEvent = elation.events.handleEvent;
   this.engine_material_change = function(ev) {
-    console.log('fuck yeah!', ev);
     var editor = ev.target;
 
     var chunktype = editor.chunktype + (editor.params ? '_pars' : '');
     this.setChunk(editor.chunkname, chunktype, editor.content);
 
+    // FIXME - need some sort of shader pre-compile check to make sure it's valid before we start using it in the scene
     for (var k in this.shaderdefs) {
       var deftype = 'chunks_' + editor.chunktype;
       if (this.shaderdefs[k][deftype].indexOf(editor.chunkname) != -1) {
@@ -287,7 +285,7 @@ console.log('component', component);
 });
 
 elation.component.add("engine.utils.materials.editor", function() {
-  this.changetimeout = 1000;
+  this.changetimeout = 500;
 
   this.init = function() {
     this.chunkname = this.args.chunkname;

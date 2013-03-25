@@ -5,23 +5,22 @@
   border-bottom: 1px solid #333;
 }
 .engine_material {
-  background: #ccc;
 }
 .engine_materials_uniforms {
-  background: #eee;
   width: 20em;
+  float: left;
 }
 .engine_materials_vertex {
-  background: #eee;
   width: 35em;
   white-space: pre;
   overflow: auto;
+  float: left;
 }
 .engine_materials_fragment {
-  background: #eee;
   width: 35em;
   white-space: pre;
   overflow: auto;
+  float: left;
 }
 .engine_materials_uniforms .engine_materials_chunk:hover,
 .engine_materials_uniforms .engine_materials_chunk:active {
@@ -33,7 +32,7 @@
 }
 .engine_materials_fragment .engine_materials_chunk:hover,
 .engine_materials_fragment .engine_materials_chunk:active {
-  background: rgba(0,0,255,.1);
+  background: rgba(0,0,255,.2);
 }
 .engine_materials_chunk h3 {
   text-align: center;
