@@ -239,17 +239,25 @@ cam.rotation.x = -Math.PI/24;
     this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
     var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
 
+    // revert textures
+    for (var id in objects) {
+      if (realmaterials[id]) {
+        objects[id].material = realmaterials[id];
+      }
+      objects[id].visible = realvisible[id];
+    }
+
       //console.log('plip', pickid, objects[pickid], [x, this.container.offsetHeight - y], this.pickingbuffer);
     if (pickid > 0) {
       if (this.pickingobject !== objects[pickid]) {
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
-          elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject)});
+          elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
         }
         this.pickingobject = objects[pickid];
         if (this.pickingobject) {
           //console.log('mouseover', this.pickingobject);
-          elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject)});
+          elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
         }
       }
       
@@ -259,14 +267,6 @@ cam.rotation.x = -Math.PI/24;
         elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject)});
         this.pickingobject = false;
       }
-    }
-
-    // revert textures
-    for (var id in objects) {
-      if (realmaterials[id]) {
-        objects[id].material = realmaterials[id];
-      }
-      objects[id].visible = realvisible[id];
     }
   }
   this.getThingFromObject = function(obj) {
