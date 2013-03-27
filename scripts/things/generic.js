@@ -35,6 +35,28 @@ elation.component.add("engine.things.generic", function() {
     if (typeof this.postinit == 'function') {
       this.postinit();
     }
+
+    elation.events.add(this, 'mouseover', elation.bind(this, function(ev) {
+      if (ev.data && ev.data.material) {
+        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
+        for (var i = 0; i < materials.length; i++) {
+          if (materials[i].emissive) {
+            materials[i].emissive.setHex(0x333300);
+          }
+        }
+      }
+    }));
+    elation.events.add(this, 'mouseout', elation.bind(this, function(ev) {
+      if (ev.data && ev.data.material) {
+        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
+        for (var i = 0; i < materials.length; i++) {
+          if (materials[i].emissive) {
+            materials[i].emissive.setHex(0x000000);
+          }
+        }
+      }
+    }));
+
   }
   this.initProperties = function() {
     this.exists = true;
