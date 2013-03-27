@@ -287,7 +287,7 @@ SoundPlayer.prototype.setLoop = function(value) {
 	}
 }
 
-SoundPlayer.prototype.setPan = function(value) {
+SoundPlayer.prototype.setPan = function(value, velocity) {
 	//VELOCITY CODE FROM Ilmari Heikkinen. http://www.html5rocks.com/en/tutorials/webaudio/positional_audio/
 	// var dt = secondsSinceLastFrame;
 	// var dx = value[0]-this.pan[0], dy = value[1]-this.pan[1], dz = value[2]-this.pan[2];
@@ -301,12 +301,10 @@ SoundPlayer.prototype.setPan = function(value) {
 		{
 			this.panners[i].setPosition(this.pan[0],this.pan[1],this.pan[2]);
 
-/*
-			if(velocity[0])
+			if(velocity && velocity[0])
 			{
 				this.panners[i].setVelocity(velocity[0],velocity[1],velocity[2]);
 			}
-*/
 		}
 	}
 }
