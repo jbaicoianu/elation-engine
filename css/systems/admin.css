@@ -14,9 +14,6 @@
   width: 18em;
 }
 .engine_admin_scenetree ul {
-  list-style: none;
-  padding-left: .5em;
-  margin: 0;
 }
 .engine_admin_scenetree ul li {
   cursor: pointer;
