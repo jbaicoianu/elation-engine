@@ -201,7 +201,6 @@ elation.component.add("engine.things.generic", function() {
     if (!this.children[thing.id]) {
       this.children[thing.id] = thing;
       thing.parent = this;
-console.log('dood', thing, thing.parent);
       if (this.objects && thing.objects && this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].add(thing.objects['3d']);
       } else if (thing instanceof THREE.Object3D) {
