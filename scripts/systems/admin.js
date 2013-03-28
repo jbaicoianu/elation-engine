@@ -152,8 +152,8 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
   }
   this.change = function(ev) {
     var propname = ev.target.id.replace(/^engine_admin_inspector_properties_/, "").replace(/_/g, ".");
-    //var thing = this.thingwrapper.thing;
-    this.thing.set(propname, ev.target.value);
+    var thing = this.thingwrapper.value;
+    thing.set(propname, ev.target.value);
   }
 });
 elation.component.add("engine.systems.admin.inspector.objects", function() {
