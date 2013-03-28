@@ -5,6 +5,7 @@
   width: 100%;
   min-height: 2em;
   background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,.8) 66%, rgba(64,64,64,.5) 98%);
+  background-image: -moz-linear-gradient(bottom, rgba(0,0,0,.8) 66%, rgba(64,64,64,.5) 98%);
   z-index: 10;
 }
 .engine_admin_scenetree {
