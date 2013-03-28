@@ -171,6 +171,12 @@ elation.component.add("engine.things.generic", function() {
           case 'face':
             material = new THREE.MeshFaceMaterial();
             break;
+          case 'depth':
+            material = new THREE.MeshDepthMaterial();
+            break;
+          case 'normal':
+            material = new THREE.MeshNormalMaterial();
+            break;
           case 'basic':
           default:
             material = new THREE.MeshBasicMaterial(materialparams);
