@@ -7,14 +7,16 @@
 
 // function AudioStage()
 var AudioStage = function() {
-	this.context = new webkitAudioContext();
-	this.masterFader = this.getNewMasterFader();
+  if (typeof webkitAudioContext !== 'undefined') {
+    this.context = new webkitAudioContext();
+    this.masterFader = this.getNewMasterFader();
 
-	//Create object to hold all sounds and their associated events
-	this.cues = {};
+  }
+  //Create object to hold all sounds and their associated events
+  this.cues = {};
 
-	// Callback function for when all sounds have been loaded
-	this.ready = function() { console.log('audiostage done loading'); };
+  // Callback function for when all sounds have been loaded
+  this.ready = function() { console.log('audiostage done loading'); };
 }
 
 AudioStage.prototype.getNewMasterFader = function() {
@@ -30,6 +32,7 @@ AudioStage.prototype.getNewMasterFader = function() {
 AudioStage.prototype.addCues = function(cueObject) {
 	var bufferPaths = new Array(), 
 		objectInstance = this;
+  if (!this.context) return;
 
 	for (cue in cueObject) {
 		//Don't add duplicates
@@ -48,6 +51,7 @@ AudioStage.prototype.addCues = function(cueObject) {
 
 	this.loadSoundBuffers(bufferPaths, function(bufferList) {
 		
+    if (!objectInstance.context) return;
 
 		// TODO: Can this be optimized to not use a For-in?
 		for (cue in cueObject) {
@@ -98,6 +102,8 @@ AudioStage.prototype.addCues = function(cueObject) {
 //utility method for loading in all the sound buffers.
 AudioStage.prototype.loadSoundBuffers = function(soundFileArray, completionFunc) {
 	var bufferLoader, objectInstance = this;
+
+  if (!objectInstance.context) return;
 
 	bufferLoader = new BufferLoader(
 			objectInstance.context,
