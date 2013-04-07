@@ -1,5 +1,5 @@
 elation.template.add('engine.materials.chunk', '<div class="engine_materials_chunk style_box"><h1>{chunkname}</h1><div class="engine_materials_chunk_uniforms style_box"><h2>uniforms</h2> <ul> {#uniforms} <li><h4>{name}</h4> ({type})</li> {/uniforms} </ul></div> <div class="engine_materials_chunk_vertex style_box"><h2>vertex</h2><p>{chunk.vertex_pars}</p><p>{chunk.vertex}</p></div>  <div class="engine_materials_chunk_fragment style_box"><h2>fragment</h2><p>{chunk.fragment_pars}</p><p>{chunk.fragment}</p></div></div>');
-elation.template.add('engine.materials.chunk.uniforms', '<h3>{chunkname}</h3><ul class="engine_materials_chunk_uniform"> {#uniforms} <li><h4>{name}</h4> ({type})</li> {/uniforms} </ul>');
+elation.template.add('engine.materials.chunk.uniforms', '<h3>{chunkname}</h3><ul class="engine_materials_chunk_uniform"> {#uniforms} <li><h4>{name}</h4> <input value="{value}"> ({type})</li> {/uniforms} </ul>');
 elation.template.add('engine.materials.chunk.vertex', '<h3>{chunkname}</h3><p elation:component="engine.utils.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="vertex" {?params}elation:args.params=1{/params} class="engine_materials_chunk_vertex">{content}</p>');
 elation.template.add('engine.materials.chunk.fragment', '<h3>{chunkname}</h3><p elation:component="engine.utils.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="fragment" {?params}elation:args.params=1{/params} class="engine_materials_chunk_fragment">{content}</p>');
 
@@ -133,9 +133,8 @@ elation.extend("engine.utils.materials", new function() {
     }
     return chunk[0] + "\nvoid main() {\n" + chunk[1] + "\n}\n";
   }
-  this.display = function(shaders) {
-
-/*
+  this.displaychunks = function(shaders) {
+    /*
     if (!chunks) chunks = this.shaderchunks;
 
     for (var k in chunks) {
@@ -152,110 +151,130 @@ elation.extend("engine.utils.materials", new function() {
       chunkwrapper.innerHTML = elation.template.get("engine.materials.chunk", tplargs);
 console.log(chunks[k], chunks[k].uniforms);
     }
-*/
+    */
+  }
+  this.displayall = function(shaders, material) {
     if (!shaders) shaders = this.shaderdefs;
-
     for (var k in shaders) {
-      var root = elation.html.create({type: 'div', classname: 'engine_material style_box', append: document.body});
-      elation.ui.window(null, root, {title: k});
-    
-      var uniformcontainer = elation.html.create({classname: 'engine_materials_uniforms style_box', content: '<h2>Uniforms</h2>', append: root});
-      var vertexcontainer = elation.html.create({classname: 'engine_materials_vertex style_box', content: '<h2>Vertex Shader</h2>', append: root});
-      var fragmentcontainer = elation.html.create({classname: 'engine_materials_fragment style_box', content: '<h2>Fragment Shader</h2>', append: root});
+      this.display(k, material);
+    }
+  }
+  this.display = function(shadername, material) {
+    var shaderdef = this.shaderdefs[shadername];
+    //console.log(shadername, shaderdef, material);
+    var root = elation.html.create({type: 'div', classname: 'engine_material style_box', append: document.body});
+    elation.ui.window(null, root, {title: shadername});
+  
+    var uniformcontainer = elation.html.create({classname: 'engine_materials_uniforms style_box', content: '<h2>Uniforms</h2>', append: root});
+    var vertexcontainer = elation.html.create({classname: 'engine_materials_vertex style_box', content: '<h2>Vertex Shader</h2>', append: root});
+    var fragmentcontainer = elation.html.create({classname: 'engine_materials_fragment style_box', content: '<h2>Fragment Shader</h2>', append: root});
 
-      var vertexpars = elation.html.create({classname: 'engine_materials_shader_params', append: vertexcontainer});
-      var vertexshader = elation.html.create({classname: 'engine_materials_shader_main', append: vertexcontainer});
-      var fragmentpars = elation.html.create({classname: 'engine_materials_shader_params', append: fragmentcontainer});
-      var fragmentshader = elation.html.create({classname: 'engine_materials_shader_main', append: fragmentcontainer});
+    var vertexpars = elation.html.create({classname: 'engine_materials_shader_params', append: vertexcontainer});
+    var vertexshader = elation.html.create({classname: 'engine_materials_shader_main', append: vertexcontainer});
+    var fragmentpars = elation.html.create({classname: 'engine_materials_shader_params', append: fragmentcontainer});
+    var fragmentshader = elation.html.create({classname: 'engine_materials_shader_main', append: fragmentcontainer});
 
-      /* uniforms */
-      for (var j in shaders[k].uniforms) {
-        var chunkname = shaders[k].uniforms[j];
-        var tplargs = {
-          shadername: k,
-          chunkname: chunkname,
-          uniforms: []
-        };
-        if (this.shaderchunks[chunkname]) {
-          for (var l in this.shaderchunks[chunkname].uniforms) {
-            var uniform = this.shaderchunks[chunkname].uniforms[l];
+    /* uniforms */
+    for (var j in shaderdef.uniforms) {
+      var chunkname = shaderdef.uniforms[j];
+      var tplargs = {
+        shadername: shadername,
+        chunkname: chunkname,
+        uniforms: []
+      };
+      if (this.shaderchunks[chunkname]) {
+        for (var l in this.shaderchunks[chunkname].uniforms) {
+          var uniform = this.shaderchunks[chunkname].uniforms[l];
+          uniform.name = l;
+          if (material && material.uniforms[l]) {
+            var uval = material.uniforms[l].value;
+            if (uniform.type == 'c') uniform.value = '#' + uval.getHexString();
+            else if (uniform.type == 'v2') uniform.value = uval.x + ',' + uval.y;
+            else if (uniform.type == 'v3') uniform.value = uval.x + ',' + uval.y + ',' + uval.z;
+            else if (uniform.type == 'v4') uniform.value = uval.x + ',' + uval.y + ',' + uval.z + ',' + uval.w;
+            else uniform.value = material.uniforms[l].value;
+          }
+          tplargs.uniforms.push(uniform);
+        }
+      } else {
+        if (THREE.UniformsLib[chunkname]) {
+          for (var l in THREE.UniformsLib[chunkname]) {
+            var uniform = THREE.UniformsLib[chunkname][l];
             uniform.name = l;
+            if (material && material.uniforms[l]) {
+              var uval = material.uniforms[l].value;
+              if (uniform.type == 'c') uniform.value = '#' + uval.getHexString();
+              else if (uniform.type == 'v2') uniform.value = uval.x + ',' + uval.y;
+              else if (uniform.type == 'v3') uniform.value = uval.x + ',' + uval.y + ',' + uval.z;
+              else if (uniform.type == 'v4') uniform.value = uval.x + ',' + uval.y + ',' + uval.z + ',' + uval.w;
+              else uniform.value = material.uniforms[l].value;
+            }
             tplargs.uniforms.push(uniform);
           }
-        } else {
-          if (THREE.UniformsLib[chunkname]) {
-            for (var l in THREE.UniformsLib[chunkname]) {
-              var uniform = THREE.UniformsLib[chunkname][l];
-              uniform.name = l;
-              tplargs.uniforms.push(uniform);
-            }
-          }
-        }
-        elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: uniformcontainer, content: elation.template.get("engine.materials.chunk.uniforms", tplargs)});
-      }
-      /* vertex */
-      for (var j in shaders[k].chunks_vertex) {
-        var chunkname = shaders[k].chunks_vertex[j];
-        var tplargs = {
-          shadername: k,
-          chunkname: chunkname
-        };
-        if (this.shaderchunks[chunkname]) {
-          tplargs.vertex_pars = this.shaderchunks[chunkname].vertex_pars;
-          tplargs.vertex = this.shaderchunks[chunkname].vertex;
-        } 
-        if (!tplargs.vertex_pars && THREE.ShaderChunk[chunkname + '_pars_vertex']) {
-          tplargs.vertex_pars = THREE.ShaderChunk[chunkname + '_pars_vertex'];
-        }
-        if (!tplargs.vertex && THREE.ShaderChunk[chunkname + '_vertex']) {
-          tplargs.vertex = THREE.ShaderChunk[chunkname + '_vertex'];
-        }
-        if (tplargs.vertex_pars) {
-          tplargs.content = tplargs.vertex_pars;
-          tplargs.params = true;
-          elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: vertexpars, content: elation.template.get("engine.materials.chunk.vertex", tplargs)});
-        }
-        if (tplargs.vertex) {
-          tplargs.content = tplargs.vertex;
-          tplargs.params = false;
-          elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: vertexshader, content: elation.template.get("engine.materials.chunk.vertex", tplargs)});
         }
       }
-      /* fragment */
-      for (var j in shaders[k].chunks_fragment) {
-        var chunkname = shaders[k].chunks_fragment[j];
-        var tplargs = {
-          shadername: k,
-          chunkname: chunkname
-        };
-        if (this.shaderchunks[chunkname]) {
-          tplargs.fragment_pars = this.shaderchunks[chunkname].fragment_pars;
-          tplargs.fragment = this.shaderchunks[chunkname].fragment;
-        }
-        if (!tplargs.fragment_pars && THREE.ShaderChunk[chunkname + '_pars_fragment']) {
-          tplargs.fragment_pars = THREE.ShaderChunk[chunkname + '_pars_fragment'];
-        }
-        if (!tplargs.fragment && THREE.ShaderChunk[chunkname + '_fragment']) {
-          tplargs.fragment = THREE.ShaderChunk[chunkname + '_fragment'];
-        }
-        if (tplargs.fragment_pars) {
-          tplargs.content = tplargs.fragment_pars;
-          tplargs.params = true;
-          elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: fragmentpars, content: elation.template.get("engine.materials.chunk.fragment", tplargs)});
-        }
-        if (tplargs.fragment) {
-          tplargs.content = tplargs.fragment;
-          tplargs.params = false;
-          elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: fragmentshader, content: elation.template.get("engine.materials.chunk.fragment", tplargs)});
-        }
+      elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: uniformcontainer, content: elation.template.get("engine.materials.chunk.uniforms", tplargs)});
+    }
+    /* vertex */
+    for (var j in shaderdef.chunks_vertex) {
+      var chunkname = shaderdef.chunks_vertex[j];
+      var tplargs = {
+        shadername: shadername,
+        chunkname: chunkname
+      };
+      if (this.shaderchunks[chunkname]) {
+        tplargs.vertex_pars = this.shaderchunks[chunkname].vertex_pars;
+        tplargs.vertex = this.shaderchunks[chunkname].vertex;
+      } 
+      if (!tplargs.vertex_pars && THREE.ShaderChunk[chunkname + '_pars_vertex']) {
+        tplargs.vertex_pars = THREE.ShaderChunk[chunkname + '_pars_vertex'];
+      }
+      if (!tplargs.vertex && THREE.ShaderChunk[chunkname + '_vertex']) {
+        tplargs.vertex = THREE.ShaderChunk[chunkname + '_vertex'];
+      }
+      if (tplargs.vertex_pars) {
+        tplargs.content = tplargs.vertex_pars;
+        tplargs.params = true;
+        elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: vertexpars, content: elation.template.get("engine.materials.chunk.vertex", tplargs)});
+      }
+      if (tplargs.vertex) {
+        tplargs.content = tplargs.vertex;
+        tplargs.params = false;
+        elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: vertexshader, content: elation.template.get("engine.materials.chunk.vertex", tplargs)});
+      }
+    }
+    /* fragment */
+    for (var j in shaderdef.chunks_fragment) {
+      var chunkname = shaderdef.chunks_fragment[j];
+      var tplargs = {
+        shadername: shadername,
+        chunkname: chunkname
+      };
+      if (this.shaderchunks[chunkname]) {
+        tplargs.fragment_pars = this.shaderchunks[chunkname].fragment_pars;
+        tplargs.fragment = this.shaderchunks[chunkname].fragment;
+      }
+      if (!tplargs.fragment_pars && THREE.ShaderChunk[chunkname + '_pars_fragment']) {
+        tplargs.fragment_pars = THREE.ShaderChunk[chunkname + '_pars_fragment'];
+      }
+      if (!tplargs.fragment && THREE.ShaderChunk[chunkname + '_fragment']) {
+        tplargs.fragment = THREE.ShaderChunk[chunkname + '_fragment'];
+      }
+      if (tplargs.fragment_pars) {
+        tplargs.content = tplargs.fragment_pars;
+        tplargs.params = true;
+        elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: fragmentpars, content: elation.template.get("engine.materials.chunk.fragment", tplargs)});
+      }
+      if (tplargs.fragment) {
+        tplargs.content = tplargs.fragment;
+        tplargs.params = false;
+        elation.html.create({tag: 'div', classname: 'engine_materials_chunk', append: fragmentshader, content: elation.template.get("engine.materials.chunk.fragment", tplargs)});
       }
     }
     elation.component.init();
     var editors = elation.find('.engine_materials_editor', this.container);
-    console.log(editors);
     for (var i = 0; i < editors.length; i++) {
       var component = elation.component.fetch(editors[i]);
-console.log('component', component);
       elation.events.add(component, 'engine_material_change', this);
     }
   }
@@ -274,8 +293,8 @@ console.log('component', component);
 
         if (this.materialinstances[k]) {
           for (var j = 0; j < this.materialinstances[k].length; j++) {
-            this.materialinstances[k][j].fragmentShader = this.shaders[k].fragmentShader;
-            this.materialinstances[k][j].vertexShader = this.shaders[k].vertexShader;
+            this.materialinstances[k][j].fragmentShader = this.shaderdef.fragmentShader;
+            this.materialinstances[k][j].vertexShader = this.shaderdef.vertexShader;
             this.materialinstances[k][j].needsUpdate = true; 
           }
         }

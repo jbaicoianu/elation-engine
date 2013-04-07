@@ -7,7 +7,7 @@
 .engine_material {
 }
 .engine_materials_uniforms {
-  width: 20em;
+  width: 25em;
   float: left;
 }
 .engine_materials_vertex {
@@ -81,4 +81,9 @@ ul.engine_materials_chunk_uniform {
 }
 .engine_materials_shader_main:after {
   content: '}';
+}
+
+.engine_materials_uniforms input {
+  border: 1px solid #ccc;
+  font-size: .9em;
 }
