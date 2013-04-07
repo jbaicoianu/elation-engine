@@ -29,10 +29,12 @@ AudioStage.prototype.getNewMasterFader = function() {
 	return fader;
 };
 
-AudioStage.prototype.addCues = function(cueObject) {
+AudioStage.prototype.addCues = function(cueObject, cuePrefix) {
 	var bufferPaths = new Array(), 
 		objectInstance = this;
-  if (!this.context) return;
+	var newCues = [];
+	if (!this.context) return;
+	if (!cuePrefix) cuePrefix = "";
 
 	for (cue in cueObject) {
 		//Don't add duplicates
@@ -55,6 +57,7 @@ AudioStage.prototype.addCues = function(cueObject) {
 
 		// TODO: Can this be optimized to not use a For-in?
 		for (cue in cueObject) {
+			var cueFull = cuePrefix + cue;
 			var cueFileLength = cueObject[cue].file.length,
 				bufferArray = [];
 
@@ -74,28 +77,32 @@ AudioStage.prototype.addCues = function(cueObject) {
 					bufferArray.push(bufferList[cueObject[cue].file]);
 				}
 
-				objectInstance.cues[cue] = new SoundPlayer(objectInstance.context, bufferArray, objectInstance.masterFader);
+				var newCue = new SoundPlayer(objectInstance.context, bufferArray, objectInstance.masterFader);
 				// console.debug(objectInstance.cues[cue]);
-				objectInstance.cues[cue].setLoop(cueObject[cue].loop);
-				objectInstance.cues[cue].setVolume(cueObject[cue].vol);
-				objectInstance.cues[cue].setPolyphony(cueObject[cue].poly);
-				objectInstance.cues[cue].setCrossfadeStyle(cueObject[cue].crossfade);
+				newCue.setLoop(cueObject[cue].loop);
+				newCue.setVolume(cueObject[cue].vol);
+				newCue.setPolyphony(cueObject[cue].poly);
+				newCue.setCrossfadeStyle(cueObject[cue].crossfade);
 
 				if(cueObject[cue].effects)
 				{
-					objectInstance.cues[cue].setConvolveBuffer(bufferList[cueObject['convolveBuffer'].file]);
-					objectInstance.cues[cue].addEffects(cueObject[cue].effects);
+					newCue.setConvolveBuffer(bufferList[cueObject['convolveBuffer'].file]);
+					newCue.addEffects(cueObject[cue].effects);
 				}
 
 				if(cueObject[cue].pan)
 				{
-					objectInstance.cues[cue].setPan(cueObject[cue].pan);	
+					newCue.setPan(cueObject[cue].pan);	
 				}
+
+				objectInstance.cues[cueFull] = newCue;
+				newCues[cue] = newCue;
 			}
 		}
 
 		objectInstance.ready();
 	});
+	return newCues;
 };
 
 
