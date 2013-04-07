@@ -17,7 +17,7 @@ elation.extend("engine.loop", function(name) {
     elation.events.fire({element: this, type: "engine_start"});
     this.lastupdate = new Date().getTime();
     // Start run loop, passing in current time
-    this.run(this.lastupdate);
+    this.run(0);
   }
   this.stop = function() {
     elation.events.fire({element: this, type: "engine_stop"});
