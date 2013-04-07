@@ -4,7 +4,8 @@ elation.extend("engine.systems.world", function(args) {
   this.children = {};
   this.scene = {
     'world-3d': new THREE.Scene(),
-    'world-dom': new THREE.Scene()
+    'world-dom': new THREE.Scene(),
+    'sky': false
   };
   //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
 
@@ -30,7 +31,9 @@ elation.extend("engine.systems.world", function(args) {
     if (thing.container) {
       //this.renderer['world-dom'].domElement.appendChild(thing.container);
     }
-    elation.events.fire({type: 'engine_thing_create', element: thing});
+    elation.events.add(thing, 'thing_add', elation.bind(this, function(ev) {
+      elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
+    }));
   }
   this.remove = function(thing) {
     if (this.children[thing.name]) {
@@ -73,6 +76,36 @@ elation.extend("engine.systems.world", function(args) {
     if (root == this) {
       this.loaded = true;
       elation.events.fire({type: 'engine_world_init', element: this});
+    }
+  }
+  this.setSky = function(texture) {
+    if (texture !== false) {
+      if (!this.scene['sky']) {
+        this.scene['sky'] = new THREE.Scene();
+        var skygeom = new THREE.CubeGeometry(1,1,1, 10, 10, 10);
+        var skymat = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide, wireframe: true, depthWrite: false});
+
+      var shader = THREE.ShaderLib[ "cube" ];
+      shader.uniforms[ "tCube" ].value = texture;
+
+      var skymat = new THREE.ShaderMaterial( {
+        fragmentShader: shader.fragmentShader,
+        vertexShader: shader.vertexShader,
+        uniforms: shader.uniforms,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      } );
+
+        this.skymesh = new THREE.Mesh(skygeom, skymat);
+        this.scene['sky'].add(this.skymesh);
+        console.log('create sky mesh');
+      }
+      this.skyenabled = true;
+    } else {
+      this.skyenabled = false;
+    }
+    if (this.skyenabled) {
+      
     }
   }
 });
