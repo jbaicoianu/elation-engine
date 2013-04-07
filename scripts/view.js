@@ -39,14 +39,23 @@ cam.rotation.x = -Math.PI/24;
 //cam.rotation.y = -Math.PI/4;
     this.setcamera(cam);
     this.setscene(this.engine.systems.active.world.scene['world-3d']);
+    this.setskyscene(this.engine.systems.active.world.scene['sky']);
     //console.log(this.engine.systems.active.world.scene['world-3d']);
 
     this.composer = new THREE.EffectComposer(this.rendersystem.renderer);
-    this.composer.addPass(new THREE.RenderPass(this.scene, this.camera, null, new THREE.Color(0xffffff), 0));
+    var mainpass = new THREE.RenderPass(this.scene, this.camera, null, null, 0)
+    if (this.skyscene) {
+      mainpass.clear = false;
+      var skypass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
+      this.composer.addPass(skypass);
+    }
+    this.composer.addPass(mainpass);
 
     this.effects['film']= new THREE.FilmPass( 0.35, .75, 2048, false );
     this.effects['sepia'] = new THREE.ShaderPass( THREE.SepiaShader );
     this.effects['bleach'] = new THREE.ShaderPass( THREE.BleachBypassShader );
+    this.effects['copy'] = new THREE.ShaderPass( THREE.CopyShader );
+    this.effects['copy'].renderToScreen = true;
 
     this.effects['FXAA'] = new THREE.ShaderPass( THREE.FXAAShader );
     this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / this.size[0], 1 / this.size[1]);
@@ -56,6 +65,7 @@ cam.rotation.x = -Math.PI/24;
     //this.composer.addPass(this.effects['sepia']);
     //this.composer.addPass(this.effects['film']);
     this.composer.addPass( this.effects['FXAA'] );
+    //this.composer.addPass( this.effects['copy'] );
 
     this.stats = new Stats();
     this.stats.domElement.style.position = 'absolute';
@@ -81,6 +91,11 @@ cam.rotation.x = -Math.PI/24;
   }
   this.render = function(delta) {
     if (this.scene && this.camera) {
+      if (this.skycamera) {
+        this.skycamera.rotation.copy(this.camera.rotation);
+        this.skycamera.quaternion.copy(this.camera.quaternion);
+        this.skycamera.useQuaternion = this.camera.useQuaternion;
+      }
       if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
         this.setrendersize(this.size[0], this.size[1]);
       }
@@ -105,6 +120,14 @@ cam.rotation.x = -Math.PI/24;
   }
   this.setscene = function(scene) {
     this.scene = scene;
+  }
+  this.setskyscene = function(scene) {
+    this.skyscene = scene;
+    this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
+    this.skycamera.rotation = this.camera.rotation;
+    this.skycamera.quaternion = this.camera.quaternion;
+    this.skycamera.useQuaternion = this.camera.useQuaternion;
+    this.skyscene.add(this.skycamera);
   }
   this.getscene = function(obj) {
     var scene = obj;
