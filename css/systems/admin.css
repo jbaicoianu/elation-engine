@@ -106,7 +106,7 @@
 .engine_thing {
   margin-left: .2em;
 }
-.engine_thing>span:before {
+span.engine_thing_object:before {
   display: inline-block;
   width: 20px;
   height: 20px;
@@ -115,45 +115,46 @@
   margin: -3px .4em -3px 0;
   vertical-align: baseline;
 }
-.engine_thing_mesh>span:before {
+span.engine_thing_object_Mesh:before {
   background: url(/images/engine/objecticons-small.png) -21px -60px;
 }
-.engine_thing_geometry>span:before {
+span.engine_thing_object_Geometry:before {
   background: url(/images/engine/objecticons-small.png) -21px -40px;
 }
-.engine_thing_spheregeometry>span:before {
+span.engine_thing_object_SphereGeometry:before {
   background: url(/images/engine/objecticons-small.png) -63px -20px;
 }
-.engine_thing_planegeometry>span:before {
+span.engine_thing_object_PlaneGeometry:before {
   background: url(/images/engine/objecticons-small.png) -0px -20px;
 }
-.engine_thing_cubegeometry>span:before {
+span.engine_thing_object_CubeGeometry:before {
   background: url(/images/engine/objecticons-small.png) -21px -20px;
 }
-.engine_thing_torusgeometry>span:before {
+span.engine_thing_object_TorusGeometry:before {
   background: url(/images/engine/objecticons-small.png) -168px -20px;
 }
-.engine_thing_cylindergeometry>span:before {
+span.engine_thing_object_CylinderGeometry:before {
   background: url(/images/engine/objecticons-small.png) -147px -20px;
 }
-.engine_thing_textgeometry>span:before {
+span.engine_thing_object_TextGeometry:before {
   background: url(/images/engine/objecticons-small.png) -168px -40px;
 }
-.engine_thing_material>span:before {
+span.engine_thing_object_Material:before {
   background: url(/images/engine/objecticons-small.png) -126px -60px;
 }
-.engine_thing_material>span:before,
-.engine_thing_meshbasicmaterial>span:before,
-.engine_thing_meshlambertmaterial>span:before,
-.engine_thing_meshphongmaterial>span:before,
-.engine_thing_shadermaterial>span:before {
+span.engine_thing_object_Material:before,
+span.engine_thing_object_MeshBasicMaterial:before,
+span.engine_thing_object_MeshLambertMaterial:before,
+span.engine_thing_object_MeshPhongMaterial:before,
+span.engine_thing_object_MeshFaceMaterial:before,
+span.engine_thing_object_ShaderMaterial:before {
   background: url(/images/engine/objecticons-small.png) -168px 0px;
 }
-.engine_thing_pointlight>span:before {
+span.engine_thing_object_PointLight:before {
   background: url(/images/engine/objecticons-small.png) -251px -20px;
 }
-.engine_thing_perspectivecamera>span:before,
-.engine_thing_orthographiccamera>span:before,
-.engine_thing_camera>span:before {
+span.engine_thing_object_PerspectiveCamera:before,
+span.engine_thing_object_OrthographicCamera:before,
+span.engine_thing_object_Camera:before {
   background: url(/images/engine/objecticons-small.png) -126px -60px;
 }

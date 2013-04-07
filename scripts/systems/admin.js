@@ -1,3 +1,8 @@
+elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
+elation.template.add('engine.systems.admin.inspector.property', '{?value}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{:else}<span>{name}</span>{/value}');
+
+elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.id} ({type})</span>');
+
 elation.extend("engine.systems.admin", function(args) {
   elation.implement(this, elation.engine.systems.system);
   this.system_attach = function(ev) {
@@ -34,15 +39,19 @@ elation.extend("engine.systems.admin", function(args) {
 */
   }
   this.engine_frame = function(ev) {
+    /* FIXME - silly hack! */
     if (!this.flycontrols) {
-      var view = this.engine.systems.get('render').views['main'];
-      this.flycontrols = new THREE.FlyControls(view.camera, view.container);
-      this.flycontrols.movementSpeed = 10;
-      this.flycontrols.rollSpeed = Math.PI/4;
-      this.flycontrols.dragToLook = true;
+      var render = this.engine.systems.get('render');
+      if (render.views['main']) {
+        var view = this.engine.systems.get('render').views['main'];
+        this.flycontrols = new THREE.FlyControls(view.camera, view.container);
+        this.flycontrols.movementSpeed = 10;
+        this.flycontrols.rollSpeed = Math.PI/4;
+        this.flycontrols.dragToLook = true;
+      }
+    } else {
+      this.flycontrols.update(ev.data.delta);
     }
-
-    this.flycontrols.update(ev.data.delta);
   }
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
@@ -50,7 +59,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.world = this.args.world;
     this.container.innerHTML = '<h2>Scene</h2>';
     elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
-    elation.events.add(this.world, 'engine_thing_create', this);
+    elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
     if (this.world.loaded) {
       this.create();
     } else {
@@ -63,15 +72,42 @@ elation.component.add("engine.systems.admin.scenetree", function() {
       attrs: {
         children: 'children',
         label: 'id',
+        itemtemplate: 'engine.systems.admin.scenetree.thing'
       }
     });
     elation.events.add(this.treeview, 'ui_treeview_select,ui_treeview_hover', this);
+    // TODO - object hover/selection should be made available when a specific selection mode is enabled
+    /*
+    elation.events.add(this, 'mouseover', elation.bind(this, function(ev) {
+      if (ev.data && ev.data.material) {
+        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
+        for (var i = 0; i < materials.length; i++) {
+          if (materials[i].emissive) {
+            materials[i].emissive.setHex(0x333300);
+          }
+        }
+      }
+    }));
+    elation.events.add(this, 'mouseout', elation.bind(this, function(ev) {
+      if (ev.data && ev.data.material) {
+        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
+        for (var i = 0; i < materials.length; i++) {
+          if (materials[i].emissive) {
+            materials[i].emissive.setHex(0x000000);
+          }
+        }
+      }
+    }));
+    */
   }
   this.ui_treeview_hover = function(ev) {
   }
   this.ui_treeview_select = function(ev) {
     this.selectedthing = ev.data;
     elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
+  }
+  this.world_thing_add = function(ev) {
+    //console.log("PLOP", ev);
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
@@ -90,7 +126,7 @@ elation.component.add("engine.systems.admin.inspector", function() {
     if (!this.tabs) {
       this.createTabs();
     }
-    this.label.innerHTML = thing.id;
+    this.label.innerHTML = thing.id + ' (' + thing.type + ')';
     this.tabs.setActiveTab(this.activetab || "properties");
     //this.properties.setThing(thingwrapper);
     //this.objects.setThing(thingwrapper);
@@ -123,78 +159,130 @@ elation.component.add("engine.systems.admin.inspector", function() {
 elation.component.add("engine.systems.admin.inspector.properties", function() {
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_properties ui_treeview');
-    this.propul = elation.html.create({tag: 'ul', append: this.container});
+    this.propdiv = elation.html.create({tag: 'div', append: this.container});
   }
   this.setThing = function(thingwrapper) {
     this.thingwrapper = thingwrapper;
     var thing = thingwrapper.value;
-    this.propul.innerHTML = '';
-    for (var k in thing.properties) {
-      var li = elation.html.create({tag: 'li', append: this.propul, content: '<h3>' + k + '</h3>'});
-      this.addProperties(thing.properties[k], li, "engine_admin_inspector_properties_" + k);
-    }
+    this.propdiv.innerHTML = '';
+    var proptree = this.buildPropertyTree(thing.properties);
+      
+    // FIXME - should reuse the same treeview rather than creating a new one each time
+    this.treeview = elation.ui.treeview(null, this.propdiv, {
+      items: proptree,
+      attrs: {
+        children: 'children',
+        itemtemplate: 'engine.systems.admin.inspector.property'
+      }
+    });
+    var propinputs = elation.find('input', this.propdiv);
+    elation.events.add(propinputs, 'change', this);
   }
-  this.addProperties = function(properties, root, idprefix) {
-    if (!root) root = this.container;
-    var propul = elation.html.create({tag: 'ul', append: root});
+  this.buildPropertyTree = function(properties, prefix) {
+    var root = {};
+    if (!prefix) prefix = '';
+
     for (var k in properties) {
-      var htmlid = idprefix + "_" + k;
-      if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
-        var li = elation.html.create({tag: 'li', append: propul, content: '<span>' + k + '</span>'});
-        this.addProperties(properties[k], li, htmlid);
+      root[k] = {name: k, fullname: prefix + k};
+      if (properties[k] instanceof THREE.Vector2) {
+        root[k]['value'] = properties[k].x + ',' + properties[k].y;
+      } else if (properties[k] instanceof THREE.Vector3) {
+        root[k]['value'] = properties[k].x + ',' + properties[k].y + ',' + properties[k].z;
+      } else if (properties[k] instanceof THREE.Vector4 || properties[k] instanceof THREE.Quaternion) {
+        root[k]['value'] = properties[k].x + ',' + properties[k].y + ',' + properties[k].z + ',' + properties[k].w;
+      } else if (properties[k] instanceof THREE.Texture) {
+        root[k]['value'] = properties[k].sourceFile;
+      } else if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
+        root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + "_");
       } else {
-        var li = elation.html.create({tag: 'li', append: propul});
-        var label = elation.html.create({tag: 'label', attributes: { htmlFor: htmlid }, content: k, append: li});
-        var input = elation.html.create({tag: 'input', id: htmlid, attributes: { value: properties[k] }, append: li});
-        elation.events.add(input, 'change', this);
+        root[k]['value'] = properties[k];
       }
     }
+    return root;
   }
   this.change = function(ev) {
     var propname = ev.target.id.replace(/^engine_admin_inspector_properties_/, "").replace(/_/g, ".");
     var thing = this.thingwrapper.value;
-    thing.set(propname, ev.target.value);
+    thing.set(propname, ev.target.value, true);
   }
 });
 elation.component.add("engine.systems.admin.inspector.objects", function() {
-  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'CubeGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
+  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'CubeGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshFaceMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_objects ui_treeview');
   }
   this.setThing = function(thingwrapper) {
     this.thing = thingwrapper.value;
     this.container.innerHTML = '';
-    this.addObjects(this.thing.objects);
-  }
-  this.addObjects = function(objects, root) {
-    if (!root) root = this.container;
 
-    var ul = elation.html.create({tag: 'ul', append: root});
+    var objtree = this.buildObjectTree(this.thing.objects);
+      
+    // FIXME - should reuse the same treeview rather than creating a new one each time
+    this.treeview = elation.ui.treeview(null, this.container, {
+      items: objtree,
+      attrs: {
+        children: 'children',
+        itemtemplate: 'engine.systems.admin.inspector.object'
+      }
+    });
+    elation.events.add(this.treeview, 'ui_treeview_select', this);
+  }
+  this.buildObjectTree = function(objects, prefix) {
+    var root = {};
+    if (!prefix) prefix = '';
+
     for (var k in objects) {
-      //var htmlid = 'engine_admin_inspector_property_' + k + '_' + k;
       if (!elation.utils.isNull(objects[k])) {
         if (objects[k] instanceof elation.physics.rigidbody) {
           // TODO - show physics object to allow editing
         } else if (!objects[k]._thing || objects[k]._thing == this.thing) {
-          var type = 'Object3D';
-          //console.log('object ' + objects[k].name + ': ', objects[k]);
-          for (var i = 0; i < this.types.length; i++) {
-            if (objects[k] instanceof THREE[this.types[i]]) {
-              type = this.types[i];
-              break;
-            }
-          }
-      
-          var objname = objects[k].name || objects[k].id;
-          var li = elation.html.create({tag: 'li', classname: 'engine_thing engine_thing_' + type.toLowerCase(), append: ul, content: '<span>' + objname + ' (' + type + ')</span>'});
-          if (type == 'Mesh') {
-            this.addObjects([objects[k].geometry, objects[k].material], li);
-          }
+          root[k] = {
+            name: k,
+            fullname: prefix + k,
+            type: this.getObjectType(objects[k])
+          };
+          root[k].object = objects[k];
+          root[k].children = {};
           if (objects[k].children && objects[k].children.length > 0) {
-            this.addObjects(objects[k].children, li);
+            elation.utils.merge(this.buildObjectTree(objects[k].children, prefix + k + "_"), root[k].children);
+          }
+          switch (root[k].type) {
+            case 'Mesh':
+              var subobjects = {
+                'geometry': objects[k].geometry,
+                'material': objects[k].material
+              };
+              elation.utils.merge(this.buildObjectTree(subobjects), root[k].children);
+              break;
+            case 'MeshFaceMaterial':
+              var subobjects = objects[k].materials;
+              elation.utils.merge(this.buildObjectTree(subobjects), root[k].children);
+              break;
           }
         }
       }
+    }
+    return root;
+  }
+  this.getObjectType = function(obj) {
+    var type = 'Object3D';
+    //console.log('object ' + objects[k].name + ': ', objects[k]);
+    for (var i = 0; i < this.types.length; i++) {
+      if (obj instanceof THREE[this.types[i]]) {
+        type = this.types[i];
+        break;
+      }
+    }
+    return type;
+  }
+
+  this.ui_treeview_select = function(ev) {
+    console.log('selected!', ev);
+    var selected = ev.data.value;
+    switch (selected.type) {
+      case 'ShaderMaterial':
+        elation.engine.utils.materials.displayall(null, selected.object);
+        break;
     }
   }
 });
