@@ -1,91 +1,135 @@
 elation.component.add("engine.things.generic", function() {
-  this.objects = {};
   this.init = function() {
+    this._thingdef = {
+      properties: {},
+      events: {},
+      actions: {}
+    };
     this.parentname = this.args.parentname || '';
     this.name = this.args.name || '';
     this.type = this.args.type || 'generic';
     this.engine = this.args.engine;
     this.objects = {};
-    this.state = {};
     this.children = {};
-    this.cameras = [];
 
-    this.properties = {}
-    if (this.args.properties) {
-      for (var k in this.args.properties) {
-        this.properties[k] = {};
-        for (var k2 in this.args.properties[k]) {
-          elation.utils.arrayset(this.properties[k], k2, this.args.properties[k][k2]);
-        }
-      }
-    }
-
-    this.position = new THREE.Vector3();
-    this.orientation = new THREE.Quaternion();
+    this.defineActions({
+      'spawn': this.spawn,
+      'move': this.move
+    });
+    this.defineProperties({
+      'position':       { type: 'vector3', default: [0, 0, 0], comment: 'Object position, relative to parent' },
+      'orientation':    { type: 'quaternion', default: [0, 0, 0, 1], comment: 'Object orientation, relative to parent' },
+      'scale':          { type: 'vector3', default: [1, 1, 1], comment: 'Object scale, relative to parent' },
+      'velocity':       { type: 'vector3', default: [0, 0, 0], comment: 'Object velocity (m/s)' },
+      'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
+      'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
+      'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
+      'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
+      'render.collada': { type: 'string', comment: 'URL for Collada scene file' }
+    });
+    this.defineEvents({
+      'thing_create': [],
+      'thing_add': ['child'],
+      'thing_remove': [],
+      'thing_destroy': [],
+      'thing_tick': ['delta'],
+      'thing_think': ['delta'],
+      'thing_move': [],
+      'mouseover': ['clientX', 'clientY', 'position'],
+      'mouseout': [],
+      'mousedown': [],
+      'mouseup': [],
+      'click': []
+    });
 
     if (typeof this.preinit == 'function') {
       this.preinit();
     }
 
-    this.initProperties();
-    this.init3D();
-    this.initDOM();
     this.initPhysics();
 
     if (typeof this.postinit == 'function') {
       this.postinit();
     }
-
-    elation.events.add(this, 'mouseover', elation.bind(this, function(ev) {
-      if (ev.data && ev.data.material) {
-        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
-        for (var i = 0; i < materials.length; i++) {
-          if (materials[i].emissive) {
-            materials[i].emissive.setHex(0x333300);
-          }
-        }
-      }
-    }));
-    elation.events.add(this, 'mouseout', elation.bind(this, function(ev) {
-      if (ev.data && ev.data.material) {
-        var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
-        for (var i = 0; i < materials.length; i++) {
-          if (materials[i].emissive) {
-            materials[i].emissive.setHex(0x000000);
-          }
-        }
-      }
-    }));
-
+    this.init3D();
+    this.initDOM();
   }
   this.initProperties = function() {
-    this.exists = true;
-    if (this.properties.physical) {
-      if (this.properties.physical.position) {
-        if (elation.utils.isString(this.properties.physical.position)) {
-          this.properties.physical.position = this.properties.physical.position.split(",");
-        }
-        this.position.x = this.properties.physical.position[0];
-        this.position.y = this.properties.physical.position[1];
-        this.position.z = this.properties.physical.position[2];
-      }
-      if (this.properties.physical.exists === 0) {
-        this.exists = false;
-        return;
-      }
-      if (this.properties.physical.rotation) {
-        /*
-        this.rotation.x = this.properties.physical.rotation[0] * (Math.PI / 180);
-        this.rotation.y = this.properties.physical.rotation[1] * (Math.PI / 180);
-        this.rotation.z = this.properties.physical.rotation[2] * (Math.PI / 180);
-        */
-        var euler = new THREE.Vector3(this.properties.physical.rotation[0] * (Math.PI / 180), this.properties.physical.rotation[1] * (Math.PI / 180), this.properties.physical.rotation[2] * (Math.PI / 180));
-        this.orientation.setFromEuler(euler);
+    var props = (this.args.properties && this.args.properties.generic ? this.args.properties.generic : {});
+    this.properties = {};
+    for (var propname in this._thingdef.properties) {
+      var propval = this.get(propname);
+      var prop = this._thingdef.properties[propname];
+      if (props && props[propname]) {
+        this.set(propname, this.getPropertyValue(prop.type, props[propname]));
+      } else if (elation.utils.isNull(propval) && !elation.utils.isNull(prop.default)) {
+        this.set(propname, this.getPropertyValue(prop.type, prop.default));
       }
     }
+  }
+  this.getPropertyValue = function(type, value) {
+    switch (type) {
+      case 'vector3':
+        value = (value instanceof THREE.Vector3 ? value : new THREE.Vector3(value[0], value[1], value[2]));
+        break;
+      case 'quaternion':
+        value = new THREE.Quaternion(value[0], value[1], value[2], value[3]);
+        break;
+      case 'bool':
+        value = (value === 1 || value === '1' || value === 'true');
+        break;
+      case 'texture':
+        value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
+        break;
+    }
+    return value;
+  }
+  this.defineProperties = function(properties) {
+    elation.utils.merge(properties, this._thingdef.properties);
+    this.initProperties();
+  }
+  this.defineActions = function(actions) {
+    elation.utils.merge(actions, this._thingdef.actions);
+  }
+  this.defineEvents = function(events) {
+  }
+
+  this.set = function(property, value, forcerefresh) {
+    elation.utils.arrayset(this.properties, property, value);
+    if (forcerefresh && this.objects['3d']) {
+      this.initProperties();
+      var parent = this.objects['3d'].parent;
+      parent.remove(this.objects['3d']);
+      this.objects['3d'] = false;
+      //this.init3D();
+      parent.add(this.objects['3d']);
+    }
+  }
+  this.get = function(property, defval) {
+    if (typeof defval == 'undefined') defval = null;
+    return elation.utils.arrayget(this.properties, property, defval);
+  }
+  this.init3D = function() {
+    this.objects['3d'] = this.createObject3D();
+    this.objects['3d'].position = this.properties.position;
+    this.objects['3d'].quaternion = this.properties.orientation;
+    this.objects['3d'].scale = this.properties.scale;
+    this.objects['3d'].useQuaternion = true;
+    this.objects['3d']._thing = this;
+  }
+  this.initDOM = function() {
+    this.objects['dom'] = this.createObjectDOM();
+    elation.html.addclass(this.container, "space.thing");
+    elation.html.addclass(this.container, "space.things." + this.type);
+    //this.updateDOM();
+  }
+  this.initPhysics = function() {
+    this.createDynamics();
+  }
+  this.createObject3D = function() {
     if (this.properties.render) {
-      if (this.properties.render.scale) {
-        this.set("render.scale", new THREE.Vector3(this.properties.render.scale[0], this.properties.render.scale[1], this.properties.render.scale[2]));
+      if (this.properties.render.scene) {
+        this.loadJSONScene(this.properties.render.scene, this.properties.render.texturepath);
       }
       if (this.properties.render.mesh) {
         this.loadJSON(this.properties.render.mesh, this.properties.render.texturepath);
@@ -94,39 +138,6 @@ elation.component.add("engine.things.generic", function() {
         this.loadCollada(this.properties.render.collada);
       }
     }
-  }
-  this.set = function(property, value) {
-    elation.utils.arrayset(this.properties, property, value);
-    if (this.objects['3d']) {
-      this.initProperties();
-      var parent = this.objects['3d'].parent;
-      parent.remove(this.objects['3d']);
-      this.objects['3d'] = false;
-      this.init3D();
-      parent.add(this.objects['3d']);
-    }
-  }
-  this.get = function(property, defval) {
-    return elation.utils.arrayget(this.properties, property, defval);
-  }
-  this.init3D = function() {
-    this.objects['3d'] = this.createObject3D();
-    this.objects['3d'].position = this.position;
-    this.objects['3d'].quaternion = this.orientation;
-    this.objects['3d'].scale = this.get("physical.scale", new THREE.Vector3(1,1,1));
-    this.objects['3d'].useQuaternion = true;
-    this.objects['3d']._thing = this;
-  }
-  this.initDOM = function() {
-    this.objects['dom'] = this.createObjectDOM();
-    elation.html.addclass(this.container, "space.thing");
-    elation.html.addclass(this.container, "space.things." + this.type);
-    this.updateDOM();
-  }
-  this.initPhysics = function() {
-    this.createDynamics();
-  }
-  this.createObject3D = function() {
 
     var geometry = null, material = null;
     var geomparams = elation.utils.arrayget(this.properties, "generic.geometry") || {};
@@ -185,20 +196,11 @@ elation.component.add("engine.things.generic", function() {
     }
 
     var object = (geometry && material ? new THREE.Mesh(geometry, material) : new THREE.Object3D());
-//console.log("DOOBS", this, object);
-//console.log("\t\t", geomparams, materialparams);
     if (geometry && material) {
       if (geomparams.flipSided) material.side = THREE.BackSide;
       if (geomparams.doubleSided) material.side = THREE.DoubleSide;
     }
     return object;
-/*
-    var fuh = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshNormalMaterial());
-    fuh.position.z = -5;
-    fuh.rotation.y = Math.PI/4;
-    fuh.rotation.x = -Math.PI/4;
-    return fuh;
-*/
   }
   this.createObjectDOM = function() {
     return;
@@ -209,12 +211,15 @@ elation.component.add("engine.things.generic", function() {
       thing.parent = this;
       if (this.objects && thing.objects && this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].add(thing.objects['3d']);
+        elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       } else if (thing instanceof THREE.Object3D) {
         this.objects['3d'].add(thing);
+        elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       }
       if (this.container && thing.container) {
         this.container.appendChild(thing.container);
       }
+      elation.events.add(thing, 'thing_add', this);
     } else {
       console.log("Couldn't add ", thing, " already exists in ", this);
     }
@@ -230,74 +235,18 @@ elation.component.add("engine.things.generic", function() {
       console.log("Couldn't remove ", thing, " doesn't exist in ", this);
     }
   }
-  this.setState = function(state, value) {
-    this.state[state] = value;
-    elation.events.fire({element: this, type: "statechange", data: {state: state, value: value}});
-  }
-  this.setStates = function(states) {
-    for (var k in states) {
-      this.state[k] = states[k];
-    }
-    if (typeof this.updateParts == 'function') {
-      this.updateParts();
-    }
-  }
-  this.updateDOM = function() {
-    this.objects['3d'].updateMatrix();
-    this.objects['3d'].updateMatrixWorld();
-
-    return;
-    var cssStyle = "";
-    cssStyle += elation.space.viewport(0).toCSSMatrix(this.objects['3d'].matrixWorld, false);
-    cssStyle += " scale3d(1,-1,1)";
-    cssStyle += " translate3d(" + (-.5 * this.container.offsetWidth) + "px," + (-.5 * this.container.offsetHeight) + "px,0) ";
-    this.container.style.webkitTransform = cssStyle;
-    this.container.style.MozTransform = cssStyle;
-  }
-  this.addControlContext = function(contextname, mappings, obj) {
-    var commands = {}, bindings = {};
-    for (var k in mappings) {
-      if (elation.utils.isArray(mappings[k])) {
-        var keys = mappings[k][0].split(',');
-        if (obj) {
-          commands[k] = elation.bind(obj, mappings[k][1]);
-        } else {
-          commands[k] = mappings[k][1];
-        }
-      } else {
-        commands[k] = (function(statename) { return function(ev) { this.setState(statename, ev.value); } })(k);
-        var keys = mappings[k].split(',');
-      }
-      for (i = 0; i < keys.length; i++) {
-        bindings[keys[i]] = k;
-      }
-      this.state[k] = 0;
-    }
-
-    this.engine.systems.get('controls').addCommands(contextname, commands);
-    this.engine.systems.get('controls').addBindings(contextname, bindings);
-    this.controlcontext = contextname;
-  }
   this.createDynamics = function() {
     if (!this.objects['dynamics']) {
-      var velocity = elation.utils.arrayget(this.properties, 'physical.velocity');
-      if (!velocity) velocity = [0,0,0];
-      var angular = elation.utils.arrayget(this.properties, 'physical.rotationalvelocity');
-      if (!angular) angular = [0,0,0];
-
       this.objects['dynamics'] = new elation.physics.rigidbody({
-        position: this.position,
-        orientation: this.orientation,
-        mass: this.get("physical.mass", 1),
-        velocity: new THREE.Vector3(velocity[0], velocity[1], velocity[2]),
-        angular: new THREE.Vector3(angular[0] * Math.PI/180, angular[1] * Math.PI / 180, angular[2] * Math.PI / 180),
+        position: this.properties.position,
+        orientation: this.properties.orientation,
+        mass: this.properties.mass,
+        velocity: this.properties.velocity,
+        angular: this.properties.angular,
         object: this
       });
-      //this.dynamics.setVelocity([0,0,5]);
-      //this.dynamics.addForce("gravity", [0,-9800,0]);
       elation.physics.system.add(this.objects['dynamics']);
 
-      //this.updateCollisionSize();
       elation.events.add(this.objects['dynamics'], "dynamicsupdate,bounce", this);
     }
   }
@@ -306,20 +255,6 @@ elation.component.add("engine.things.generic", function() {
       elation.physics.system.remove(this.objects['dynamics']);
       delete this.objects['dynamics'];
     }
-  }
-  this.createCamera = function(offset, rotation) {
-    //var viewsize = this.engine.systems.get('render').views['main'].size;
-    var viewsize = [640, 480]; // FIXME - hardcoded hack!
-    this.cameras.push(new THREE.PerspectiveCamera(50, viewsize[0] / viewsize[1], .01, 1e15));
-    this.camera = this.cameras[this.cameras.length-1];
-    if (offset) {
-      this.camera.position.copy(offset)
-    }
-    if (rotation) {
-      this.camera.eulerOrder = "YZX";
-      this.camera.rotation.copy(rotation);
-    }
-    this.objects['3d'].add(this.camera);
   }
   this.loadJSON = function(url, texturepath) {
     if (typeof texturepath == 'undefined') {
@@ -337,7 +272,23 @@ elation.component.add("engine.things.generic", function() {
     mesh.receiveShadow = false;
     this.objects['3d'].add(mesh);
     //this.objects['3d'].updateCollisionSize();
-    elation.events.fire({type: "loaded", element: this, data: mesh});
+    elation.events.fire({type: "thing_load", element: this, data: mesh});
+  }
+  this.loadJSONScene = function(url, texturepath) {
+    if (typeof texturepath == 'undefined') {
+      texturepath = '/media/space/textures';
+    }
+    var loader = new THREE.SceneLoader();
+    loader.load(url, elation.bind(this, this.processJSONScene), texturepath);
+  }
+  this.processJSONScene = function(scenedata) {
+    this.objects['3d'].add(scenedata.scene);
+    this.extractEntities(scenedata.scene);
+    for (var k in scenedata.scene.children) {
+      //this.objects['3d'].add(scenedata.scene.children[k]);
+    }
+    //this.updateCollisionSize();
+    elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
   }
   this.loadCollada = function(url) {
     var loader = new THREE.ColladaLoader();
@@ -353,7 +304,7 @@ elation.component.add("engine.things.generic", function() {
     this.objects['3d'].add(collada.scene);
     this.extractEntities(collada.scene);
     //this.updateCollisionSize();
-    elation.events.fire({type: "loaded", element: this, data: collada.scene});
+    elation.events.fire({type: "thing_load", element: this, data: collada.scene});
   }
   this.extractEntities = function(scene) {
     this.cameras = [];
@@ -375,4 +326,63 @@ elation.component.add("engine.things.generic", function() {
     }
     //this.updateCollisionSize();
   }
+  this.spawn = function(type, spawnargs, orphan) {
+    if (!spawnargs) spawnargs = {};
+    var spawnname = type + Math.floor(Math.random() * 1000);
+    if (typeof elation.engine.things[type] != 'undefined') {
+      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, engine: this.engine, properties: { generic: spawnargs}});
+      if (!orphan) {
+        console.log('\t- new spawn', newguy, spawnargs);
+        this.add(newguy);
+      }
+    }
+  }
+  this.worldToLocal = function(worldpos) {
+    return this.objects['3d'].worldToLocal(worldpos);
+  }
+  this.localToWorld = function(localpos) {
+    return this.objects['3d'].localToWorld(localpos);
+  }
+  this.thing_add = function(ev) {
+    elation.events.fire({type: 'thing_add', element: this, data: ev.data});
+  }
 });
+
+/*
+  this.createCamera = function(offset, rotation) {
+    //var viewsize = this.engine.systems.get('render').views['main'].size;
+    var viewsize = [640, 480]; // FIXME - hardcoded hack!
+    this.cameras.push(new THREE.PerspectiveCamera(50, viewsize[0] / viewsize[1], .01, 1e15));
+    this.camera = this.cameras[this.cameras.length-1];
+    if (offset) {
+      this.camera.position.copy(offset)
+    }
+    if (rotation) {
+      this.camera.eulerOrder = "YZX";
+      this.camera.rotation.copy(rotation);
+    }
+    this.objects['3d'].add(this.camera);
+  }
+
+  // Sound functions
+  this.playSound = function(sound, volume, position, velocity) {
+    if (this.sounds[sound] && this.engine.systems.get('sound').enabled) {
+      this.updateSound(sound, volume, position, velocity);
+      this.sounds[sound].play();
+    }
+  }
+  this.stopSound = function(sound) {
+    if (this.sounds[sound] && this.sounds[sound].playing) {
+      this.sounds[sound].stop();
+    }
+  }
+  this.updateSound = function(sound, volume, position, velocity) {
+    if (this.sounds[sound]) {
+      if (!volume) volume = 100;
+      this.sounds[sound].setVolume(volume);
+      if (position) {
+        this.sounds[sound].setPan([position.x, position.y, position.z], (velocity ? [velocity.x, velocity.y, velocity.z] : [0,0,0]));
+      }
+    }
+  }
+*/
