@@ -53,6 +53,7 @@ elation.component.add("engine.things.generic", function() {
     }
     this.init3D();
     this.initDOM();
+    elation.events.fire({type: 'thing_create', element: this});
   }
   this.initProperties = function() {
     var props = (this.args.properties && this.args.properties.generic ? this.args.properties.generic : {});
