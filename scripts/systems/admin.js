@@ -1,7 +1,9 @@
 elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
-elation.template.add('engine.systems.admin.inspector.property', '{?value}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{:else}<span>{name}</span>{/value}');
+elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{/children}');
 
 elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.id} ({type})</span>');
+
+elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" elation:component="ui.select" elation:args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
 
 elation.extend("engine.systems.admin", function(args) {
   elation.implement(this, elation.engine.systems.system);
@@ -13,30 +15,6 @@ elation.extend("engine.systems.admin", function(args) {
 
     this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {world: this.world});
     this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world});
-
-/*
-    setTimeout(elation.bind(this, function() {
-      var controls = this.engine.systems.get('controls');
-      var view = this.engine.systems.get('render').views['main'];
-      controls.addCommands('admin', {
-        'move_left': elation.bind(view.camera, function() { this.position.x -= 1; }),
-        'move_right': elation.bind(view.camera, function() { this.position.x += 1; }),
-        'move_forward': elation.bind(view.camera, function() { this.position.z -= 1; }),
-        'move_back': elation.bind(view.camera, function() { this.position.z += 1; }),
-        'move_up': elation.bind(view.camera, function() { this.position.y += 1; }),
-        'move_down': elation.bind(view.camera, function() { this.position.y -= 1; })
-      });
-      controls.addBindings('admin', {
-        'keyboard_w': 'move_forward',
-        'keyboard_a': 'move_left',
-        'keyboard_s': 'move_back',
-        'keyboard_d': 'move_right',
-        'keyboard_r': 'move_up',
-        'keyboard_f': 'move_down',
-      });
-      controls.activateContext('admin');
-    }), 1000);
-*/
   }
   this.engine_frame = function(ev) {
     /* FIXME - silly hack! */
@@ -59,7 +37,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.world = this.args.world;
     this.container.innerHTML = '<h2>Scene</h2>';
     elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
-    elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
+    elation.events.add(this.world, 'engine_thing_create', this);
     if (this.world.loaded) {
       this.create();
     } else {
@@ -72,8 +50,21 @@ elation.component.add("engine.systems.admin.scenetree", function() {
       attrs: {
         children: 'children',
         label: 'id',
+        visible: 'properties.pickable',
         itemtemplate: 'engine.systems.admin.scenetree.thing'
       }
+    });
+    this.toolbar = elation.ui.buttonbar(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_toolbar'}), {
+      buttons: [
+        { 
+          label: '+',
+          events: { click: elation.bind(this, this.addItem) }
+        },
+        {
+          label: 'x',
+          events: { click: elation.bind(this, this.removeItem) }
+        }
+      ]
     });
     elation.events.add(this.treeview, 'ui_treeview_select,ui_treeview_hover', this);
     // TODO - object hover/selection should be made available when a specific selection mode is enabled
@@ -101,13 +92,62 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     */
   }
   this.ui_treeview_hover = function(ev) {
+    this.hoverthing = ev.data;
+    var li = ev.data.container;
+    this.toolbar.reparent(li);
   }
   this.ui_treeview_select = function(ev) {
     this.selectedthing = ev.data;
     elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
   }
-  this.world_thing_add = function(ev) {
-    //console.log("PLOP", ev);
+  this.thing_add = function(ev) {
+    console.log("admin: new item", ev);
+    // TODO - need to map the parent object to the appropriate <li> in the scenetree and append info for the new object
+  }
+  this.addItem = function() {
+    var addthing = elation.engine.systems.admin.addthing(null, elation.html.create(), {title: 'fuh'});
+    addthing.setParent(this.hoverthing.value);
+  }
+  this.removeItem = function() {
+    var thing = this.hoverthing.value;
+    //console.log('EXTERMINATE', thing);
+    thing.parent.remove(thing);
+    // TODO - need to remove object's <li> from scenetree
+  }
+});
+elation.component.add("engine.systems.admin.addthing", function() {
+  this.init = function() {
+    this.window = elation.ui.window(null, elation.html.create({classname: 'engine_admin_addthing style_box', append: document.body}), {title: 'Add Thing'});
+    this.window.setcontent(this.container);
+    this.create();
+  }
+  this.create = function() {
+    var tplvars = { };
+    var thingtypes = [];
+    for (var k in elation.engine.things) {
+      thingtypes.push(k);
+    }
+    tplvars.thingtypes = thingtypes.join(';');
+    var newhtml = elation.template.get('engine.systems.admin.addthing', tplvars);
+    console.log('tplvars:', tplvars, newhtml);
+    this.form = elation.html.create('form');
+    elation.events.add(this.form, 'submit', this);
+    this.form.innerHTML = newhtml;
+    this.container.appendChild(this.form);
+    elation.component.init(this.container);
+  }
+  this.setParent = function(newparent) {
+    this.parentthing = newparent;
+  }
+  this.submit = function(ev) {
+    ev.preventDefault();
+    console.log('make the new thing', this.form.type.value, this.form.name.value);
+    var type = this.form.type.value;
+    var name = this.form.name.value;
+    if (this.parentthing) {
+console.log(this.parentthing);
+      this.parentthing.spawn(type);
+    }
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
