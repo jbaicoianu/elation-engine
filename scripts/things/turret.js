@@ -66,7 +66,6 @@ elation.component.add("engine.things.turret", function(args) {
     elation.physics.system.add(this.hinges['mount']);
 
     this.spawn("turretcontroller");
-    this.spawn("gridhelper");
   }
 }, elation.engine.things.generic);
 
@@ -93,6 +92,7 @@ elation.component.add("engine.things.turretcontroller", function(args) {
 
     var deadzone = Math.PI/32;
 
+    // FIXME - target is hardcoded as camera for now; need proper target acquisition logic
     var turret = this.parent,
         target = this.engine.systems.get('render').views['main'].camera; //this.properties.target;
     if (turret && target) {
