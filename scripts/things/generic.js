@@ -9,6 +9,7 @@ elation.component.add("engine.things.generic", function() {
     this.name = this.args.name || '';
     this.type = this.args.type || 'generic';
     this.engine = this.args.engine;
+    this.properties = {};
     this.objects = {};
     this.children = {};
 
@@ -23,6 +24,8 @@ elation.component.add("engine.things.generic", function() {
       'velocity':       { type: 'vector3', default: [0, 0, 0], comment: 'Object velocity (m/s)' },
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
+      'exists':         { type: 'bool', default: true, comment: 'Exists' },
+      'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
       'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' }
@@ -46,38 +49,70 @@ elation.component.add("engine.things.generic", function() {
       this.preinit();
     }
 
-    this.initPhysics();
-
     if (typeof this.postinit == 'function') {
       this.postinit();
     }
+    this.migrateProperties();
     this.init3D();
     this.initDOM();
+    this.initPhysics();
+
     elation.events.fire({type: 'thing_create', element: this});
   }
   this.initProperties = function() {
-    var props = (this.args.properties && this.args.properties.generic ? this.args.properties.generic : {});
-    this.properties = {};
+    if (!this.properties) {
+      this.properties = {};
+    }
+
+    var props = this.migrateProperties(this.args.properties);
     for (var propname in this._thingdef.properties) {
-      var propval = this.get(propname);
       var prop = this._thingdef.properties[propname];
-      if (props && props[propname]) {
-        this.set(propname, this.getPropertyValue(prop.type, props[propname]));
-      } else if (elation.utils.isNull(propval) && !elation.utils.isNull(prop.default)) {
-        this.set(propname, this.getPropertyValue(prop.type, prop.default));
+      var propval = elation.utils.arrayget(this.properties, propname, null);
+      if (propval === null) {
+        if (!elation.utils.isNull(props[propname])) {
+          propval = props[propname] 
+        } else if (!elation.utils.isNull(prop.default)) {
+          propval = prop.default;
+        }
+        this.set(propname, propval);
       }
     }
+  }
+  this.migrateProperties = function(props) {
+    // FIXME - once all entries in the db have been updated, this is no longer necessary
+    if (!this.propargs) {
+      var newprops = {};
+      var preserve = ['render', 'capacity', 'sound', 'path', 'material'];
+      for (var propgroup in this.args.properties) {
+        for (var propname in this.args.properties[propgroup]) {
+          var fullpropname = (preserve.indexOf(propgroup) != -1 ? propgroup + '.' + propname : propname);
+          newprops[fullpropname] = this.args.properties[propgroup][propname];
+        }
+      }
+      this.propargs = newprops;
+    }
+    return this.propargs;
   }
   this.getPropertyValue = function(type, value) {
     switch (type) {
       case 'vector3':
-        value = (value instanceof THREE.Vector3 ? value : new THREE.Vector3(value[0], value[1], value[2]));
+        if (elation.utils.isArray(value)) {
+          value = new THREE.Vector3(value[0], value[1], value[2]);
+        } else if (elation.utils.isString(value)) {
+          var split = value.split(',');
+          value = new THREE.Vector3(split[0], split[1], split[2]);
+        }
         break;
       case 'quaternion':
-        value = new THREE.Quaternion(value[0], value[1], value[2], value[3]);
+        if (elation.utils.isArray(value)) {
+          value = new THREE.Quaternion(value[0], value[1], value[2], value[3]);
+        } else if (elation.utils.isString(value)) {
+          var split = value.split(',');
+          value = new THREE.Quaternion(split[0], split[1], split[2], split[3]);
+        }
         break;
       case 'bool':
-        value = (value === 1 || value === '1' || value === 'true');
+        value = !(value === false || value === 'false' || value === 0 || value === '0');
         break;
       case 'texture':
         value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
@@ -93,17 +128,36 @@ elation.component.add("engine.things.generic", function() {
     elation.utils.merge(actions, this._thingdef.actions);
   }
   this.defineEvents = function(events) {
+    elation.utils.merge(events, this._thingdef.events);
   }
 
   this.set = function(property, value, forcerefresh) {
-    elation.utils.arrayset(this.properties, property, value);
-    if (forcerefresh && this.objects['3d']) {
+    var propval = this.getPropertyValue(this._thingdef.properties[property].type, value);
+    var currval = this.get(property);
+    if (currval !== null) {
+      switch (this._thingdef.properties[property].type) {
+        case 'vector2':
+        case 'vector3':
+        case 'vector4':
+        case 'quaternion':
+          currval.copy(propval);
+          break;
+        default:
+          elation.utils.arrayset(this.properties, property, propval);
+      }
+    } else {
+      elation.utils.arrayset(this.properties, property, propval);
+    }
+    if (false && forcerefresh && this.objects['3d']) {
       this.initProperties();
       var parent = this.objects['3d'].parent;
       parent.remove(this.objects['3d']);
       this.objects['3d'] = false;
-      //this.init3D();
+      this.init3D();
       parent.add(this.objects['3d']);
+    }
+    if (this.objects.dynamics) {
+      this.objects.dynamics.updateState();
     }
   }
   this.get = function(property, defval) {
@@ -112,11 +166,13 @@ elation.component.add("engine.things.generic", function() {
   }
   this.init3D = function() {
     this.objects['3d'] = this.createObject3D();
-    this.objects['3d'].position = this.properties.position;
-    this.objects['3d'].quaternion = this.properties.orientation;
-    this.objects['3d'].scale = this.properties.scale;
-    this.objects['3d'].useQuaternion = true;
-    this.objects['3d']._thing = this;
+    if (this.objects['3d']) {
+      this.objects['3d'].position = this.properties.position;
+      this.objects['3d'].quaternion = this.properties.orientation;
+      this.objects['3d'].scale = this.properties.scale;
+      this.objects['3d'].useQuaternion = true;
+      this.objects['3d']._thing = this;
+    }
   }
   this.initDOM = function() {
     this.objects['dom'] = this.createObjectDOM();
@@ -128,6 +184,8 @@ elation.component.add("engine.things.generic", function() {
     this.createDynamics();
   }
   this.createObject3D = function() {
+    if (this.properties.exists === false) return;
+
     if (this.properties.render) {
       if (this.properties.render.scene) {
         this.loadJSONScene(this.properties.render.scene, this.properties.render.texturepath);
@@ -196,11 +254,19 @@ elation.component.add("engine.things.generic", function() {
       }
     }
 
+    if (!geometry && !material) {
+      geometry = new THREE.CubeGeometry(1, 1, 1);
+      material = new THREE.MeshPhongMaterial({color: 0xcccccc, opacity: .2, emissive: 0x333333, transparent: true});
+      //console.log('made placeholder thing', geometry, material);
+    }
+
     var object = (geometry && material ? new THREE.Mesh(geometry, material) : new THREE.Object3D());
     if (geometry && material) {
       if (geomparams.flipSided) material.side = THREE.BackSide;
       if (geomparams.doubleSided) material.side = THREE.DoubleSide;
     }
+    this.objects['3d'] = object;
+    this.spawn('gridhelper');
     return object;
   }
   this.createObjectDOM = function() {
@@ -333,7 +399,7 @@ elation.component.add("engine.things.generic", function() {
     if (typeof elation.engine.things[type] != 'undefined') {
       var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, engine: this.engine, properties: { generic: spawnargs}});
       if (!orphan) {
-        console.log('\t- new spawn', newguy, spawnargs);
+        //console.log('\t- new spawn', newguy, spawnargs);
         this.add(newguy);
       }
     }
