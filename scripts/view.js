@@ -30,7 +30,8 @@ elation.component.add("engine.view", function() {
     }
     this.rendersystem.view_add(this.id, this);
 
-    var cam = new THREE.PerspectiveCamera(50, this.container.offsetWidth / this.container.offsetHeight, .001, 5000000000);
+    var cam = new THREE.PerspectiveCamera(50, this.container.offsetWidth / this.container.offsetHeight, .01, 500000000);
+
     cam.position.x = 0;
     cam.position.z = 0;
     cam.position.y = 1;
@@ -122,7 +123,7 @@ cam.rotation.x = -Math.PI/24;
     this.scene = scene;
   }
   this.setskyscene = function(scene) {
-    this.skyscene = scene;
+    this.skyscene = scene || new THREE.Scene();
     this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
     this.skycamera.rotation = this.camera.rotation;
     this.skycamera.quaternion = this.camera.quaternion;
@@ -252,7 +253,12 @@ cam.rotation.x = -Math.PI/24;
       if (node.material) {
         realmaterials[objid] = node.material;
         realvisible[objid] = node.visible;
-        node.material = this.getPickingMaterial(objid);
+        var parent = this.getParentThing(node);
+        if (parent.properties.pickable) {
+          node.material = this.getPickingMaterial(objid);
+        } else {
+          node.visible = false;
+        }
         objects[objid] = node;
         objid++;
       }
