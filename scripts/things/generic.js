@@ -112,7 +112,7 @@ elation.component.add("engine.things.generic", function() {
         }
         break;
       case 'bool':
-        value = !(value === false || value === 'false' || value === 0 || value === '0');
+        value = !(value === false || value === 'false' || value === 0 || value === '0' || value === '' || value === null || typeof value == 'undefined');
         break;
       case 'texture':
         value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
@@ -397,7 +397,7 @@ elation.component.add("engine.things.generic", function() {
     if (!spawnargs) spawnargs = {};
     var spawnname = type + Math.floor(Math.random() * 1000);
     if (typeof elation.engine.things[type] != 'undefined') {
-      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, engine: this.engine, properties: { generic: spawnargs}});
+      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, type: type, engine: this.engine, properties: { generic: spawnargs}});
       if (!orphan) {
         //console.log('\t- new spawn', newguy, spawnargs);
         this.add(newguy);
