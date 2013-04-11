@@ -4,12 +4,14 @@ elation.component.add("engine.things.sector", function() {
       'fog.enabled':             { type: 'bool', default: false },
       'fog.color':               { type: 'color', default: 0x000000 },
       'fog.factor':              { type: 'float', default: 0.0000008 },
-      'ambient.enabled':         { type: 'bool', default: false },
+      'ambient.enabled':         { type: 'bool', default: true },
       'ambient.color':           { type: 'color', default: 0x333333 },
-      'light.enabled':           { type: 'bool', default: false },
+      'light.enabled':           { type: 'bool', default: true },
       'light.color':             { type: 'color', default: 0xffffff },
-      'light.position':          { type: 'vector3', default: [0,500,-500] },
-      'skybox.enabled':          { type: 'bool', default: 0 },
+      'light.position':          { type: 'vector3', default: [0,5000,-500] },
+      'plane.enabled':           { type: 'bool', default: true },
+      'skybox.cubePath':         { type: 'string' },
+      'skybox.enabled':          { type: 'bool', default: false },
       'skybox.cubePath':         { type: 'string' },
       'terrain.enabled':         { type: 'bool', default: false },
       'terrain.args.simple':     { type: 'bool', default: true },
@@ -34,6 +36,7 @@ elation.component.add("engine.things.sector", function() {
     if (this.properties.terrain.enabled) {
       this.spawn('terrain', this.properties.terrain.args);
     }
+    //this.spawn("gridhelper", {range: 20});
     return obj;
   }
   this.setSky = function() {
