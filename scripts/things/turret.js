@@ -101,8 +101,10 @@ elation.component.add("engine.things.turretcontroller", function(args) {
  
       var dist = aim.position.distanceTo(target.position);
       if (dist < turret.properties.range) {
-        var targetdir = turret.parts['Turret_mount'].worldToLocal(target.position.clone()).normalize();
-        var aimdir = turret.parts['Turret_mount'].worldToLocal(aim.velocity.clone()).normalize();
+        var targetpos = new THREE.Vector3().getPositionFromMatrix(target.matrixWorld);
+        var mypos = new THREE.Vector3().getPositionFromMatrix(this.parent.objects['3d'].matrixWorld);
+        var targetdir = turret.parts['Turret_mount'].worldToLocal(targetpos).normalize();
+        var aimdir = turret.parts['Turret_mount'].worldToLocal(aim.velocity.clone().add(mypos)).normalize();
 
         var t = new THREE.Vector3(targetdir.x, 0, targetdir.y).normalize();
         var a = new THREE.Vector3(aimdir.x, 0, aimdir.y).normalize();
