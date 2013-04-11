@@ -1,14 +1,17 @@
 /* grid helper */
 elation.component.add("engine.things.gridhelper", function() {
   this.postinit = function() {
+    this.defineProperties({
+      'range': { type: 'float', default: 5 },
+    });
+    this.set('pickable', false);
   }
   this.createObject3D = function() {
     var obj = new THREE.Object3D();
-    var range = this.args.range || 5;
-    var extent = range * 2;
+    var extent = this.properties.range * 2;
     var numverts = Math.pow(extent+1, 3);
 
-    var planemat = elation.engine.utils.materials.getShaderMaterial("gridhelper_line", {range: range});
+    var planemat = elation.engine.utils.materials.getShaderMaterial("gridhelper_line", {range: this.properties.range});
     planemat.blending = THREE.NormalBlending;
     planemat.transparent = true;
     planemat.depthWrite = false;
@@ -23,9 +26,9 @@ elation.component.add("engine.things.gridhelper", function() {
     var planexz = new THREE.Mesh(planegeo, planemat.clone());
     planeyz.rotation.y = Math.PI/2;
     planexz.rotation.x = Math.PI/2;
-    planexy.material.uniforms.color.value.setHex(0x6666ff);
-    planeyz.material.uniforms.color.value.setHex(0xff6666);
-    planexz.material.uniforms.color.value.setHex(0x66ff66);
+    planexy.material.uniforms.color.value.setHex(0x666699);
+    planeyz.material.uniforms.color.value.setHex(0x996666);
+    planexz.material.uniforms.color.value.setHex(0x669966);
     planexy.material.uniforms.axes.value.set(1,1,0);
     planeyz.material.uniforms.axes.value.set(0,1,1);
     planexz.material.uniforms.axes.value.set(1,0,1);
@@ -68,7 +71,7 @@ elation.engine.utils.materials.addChunk("gridhelper_line", {
     "if (abs(vaPos.x - float(int(vaPos.x))) < 0.05 * axes.x || ",
     "     abs(vaPos.y - float(int(vaPos.y))) < 0.05 * axes.y || ",
     "     abs(vaPos.z - float(int(vaPos.z))) < 0.05 * axes.z) { d = 1.0; }",
-    "float opacity = 1.0 - (pow(sqrt(vrPos.x * vrPos.x + vrPos.y * vrPos.y + vrPos.z * vrPos.z) / range, 2.0)) ;",
+    "float opacity = (1.0 - (pow(sqrt(vrPos.x * vrPos.x + vrPos.y * vrPos.y + vrPos.z * vrPos.z) / range, 2.0))) / 5.0 ;",
     "gl_FragColor = vec4( vColor, d * opacity);",
   ].join('\n'),
 });
