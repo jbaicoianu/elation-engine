@@ -85,16 +85,16 @@ elation.extend("engine.systems.world", function(args) {
         var skygeom = new THREE.CubeGeometry(1,1,1, 10, 10, 10);
         var skymat = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide, wireframe: true, depthWrite: false});
 
-      var shader = THREE.ShaderLib[ "cube" ];
-      shader.uniforms[ "tCube" ].value = texture;
+        var shader = THREE.ShaderLib[ "cube" ];
+        shader.uniforms[ "tCube" ].value = texture;
 
-      var skymat = new THREE.ShaderMaterial( {
-        fragmentShader: shader.fragmentShader,
-        vertexShader: shader.vertexShader,
-        uniforms: shader.uniforms,
-        depthWrite: false,
-        side: THREE.DoubleSide
-      } );
+        var skymat = new THREE.ShaderMaterial( {
+          fragmentShader: shader.fragmentShader,
+          vertexShader: shader.vertexShader,
+          uniforms: shader.uniforms,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        } );
 
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
