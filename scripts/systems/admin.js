@@ -37,7 +37,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.world = this.args.world;
     this.container.innerHTML = '<h2>Scene</h2>';
     elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
-    elation.events.add(this.world, 'engine_thing_create', this);
+    elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
     if (this.world.loaded) {
       this.create();
     } else {
@@ -91,6 +91,9 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     }));
     */
   }
+  this.updateTreeview = function() {
+    this.treeview.setItems(this.world.children);
+  }
   this.ui_treeview_hover = function(ev) {
     this.hoverthing = ev.data;
     var li = ev.data.container;
@@ -100,9 +103,10 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.selectedthing = ev.data;
     elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
   }
-  this.thing_add = function(ev) {
+  this.world_thing_add = function(ev) {
     console.log("admin: new item", ev);
     // TODO - need to map the parent object to the appropriate <li> in the scenetree and append info for the new object
+    this.treeview.setItems(this.world.children);
   }
   this.addItem = function() {
     var addthing = elation.engine.systems.admin.addthing(null, elation.html.create(), {title: 'fuh'});
@@ -113,6 +117,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     //console.log('EXTERMINATE', thing);
     thing.parent.remove(thing);
     // TODO - need to remove object's <li> from scenetree
+    this.treeview.setItems(this.world.children);
   }
 });
 elation.component.add("engine.systems.admin.addthing", function() {
@@ -135,6 +140,8 @@ elation.component.add("engine.systems.admin.addthing", function() {
     this.form.innerHTML = newhtml;
     this.container.appendChild(this.form);
     elation.component.init(this.container);
+    this.form.name.focus();
+    this.window.center();
   }
   this.setParent = function(newparent) {
     this.parentthing = newparent;
@@ -145,8 +152,8 @@ elation.component.add("engine.systems.admin.addthing", function() {
     var type = this.form.type.value;
     var name = this.form.name.value;
     if (this.parentthing) {
-console.log(this.parentthing);
       this.parentthing.spawn(type);
+      this.window.close();
     }
   }
 });
