@@ -1,7 +1,7 @@
 elation.component.add('engine.things.planet', function() {
   this.postinit = function() {
     this.defineProperties({
-      'radius': { type: 'float', default: 1000 },
+      'radius': { type: 'float', default: 1 },
       'render.texture': { type: 'texture' },
       'render.normalmap': { type: 'texture' },
       'render.bumpmap': { type: 'texture' },
@@ -14,6 +14,9 @@ elation.component.add('engine.things.planet', function() {
     if (this.properties.radius.texture) matargs.map = this.properties.radius.texture;
     if (this.properties.radius.normalmap) matargs.normalMap = this.properties.radius.normalmap;
     if (this.properties.radius.bumpmap) matargs.bumpMap = this.properties.radius.bumpMap;
+
+    matargs.shininess = 1;
+    matargs.specular = 0xffffff;
 
     var mat = new THREE.MeshPhongMaterial(matargs);
     return new THREE.Mesh(geo, mat);
