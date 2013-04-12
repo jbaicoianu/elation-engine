@@ -25,6 +25,7 @@ elation.component.add("engine.things.generic", function() {
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
+      'persist':        { type: 'bool', default: true, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
       'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
@@ -82,10 +83,13 @@ elation.component.add("engine.things.generic", function() {
     // FIXME - once all entries in the db have been updated, this is no longer necessary
     if (!this.propargs) {
       var newprops = {};
-      var preserve = ['render', 'capacity', 'sound', 'path', 'material'];
+      if (this.args.properties && !this.args.properties.generic) {
+        this.args.properties = { physical: this.args.properties };
+      }
+      var squash = ['physical', 'generic'];
       for (var propgroup in this.args.properties) {
         for (var propname in this.args.properties[propgroup]) {
-          var fullpropname = (preserve.indexOf(propgroup) != -1 ? propgroup + '.' + propname : propname);
+          var fullpropname = (squash.indexOf(propgroup) != -1 ? propname : propgroup + '.' + propname);
           newprops[fullpropname] = this.args.properties[propgroup][propname];
         }
       }
@@ -97,18 +101,18 @@ elation.component.add("engine.things.generic", function() {
     switch (type) {
       case 'vector3':
         if (elation.utils.isArray(value)) {
-          value = new THREE.Vector3(value[0], value[1], value[2]);
+          value = new THREE.Vector3(+value[0], +value[1], +value[2]);
         } else if (elation.utils.isString(value)) {
           var split = value.split(',');
-          value = new THREE.Vector3(split[0], split[1], split[2]);
+          value = new THREE.Vector3(+split[0], +split[1], +split[2]);
         }
         break;
       case 'quaternion':
         if (elation.utils.isArray(value)) {
-          value = new THREE.Quaternion(value[0], value[1], value[2], value[3]);
+          value = new THREE.Quaternion(+value[0], +value[1], +value[2], +value[3]);
         } else if (elation.utils.isString(value)) {
           var split = value.split(',');
-          value = new THREE.Quaternion(split[0], split[1], split[2], split[3]);
+          value = new THREE.Quaternion(+split[0], +split[1], +split[2], +split[3]);
         }
         break;
       case 'bool':
@@ -266,7 +270,7 @@ elation.component.add("engine.things.generic", function() {
       if (geomparams.doubleSided) material.side = THREE.DoubleSide;
     }
     this.objects['3d'] = object;
-    this.spawn('gridhelper');
+    this.spawn('gridhelper', {persist: false});
     return object;
   }
   this.createObjectDOM = function() {
@@ -409,6 +413,57 @@ elation.component.add("engine.things.generic", function() {
   }
   this.localToWorld = function(localpos) {
     return this.objects['3d'].localToWorld(localpos);
+  }
+  this.serialize = function() {
+    var ret = {
+      name: this.name,
+      parentname: this.parentname,
+      type: this.type,
+      properties: {},
+      things: {}
+    };
+    var numprops = 0,
+        numthings = 0;
+
+    for (var k in this._thingdef.properties) {
+      var propdef = this._thingdef.properties[k];
+      var propval = this.get(k);
+      if (propval !== null) {
+        switch (propdef.type) {
+          case 'vector2':
+          case 'vector3':
+          case 'vector4':
+            propval = propval.toArray();
+            for (var i = 0; i < propval.length; i++) propval[i] = +propval[i]; // FIXME - force to float 
+            break;
+          case 'quaternion':
+            propval = [propval.x, propval.y, propval.z, propval.w];
+            break;
+          case 'texture':
+            propval = propval.sourceFile;
+          /*
+          case 'color':
+            propval = propval.getHex();
+            break;
+          */
+        }
+        if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
+          elation.utils.arrayset(ret.properties, k, propval);
+          numprops++;
+        }
+      }
+    }
+    if (numprops == 0) delete ret.properties;
+
+    for (var k in this.children) {
+      if (this.children[k].properties.persist) {
+        ret.things[k] = this.children[k].serialize();
+        numthings++;
+      }
+    }
+    if (numthings == 0) delete ret.things;
+
+    return ret;
   }
   this.thing_add = function(ev) {
     elation.events.fire({type: 'thing_add', element: this, data: ev.data});
