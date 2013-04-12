@@ -2,7 +2,7 @@
 elation.component.add("engine.things.gridhelper", function() {
   this.postinit = function() {
     this.defineProperties({
-      'range': { type: 'float', default: 5 },
+      'range': { type: 'float', default: 5 }
     });
     this.set('pickable', false);
   }
