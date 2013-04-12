@@ -12,7 +12,8 @@ elation.component.add("engine.things.turret", function(args) {
       'reloadtime':      { type: 'integer', default: 2000 },
       'muzzleoffset':    { type: 'vector3', default: [0,0,0] },
       'muzzlespeed':     { type: 'float', default: 150.0 },
-      'range':           { type: 'float', default: 300.0 }
+      'range':           { type: 'float', default: 300.0 },
+      'render.scene':    { default: '/media/space/models/turret/A1 Turret.js' },
     });
     this.defineActions({
       'pitch': this.pitch,
@@ -31,7 +32,7 @@ elation.component.add("engine.things.turret", function(args) {
     this.hinges['gun'].updateState();
   }
   this.yaw = function(amount) {
-    this.yawvel.set(0, 0, amount * this.properties.pitchspeed);
+    this.yawvel.set(0, 0, amount * this.properties.yawspeed);
     this.hinges['mount'].updateState();
   }
   this.fire = function(amount) {
@@ -65,7 +66,7 @@ elation.component.add("engine.things.turret", function(args) {
     });
     elation.physics.system.add(this.hinges['mount']);
 
-    this.spawn("turretcontroller");
+    this.spawn("turretcontroller", {persist: false});
   }
 }, elation.engine.things.generic);
 
