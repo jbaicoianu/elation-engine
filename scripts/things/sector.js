@@ -28,13 +28,24 @@ elation.component.add("engine.things.sector", function() {
     var obj = new THREE.Object3D();
     this.objects['3d'] = obj;
     if (this.properties.light.enabled) {
-      this.spawn('light', {type: 'point', position: this.properties.light.position, color: this.properties.light.color});
+      this.spawn('light', {type: 'point', position: this.properties.light.position, color: this.properties.light.color, persist: false});
     }
     if (this.properties.ambient.enabled) {
-      this.spawn('light', {type: 'ambient', color: this.properties.ambient.color});
+      this.spawn('light', {type: 'ambient', color: this.properties.ambient.color, persist: false});
     }
     if (this.properties.terrain.enabled) {
       this.spawn('terrain', this.properties.terrain.args);
+    }
+    if (this.properties.plane.enabled) {
+      var planegeo = new THREE.PlaneGeometry(32,32,32,32)
+      var rot = new THREE.Matrix4().setRotationFromEuler(new THREE.Vector3(-Math.PI/2, 0, 0));
+      planegeo.applyMatrix(rot);
+
+      var planemat = new THREE.MeshBasicMaterial({color: 0xeeeeee, wireframe: true, opacity: 0.1, transparent: true});
+      planemat.depthWrite = false;
+
+      var plane = new THREE.Mesh(planegeo, planemat);
+      obj.add(plane);
     }
     //this.spawn("gridhelper", {range: 20});
     return obj;
