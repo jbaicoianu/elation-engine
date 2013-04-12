@@ -7,17 +7,34 @@ elation.extend("engine.systems.world", function(args) {
     'world-dom': new THREE.Scene(),
     'sky': false
   };
+  this.persistdelay = 1000;
+  this.lastpersist = 0;
+
   //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
 
   this.system_attach = function(ev) {
     console.log('INIT: world', this, args);
     this.loaded = false;
-    if (!elation.utils.isEmpty(args)) {
+
+    this.rootname = (args ? args.parentname + '/' + args.name : '/');
+
+    // First check localStorage for an overridden world definition
+    if (localStorage && localStorage['elation.engine.world.override:' + this.rootname]) {
+      var world = JSON.parse(localStorage['elation.engine.world.override:' + this.rootname]);
+      this.load(world);
+    } 
+
+    // If no local world override, load from args
+    if (!this.loaded && !elation.utils.isEmpty(args)) {
       this.load(args);
     }
   }
   this.engine_frame = function(ev) {
-    //console.log('FRAME: world');
+    //console.log('FRAME: world', ev);
+    if (ev.timeStamp > this.lastpersist + this.persistdelay) {
+      this.persist();
+      this.lastpersist = ev.timeStamp;
+    }
   }
   this.engine_stop = function(ev) {
     console.log('SHUTDOWN: world');
@@ -77,6 +94,17 @@ elation.extend("engine.systems.world", function(args) {
       this.loaded = true;
       elation.events.fire({type: 'engine_world_init', element: this});
     }
+  }
+  this.serialize = function() {
+    var ret = {};
+    for (var k in this.children) {
+      ret[k] = this.children[k].serialize();
+    }
+    return ret[k]; // FIXME - dumb
+  }
+  this.persist = function() {
+    localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
+    //console.log('persist', localStorage['elation.engine.world.override']);
   }
   this.setSky = function(texture) {
     if (texture !== false) {

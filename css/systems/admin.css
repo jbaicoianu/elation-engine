@@ -163,11 +163,25 @@ span.engine_thing_object_Camera:before {
   top: -.1em;
   right: 0;
   font-size: .6em;
-  background: rgba(255,0,0,.5);
   margin: 0;
   padding: 0;
 }
 .engine_admin_scenetree_toolbar button {
   margin: 0;
   padding: 0 .2em;
+}
+.engine_systems_world_sync {
+  display: inline-block;
+  width: .5em;
+  height: .5em;
+  vertical-align: middle;
+  background: #1e1;
+  border: 1px solid black;
+  border-radius: .5em;
+  float: right;
+  margin-top: .3em;
+  box-shadow: 0 0 .5em rgba(0,0,0,.8);
+}
+.engine_systems_world_sync.state_desync {
+  background: red;
 }

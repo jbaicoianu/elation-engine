@@ -35,7 +35,7 @@ elation.extend("engine.systems.admin", function(args) {
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
-    this.container.innerHTML = '<h2>Scene</h2>';
+    this.container.innerHTML = '<h2>Scene <span class="engine_systems_world_sync"></span></h2>';
     elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
     elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
     if (this.world.loaded) {
@@ -104,9 +104,9 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
   }
   this.world_thing_add = function(ev) {
-    console.log("admin: new item", ev);
-    // TODO - need to map the parent object to the appropriate <li> in the scenetree and append info for the new object
+    // refresh tree view when new items are added
     this.treeview.setItems(this.world.children);
+    ev.target.persist();
   }
   this.addItem = function() {
     var addthing = elation.engine.systems.admin.addthing(null, elation.html.create(), {title: 'fuh'});
@@ -114,9 +114,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   }
   this.removeItem = function() {
     var thing = this.hoverthing.value;
-    //console.log('EXTERMINATE', thing);
     thing.parent.remove(thing);
-    // TODO - need to remove object's <li> from scenetree
     this.treeview.setItems(this.world.children);
   }
 });
@@ -148,7 +146,6 @@ elation.component.add("engine.systems.admin.addthing", function() {
   }
   this.submit = function(ev) {
     ev.preventDefault();
-    console.log('make the new thing', this.form.type.value, this.form.name.value);
     var type = this.form.type.value;
     var name = this.form.name.value;
     if (this.parentthing) {
