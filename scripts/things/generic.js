@@ -34,6 +34,7 @@ elation.component.add("engine.things.generic", function() {
     this.defineEvents({
       'thing_create': [],
       'thing_add': ['child'],
+      'thing_load': ['mesh'],
       'thing_remove': [],
       'thing_destroy': [],
       'thing_tick': ['delta'],
@@ -291,9 +292,11 @@ elation.component.add("engine.things.generic", function() {
         this.container.appendChild(thing.container);
       }
       elation.events.add(thing, 'thing_add', this);
+      return true;
     } else {
       console.log("Couldn't add ", thing, " already exists in ", this);
     }
+    return false;
   }
   this.remove = function(thing) {
     if (this.children[thing.id]) {
@@ -305,6 +308,15 @@ elation.component.add("engine.things.generic", function() {
     } else {
       console.log("Couldn't remove ", thing, " doesn't exist in ", this);
     }
+  }
+  this.reparent = function(newparent) {
+    if (newparent) {
+      if (this.parent) {
+        this.parent.remove(this);
+      }
+      return newparent.add(this);
+    }
+    return false;
   }
   this.createDynamics = function() {
     if (!this.objects['dynamics']) {
@@ -341,9 +353,9 @@ elation.component.add("engine.things.generic", function() {
     mesh.doubleSided = false;
     mesh.castShadow = false;
     mesh.receiveShadow = false;
-    this.objects['3d'].add(mesh);
     //this.objects['3d'].updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: mesh});
+    this.objects['3d'].add(mesh);
   }
   this.loadJSONScene = function(url, texturepath) {
     if (typeof texturepath == 'undefined') {
@@ -353,13 +365,10 @@ elation.component.add("engine.things.generic", function() {
     loader.load(url, elation.bind(this, this.processJSONScene), texturepath);
   }
   this.processJSONScene = function(scenedata) {
-    this.objects['3d'].add(scenedata.scene);
     this.extractEntities(scenedata.scene);
-    for (var k in scenedata.scene.children) {
-      //this.objects['3d'].add(scenedata.scene.children[k]);
-    }
     //this.updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
+    this.objects['3d'].add(scenedata.scene);
   }
   this.loadCollada = function(url) {
     var loader = new THREE.ColladaLoader();
@@ -372,10 +381,10 @@ elation.component.add("engine.things.generic", function() {
   this.processCollada = function(collada) {
     collada.scene.rotation.x = -Math.PI / 2;
     collada.scene.rotation.z = Math.PI;
-    this.objects['3d'].add(collada.scene);
     this.extractEntities(collada.scene);
     //this.updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: collada.scene});
+    this.objects['3d'].add(collada.scene);
   }
   this.extractEntities = function(scene) {
     this.cameras = [];
@@ -401,7 +410,7 @@ elation.component.add("engine.things.generic", function() {
     if (!spawnargs) spawnargs = {};
     var spawnname = type + Math.floor(Math.random() * 1000);
     if (typeof elation.engine.things[type] != 'undefined') {
-      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, type: type, engine: this.engine, properties: { generic: spawnargs}});
+      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, type: type, engine: this.engine, properties: spawnargs });
       if (!orphan) {
         //console.log('\t- new spawn', newguy, spawnargs);
         this.add(newguy);
@@ -456,9 +465,13 @@ elation.component.add("engine.things.generic", function() {
     if (numprops == 0) delete ret.properties;
 
     for (var k in this.children) {
-      if (this.children[k].properties.persist) {
-        ret.things[k] = this.children[k].serialize();
-        numthings++;
+      if (this.children[k].properties) {
+        if (this.children[k].properties.persist) {
+          ret.things[k] = this.children[k].serialize();
+          numthings++;
+        }
+      } else {
+        console.log('huh what', k, this.children[k]);
       }
     }
     if (numthings == 0) delete ret.things;
