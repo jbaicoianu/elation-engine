@@ -18,11 +18,13 @@ elation.extend("engine.systems.world", function(args) {
 
     this.rootname = (args ? args.parentname + '/' + args.name : '/');
 
+/*
     // First check localStorage for an overridden world definition
     if (localStorage && localStorage['elation.engine.world.override:' + this.rootname]) {
       var world = JSON.parse(localStorage['elation.engine.world.override:' + this.rootname]);
       this.load(world);
     } 
+*/
 
     // If no local world override, load from args
     if (!this.loaded && !elation.utils.isEmpty(args)) {
