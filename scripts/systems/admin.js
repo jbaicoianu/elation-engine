@@ -7,6 +7,9 @@ elation.template.add('engine.systems.admin.addthing', 'Add new <select name="typ
 
 elation.extend("engine.systems.admin", function(args) {
   elation.implement(this, elation.engine.systems.system);
+
+  this.cameraactive = true;
+
   this.system_attach = function(ev) {
     console.log('INIT: admin');
 
@@ -18,31 +21,56 @@ elation.extend("engine.systems.admin", function(args) {
   }
   this.engine_frame = function(ev) {
     /* FIXME - silly hack! */
-    if (!this.flycontrols) {
-      var render = this.engine.systems.get('render');
-      if (render.views['main']) {
-        var view = this.engine.systems.get('render').views['main'];
-        this.flycontrols = new THREE.FlyControls(view.camera, view.container);
-        this.flycontrols.movementSpeed = 10;
-        this.flycontrols.rollSpeed = Math.PI/4;
-        this.flycontrols.dragToLook = true;
-      }
-    } else {
-      this.flycontrols.update(ev.data.delta);
+    if ( this.cameraactive && !this.admincontrols) {
+      this.createCamera();
+    } else if (this.cameraactive) {
+      this.admincontrols.update(ev.data.delta);
     }
+  }
+  this.createCamera = function() {
+    var render = this.engine.systems.get('render');
+    if (render.views['main']) {
+      var view = this.engine.systems.get('render').views['main'];
+      this.admincontrols = new THREE.OrbitControls(view.camera, view.container);
+      this.admincontrols.rotateDown(Math.PI/4);
+      this.admincontrols.rotateRight(Math.PI/4);
+      this.admincontrols.zoomOut(25);
+      this.admincontrols.userPanSpeed = .1;
+      this.admincontrols.enable();
+
+      /*
+      this.admincontrols = new THREE.FlyControls(view.camera, view.container);
+      this.admincontrols.movementSpeed = 10;
+      this.admincontrols.rollSpeed = Math.PI/4;
+      this.admincontrols.dragToLook = true;
+      */
+      this.admincontrols.update(0);
+      this.cameraactive = true;
+    }
+  }
+  this.setCameraActive = function(active) {
+    this.cameraactive = active;
+    if (active) this.admincontrols.enable();
+    else this.admincontrols.disable();
   }
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
-    this.container.innerHTML = '<h2>Scene <span class="engine_systems_world_sync"></span></h2>';
-    elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
+    this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: 'Scene'});
+    //this.container.innerHTML = '<h2>Scene <span class="engine_systems_world_sync"></span></h2>';
+    this.window.setcontent(this.container);
+    //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
     elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
     if (this.world.loaded) {
       this.create();
     } else {
       elation.events.add(this.world, "engine_world_init", elation.bind(this, this.create));
     }
+    this.indicator = elation.ui.indicator(null, elation.html.create({append: this.window.titlebar}));
+    this.indicator.setState('state_desync');
+
+    this.manipulator = elation.engine.things.manipulator('manipulator', elation.html.create(), {persist: false, name: 'manipulator', type: 'manipulator', engine: this.world.engine}); 
   }
   this.create = function() {
     this.treeview = elation.ui.treeview(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_list', append: this.container}), {
@@ -100,8 +128,13 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.toolbar.reparent(li);
   }
   this.ui_treeview_select = function(ev) {
-    this.selectedthing = ev.data;
-    elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
+    var thing = ev.data.value;
+    if (thing != this.manipulator) {
+      this.selectedthing = ev.data;
+      //this.selectedthing.value.spawn('manipulator', {persist: false});
+      this.manipulator.reparent(thing);
+      elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
+    }
   }
   this.world_thing_add = function(ev) {
     // refresh tree view when new items are added
