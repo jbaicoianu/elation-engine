@@ -180,32 +180,46 @@ cam.rotation.x = -Math.PI/24;
     }
     this.mousepos = [ev.clientX, ev.clientY];
   }
+  this.mousedown = function(ev) {
+    if (this.pickingactive && this.pickingobject) {
+      this.cancelclick = false;
+      var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY});
+      for (var i = 0; i < fired.length; i++) {
+        if (fired[i].cancelBubble) ev.stopPropagation();
+      }
+    }
+  }
   this.mousemove = function(ev) {
     this.mousepos = [ev.clientX, ev.clientY];
+    this.cancelclick = true;
   }
   this.mouseout = function(ev) {
     if (this.pickingactive) {
       elation.events.remove(this.container, 'mousemove,mouseout', this);
       this.pickingactive = false;
       if (this.pickingobject) {
-        elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject)});
+        var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY});
         this.pickingobject = false;
+        for (var i = 0; i < fired.length; i++) {
+          if (fired[i].cancelBubble) ev.stopPropagation();
+        }
       }
-    }
-  }
-  this.mousedown = function(ev) {
-    if (this.pickingactive && this.pickingobject) {
-      elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject)});
     }
   }
   this.mouseup = function(ev) {
     if (this.pickingactive && this.pickingobject) {
-      elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject)});
+      var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+      for (var i = 0; i < fired.length; i++) {
+        if (fired[i].cancelBubble) ev.stopPropagation();
+      }
     }
   }
   this.click = function(ev) {
-    if (this.pickingactive && this.pickingobject) {
-      elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject)});
+    if (this.pickingactive && this.pickingobject && !this.cancelclick) {
+      var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+      for (var i = 0; i < fired.length; i++) {
+        if (fired[i].cancelBubble) ev.stopPropagation();
+      }
     }
     ev.preventDefault();
   }
@@ -242,7 +256,7 @@ cam.rotation.x = -Math.PI/24;
   }
   this.pick = function(x, y) {
     // ratelimit to once every n frames, for performance reasons
-    if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
+    //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
 
     var objects = [];
     var realmaterials = [];
@@ -276,7 +290,7 @@ cam.rotation.x = -Math.PI/24;
       objects[id].visible = realvisible[id];
     }
 
-      //console.log('plip', pickid, objects[pickid], [x, this.container.offsetHeight - y], this.pickingbuffer);
+    //console.log('plip', pickid, objects[pickid], [x, this.container.offsetHeight - y], this.pickingbuffer);
     if (pickid > 0) {
       if (this.pickingobject !== objects[pickid]) {
         if (this.pickingobject) {
@@ -285,7 +299,6 @@ cam.rotation.x = -Math.PI/24;
         }
         this.pickingobject = objects[pickid];
         if (this.pickingobject) {
-          //console.log('mouseover', this.pickingobject);
           elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
         }
       }
@@ -293,7 +306,7 @@ cam.rotation.x = -Math.PI/24;
     } else {
       if (this.pickingobject) {
         //console.log('mouseout', this.pickingobject);
-        elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject)});
+        elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
         this.pickingobject = false;
       }
     }
