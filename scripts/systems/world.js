@@ -105,7 +105,7 @@ elation.extend("engine.systems.world", function(args) {
     return ret[k]; // FIXME - dumb
   }
   this.persist = function() {
-    localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
+    //localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
     //console.log('persist', localStorage['elation.engine.world.override']);
   }
   this.setSky = function(texture) {
