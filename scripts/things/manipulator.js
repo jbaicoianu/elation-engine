@@ -1,7 +1,6 @@
 elation.component.add('engine.things.manipulator', function() {
   this.postinit = function() {
     elation.events.add(this, "mouseover,mouseout,mousedown", this);
-
   }
   this.defaultsize = 4;
   this.opacities = [0.5, 0.8];
@@ -138,7 +137,7 @@ elation.component.add('engine.things.manipulator', function() {
       console.log('unknown action:', ev);
     }
 
-    ev.stopPropagation();
+    //ev.stopPropagation();
   }
   this.mousemove = function(ev) {
     if (this.action) {
@@ -172,7 +171,7 @@ elation.component.add('engine.things.manipulator', function() {
     this.engine.systems.get('admin').setCameraActive(true); // re-enable camera controls
   }
   this.click = function(ev) {
-    ev.stopPropagation();
+    //ev.stopPropagation();
   }
 }, elation.engine.things.generic);
 
