@@ -12,6 +12,8 @@ elation.component.add('engine.things.light', function() {
     switch (this.properties.type) {
       case 'point':
         obj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
+        var helper = new THREE.PointLightHelper(obj, 1);
+        obj.add(helper);
         break;
       case 'ambient':
         obj = new THREE.AmbientLight(this.properties.color);
