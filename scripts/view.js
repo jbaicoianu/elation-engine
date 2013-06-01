@@ -268,7 +268,7 @@ cam.rotation.x = -Math.PI/24;
         realmaterials[objid] = node.material;
         realvisible[objid] = node.visible;
         var parent = this.getParentThing(node);
-        if (parent.properties.pickable) {
+        if (parent.properties.mouseevents) {
           node.material = this.getPickingMaterial(objid);
         } else {
           node.visible = false;
