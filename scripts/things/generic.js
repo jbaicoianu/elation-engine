@@ -25,6 +25,7 @@ elation.component.add("engine.things.generic", function() {
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
+      'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
       'persist':        { type: 'bool', default: true, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
@@ -85,13 +86,17 @@ elation.component.add("engine.things.generic", function() {
     if (!this.propargs) {
       var newprops = {};
       if (this.args.properties && !this.args.properties.generic) {
-        this.args.properties = { physical: this.args.properties };
+        //this.args.properties = { physical: this.args.properties };
       }
       var squash = ['physical', 'generic'];
       for (var propgroup in this.args.properties) {
-        for (var propname in this.args.properties[propgroup]) {
-          var fullpropname = (squash.indexOf(propgroup) != -1 ? propname : propgroup + '.' + propname);
-          newprops[fullpropname] = this.args.properties[propgroup][propname];
+        if (this.args.properties[propgroup] instanceof Object) {
+          for (var propname in this.args.properties[propgroup]) {
+            var fullpropname = (squash.indexOf(propgroup) != -1 ? propname : propgroup + '.' + propname);
+            newprops[fullpropname] = this.args.properties[propgroup][propname];
+          }
+        } else {
+          newprops[propgroup] = this.args.properties[propgroup];
         }
       }
       this.propargs = newprops;
@@ -271,7 +276,7 @@ elation.component.add("engine.things.generic", function() {
       if (geomparams.doubleSided) material.side = THREE.DoubleSide;
     }
     this.objects['3d'] = object;
-    this.spawn('gridhelper', {persist: false});
+    //this.spawn('gridhelper', {persist: false});
     return object;
   }
   this.createObjectDOM = function() {
@@ -412,7 +417,7 @@ elation.component.add("engine.things.generic", function() {
     if (typeof elation.engine.things[type] != 'undefined') {
       var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, type: type, engine: this.engine, properties: spawnargs });
       if (!orphan) {
-        //console.log('\t- new spawn', newguy, spawnargs);
+        console.log('\t- new spawn', newguy, spawnargs);
         this.add(newguy);
       }
     }
