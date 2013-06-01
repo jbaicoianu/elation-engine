@@ -16,8 +16,8 @@ elation.extend("engine.systems.admin", function(args) {
     elation.html.addclass(this.container, "engine_admin");
     this.world = this.engine.systems.get('world');
 
-    this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {world: this.world});
-    this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world});
+    this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {world: this.world, admin: this});
+    this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
   }
   this.engine_frame = function(ev) {
     /* FIXME - silly hack! */
@@ -57,6 +57,7 @@ elation.extend("engine.systems.admin", function(args) {
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
+    this.admin = this.args.admin;
     this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: 'Scene'});
     //this.container.innerHTML = '<h2>Scene <span class="engine_systems_world_sync"></span></h2>';
     this.window.setcontent(this.container);
@@ -70,7 +71,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.indicator = elation.ui.indicator(null, elation.html.create({append: this.window.titlebar}));
     this.indicator.setState('state_desync');
 
-    this.manipulator = elation.engine.things.manipulator('manipulator', elation.html.create(), {persist: false, name: 'manipulator', type: 'manipulator', engine: this.world.engine}); 
+    this.manipulator = elation.engine.things.manipulator('manipulator', elation.html.create(), {properties: {persist: false, pickable: false}, name: 'manipulator', type: 'manipulator', engine: this.world.engine}); 
   }
   this.create = function() {
     this.treeview = elation.ui.treeview(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_list', append: this.container}), {
@@ -84,6 +85,10 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     });
     this.toolbar = elation.ui.buttonbar(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_toolbar'}), {
       buttons: [
+        {
+          label: '⊙',
+          events: { click: elation.bind(this, this.centerItem) }
+        },
         { 
           label: '+',
           events: { click: elation.bind(this, this.addItem) }
@@ -129,7 +134,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   }
   this.ui_treeview_select = function(ev) {
     var thing = ev.data.value;
-    if (thing != this.manipulator) {
+    if (thing.properties.pickable) {
       this.selectedthing = ev.data;
       //this.selectedthing.value.spawn('manipulator', {persist: false});
       this.manipulator.reparent(thing);
@@ -138,8 +143,15 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   }
   this.world_thing_add = function(ev) {
     // refresh tree view when new items are added
-    this.treeview.setItems(this.world.children);
-    ev.target.persist();
+    if (ev.data.thing.properties.pickable) {
+      this.treeview.setItems(this.world.children);
+    }
+    //ev.target.persist();
+  }
+  this.centerItem = function() {
+    var cdiff = this.admin.admincontrols.object.position.clone().sub(this.admin.admincontrols.center);
+    this.admin.admincontrols.center.copy(this.hoverthing.value.properties.position);
+    this.admin.admincontrols.object.position.copy(this.hoverthing.value.properties.position).add(cdiff);
   }
   this.addItem = function() {
     var addthing = elation.engine.systems.admin.addthing(null, elation.html.create(), {title: 'fuh'});
