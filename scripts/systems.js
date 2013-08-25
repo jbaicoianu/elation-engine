@@ -5,11 +5,19 @@ elation.extend("engine.systems", function(args) {
 
   this.add = function(name, args) {
     // register and initialize a new system, which will respond to events emitted by the engine
-    if (typeof elation.engine.systems[name] == 'function') {
-      this.active[name] = new elation.engine.systems[name](args);
-      this.active[name].attach(this.engine);
+    if (elation.utils.isArray(name)) {
+      var systems = {};
+      for (var i = 0; i < name.length; i++) {
+        systems[name[i]] = this.add(name[i]);
+      }
+      return systems;
+    } else {
+      if (typeof elation.engine.systems[name] == 'function') {
+        this.active[name] = new elation.engine.systems[name](args);
+        this.active[name].attach(this.engine);
+      }
+      return this.active[name];
     }
-    return this.active[name];
   }
   this.get = function(name) {
     return this.active[name];
