@@ -256,7 +256,7 @@ cam.rotation.x = -Math.PI/24;
   }
   this.pick = function(x, y) {
     // ratelimit to once every n frames, for performance reasons
-    //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
+    if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
 
     var objects = [];
     var realmaterials = [];
@@ -280,6 +280,7 @@ cam.rotation.x = -Math.PI/24;
     var pickingtarget = null; //(this.pickingdebug ? null : this.pickingtarget)
     this.rendersystem.renderer.render(this.scene, this.camera, pickingtarget);
     this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
+    
     var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
 
     // revert textures
