@@ -18,16 +18,22 @@ elation.extend("engine.utils.materials", new function() {
   this.getTexture = function(url, repeat, mirrored) {
     if (!this.texturecache[url]) {
       this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
+      this.texturecache[url].anisotropy = 16;
     }
     if (repeat) {
-      this.texturecache[url].wrapS = (mirrored ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping);
-      this.texturecache[url].wrapT = (mirrored ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping);
-
-      if (elation.utils.isArray(repeat)) {
-        this.texturecache[url].repeat.set(repeat[0], repeat[1]);
-      }
+      this.setTextureRepeat(this.texturecache[url], repeat, mirrored);
     }
     return this.texturecache[url];
+  }
+  this.setTextureRepeat = function(texture, repeat, mirrored) {
+    texture.wrapS = (mirrored ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping);
+    texture.wrapT = (mirrored ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping);
+
+    if (repeat instanceof THREE.Vector2) {
+      texture.repeat.copy(repeat);
+    } else if (elation.utils.isArray(repeat)) {
+      texture.repeat.set(repeat[0], repeat[1]);
+    }
   }
   this.addShader = function(shadername, shader) {
     this.shaders[shadername] = shader;
@@ -46,6 +52,9 @@ elation.extend("engine.utils.materials", new function() {
         shaderargs.defines = defines;
       }
 		  shaderargs.uniforms = THREE.UniformsUtils.clone( this.shaders[shadername].uniforms );
+      if (this.shaders[shadername].attributes) {
+        shaderargs.attributes = this.shaders[shadername].attributes;
+      }
       for (var k in uniforms) {
         if (shaderargs.uniforms[k]) {
           shaderargs.uniforms[k].value = uniforms[k];
@@ -60,7 +69,6 @@ elation.extend("engine.utils.materials", new function() {
     return new THREE.MeshBasicMaterial({color: 0xcc0000});
   }
   this.buildShader = function(shadername, chunkargs) {
-    console.log('MAKE IT', shadername, chunkargs);
     this.shaderdefs[shadername] = chunkargs;
 
     var vertex_parms = vertex_shader = fragment_parms = fragment_shader = "";
@@ -88,6 +96,17 @@ elation.extend("engine.utils.materials", new function() {
         }
       }
       shaderargs.uniforms = THREE.UniformsUtils.merge(uniforms);
+    }
+    if (chunkargs.attributes) {
+      shaderargs.attributes = attributes;
+      var attributes = [];
+      for (var i = 0; i < chunkargs.attributes.length; i++) {
+        var chunkname = chunkargs.attributes[i];
+        if (this.shaderchunks[chunkname] && this.shaderchunks[chunkname].attributes) {
+          attributes.push(this.shaderchunks[chunkname].attributes);
+        }
+      }
+      shaderargs.attributes = THREE.UniformsUtils.merge(attributes);
     }
     this.shaders[shadername] = shaderargs;
   }
