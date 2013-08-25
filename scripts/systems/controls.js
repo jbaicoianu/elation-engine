@@ -109,13 +109,16 @@ elation.extend("engine.systems.controls", function(args) {
     elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
 
     if (args) {
-      for (var k in args) {
-        this.addContext(k, args[k]);
-      }
+      this.addContexts(args);
     }
   }
   this.addCommands = function(context, commands) {
     this.contexts[context] = commands;
+  }
+  this.addContexts = function(contexts) {
+    for (var k in contexts) {
+      this.addContext(k, contexts[k]);
+    }
   }
   this.addContext = function(context, contextargs) {
     var commands = {};
