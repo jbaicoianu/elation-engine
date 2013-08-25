@@ -13,18 +13,16 @@ elation.extend("engine.systems.world", function(args) {
   //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
 
   this.system_attach = function(ev) {
-    console.log('INIT: world', this, args);
+    console.log('INIT: world');
     this.loaded = false;
 
     this.rootname = (args ? args.parentname + '/' + args.name : '/');
 
-/*
     // First check localStorage for an overridden world definition
-    if (localStorage && localStorage['elation.engine.world.override:' + this.rootname]) {
+    if (false && localStorage && localStorage['elation.engine.world.override:' + this.rootname]) {
       var world = JSON.parse(localStorage['elation.engine.world.override:' + this.rootname]);
       this.load(world);
     } 
-*/
 
     // If no local world override, load from args
     if (!this.loaded && !elation.utils.isEmpty(args)) {
@@ -105,7 +103,7 @@ elation.extend("engine.systems.world", function(args) {
     return ret[k]; // FIXME - dumb
   }
   this.persist = function() {
-    //localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
+    localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
     //console.log('persist', localStorage['elation.engine.world.override']);
   }
   this.setSky = function(texture) {
