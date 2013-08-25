@@ -6,7 +6,7 @@ elation.extend("engine.systems.ai", function(args) {
   this.thinktime = 1000/20;
 
   this.system_attach = function(ev) {
-    console.log('INIT: ai', this, args);
+    console.log('INIT: ai');
   }
   this.engine_frame = function(ev) {
     //console.log('FRAME: ai', this.thinkers);

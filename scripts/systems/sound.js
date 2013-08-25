@@ -4,7 +4,7 @@ elation.extend("engine.systems.sound", function(args) {
   this.enabled = true;
 
   this.system_attach = function(ev) {
-    console.log('INIT: sound', this);
+    console.log('INIT: sound');
     this.stage = new AudioStage();
 
     this.up = new THREE.Vector3(0,1,0);
