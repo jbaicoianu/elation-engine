@@ -364,17 +364,25 @@ THREE.OrbitControls = function ( object, domElement ) {
   }
 
   this.enable = function() {
-    this.domElement.addEventListener( 'contextmenu', onContextMenu, false );
-    this.domElement.addEventListener( 'mousedown', onMouseDown, false );
-    this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
-    this.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
-    this.domElement.addEventListener( 'keydown', onKeyDown, false );
+    if (!this.enabled) {
+      this.domElement.addEventListener( 'contextmenu', onContextMenu, false );
+      this.domElement.addEventListener( 'mousedown', onMouseDown, false );
+      this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
+      this.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
+      this.domElement.addEventListener( 'keydown', onKeyDown, false );
+      this.enabled = true;
+    }
   }
   this.disable = function() {
-    this.domElement.removeEventListener( 'contextmenu', onContextMenu, false );
-    this.domElement.removeEventListener( 'mousedown', onMouseDown, false );
-    this.domElement.removeEventListener( 'mousewheel', onMouseWheel, false );
-    this.domElement.removeEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
-    this.domElement.removeEventListener( 'keydown', onKeyDown, false );
+    if (this.enabled) {
+      this.domElement.removeEventListener( 'contextmenu', onContextMenu, false );
+      this.domElement.removeEventListener( 'mousedown', onMouseDown, false );
+      this.domElement.removeEventListener( 'mousewheel', onMouseWheel, false );
+      this.domElement.removeEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
+      this.domElement.removeEventListener( 'keydown', onKeyDown, false );
+      document.removeEventListener( 'mousemove', onMouseMove, false );
+      document.removeEventListener( 'mouseup', onMouseUp, false );
+      this.enabled = false;
+    }
   }
 };

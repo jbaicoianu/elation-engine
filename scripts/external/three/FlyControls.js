@@ -252,13 +252,29 @@ THREE.FlyControls = function ( object, domElement ) {
 		};
 
 	};
-
-	this.domElement.addEventListener( 'mousemove', bind( this, this.mousemove ), false );
-	this.domElement.addEventListener( 'mousedown', bind( this, this.mousedown ), false );
-	this.domElement.addEventListener( 'mouseup',   bind( this, this.mouseup ), false );
-
-	this.domElement.addEventListener( 'keydown', bind( this, this.keydown ), false );
-	this.domElement.addEventListener( 'keyup',   bind( this, this.keyup ), false );
+  this.enable = function() {
+    if (!this.enabled) {
+      this.bindings = {
+        'mousedown': bind(this, this.mousedown),
+        'mousemove': bind(this, this.mousemove),
+        'mouseup': bind(this, this.mouseup),
+        'keydown': bind(this, this.keydown),
+        'keyup': bind(this, this.keyup),
+      };
+      for (var k in this.bindings) {
+        this.domElement.addEventListener( k, this.bindings[k], false );
+      }
+    }
+    this.enabled = true;
+  }
+  this.disable = function() {
+    if (this.enabled) {
+      for (var k in this.bindings) {
+        this.domElement.removeEventListener( k,   this.bindings[k], false );
+      }
+      this.enabled = false;
+    }
+  }
 
 	this.updateMovementVector();
 	this.updateRotationVector();

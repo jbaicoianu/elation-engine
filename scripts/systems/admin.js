@@ -31,19 +31,19 @@ elation.extend("engine.systems.admin", function(args) {
     var render = this.engine.systems.get('render');
     if (render.views['main']) {
       var view = this.engine.systems.get('render').views['main'];
-      this.admincontrols = new THREE.OrbitControls(view.camera, view.container);
-      this.admincontrols.rotateDown(Math.PI/4);
-      this.admincontrols.rotateRight(Math.PI/4);
-      this.admincontrols.zoomOut(25);
-      this.admincontrols.userPanSpeed = .1;
-      this.admincontrols.enable();
+      this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
+      this.orbitcontrols.rotateDown(Math.PI/4);
+      this.orbitcontrols.rotateRight(Math.PI/4);
+      this.orbitcontrols.zoomOut(25);
+      this.orbitcontrols.userPanSpeed = .1;
 
-      /*
-      this.admincontrols = new THREE.FlyControls(view.camera, view.container);
-      this.admincontrols.movementSpeed = 10;
-      this.admincontrols.rollSpeed = Math.PI/4;
-      this.admincontrols.dragToLook = true;
-      */
+      this.flycontrols = new THREE.FlyControls(view.camera, view.container);
+      this.flycontrols.movementSpeed = 10;
+      this.flycontrols.rollSpeed = Math.PI/4;
+      this.flycontrols.dragToLook = true;
+
+      this.toggleControls();
+  
       this.admincontrols.update(0);
       this.cameraactive = true;
     }
@@ -52,6 +52,17 @@ elation.extend("engine.systems.admin", function(args) {
     this.cameraactive = active;
     if (active) this.admincontrols.enable();
     else this.admincontrols.disable();
+  }
+  this.toggleControls = function() {
+    if (this.admincontrols) {
+      this.admincontrols.disable();
+    }
+    if (this.admincontrols === this.orbitcontrols) {
+      this.admincontrols = this.flycontrols;
+    } else {
+      this.admincontrols = this.orbitcontrols;
+    }
+    this.admincontrols.enable();
   }
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
@@ -63,13 +74,12 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.window.setcontent(this.container);
     //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
     elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
-    if (this.world.loaded) {
-      this.create();
-    } else {
-      elation.events.add(this.world, "engine_world_init", elation.bind(this, this.create));
-    }
+    this.create();
     this.indicator = elation.ui.indicator(null, elation.html.create({append: this.window.titlebar}));
     this.indicator.setState('state_desync');
+
+    this.cameratoggle = elation.ui.button(null, elation.html.create({tag: 'button', append: this.window.titlebar}), {label: '🔁'});
+    elation.events.add(this.cameratoggle, "ui_button_click", elation.bind(this, function() { this.admin.toggleControls(); }));
 
     this.manipulator = elation.engine.things.manipulator('manipulator', elation.html.create(), {properties: {persist: false, pickable: false}, name: 'manipulator', type: 'manipulator', engine: this.world.engine}); 
   }
@@ -126,6 +136,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   }
   this.updateTreeview = function() {
     this.treeview.setItems(this.world.children);
+    this.treeview.sort();
   }
   this.ui_treeview_hover = function(ev) {
     this.hoverthing = ev.data;
@@ -264,6 +275,7 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
         itemtemplate: 'engine.systems.admin.inspector.property'
       }
     });
+    this.treeview.sort();
     var propinputs = elation.find('input', this.propdiv);
     elation.events.add(propinputs, 'change', this);
   }
