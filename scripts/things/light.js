@@ -15,6 +15,11 @@ elation.component.add('engine.things.light', function() {
         var helper = new THREE.PointLightHelper(obj, 1);
         obj.add(helper);
         break;
+      case 'directional':
+        obj = new THREE.DirectionalLight(this.properties.color, this.properties.intensity);
+        var helper = new THREE.DirectionalLightHelper(obj, 1);
+        obj.add(helper);
+        break;
       case 'ambient':
         obj = new THREE.AmbientLight(this.properties.color);
         break;
