@@ -4,11 +4,11 @@ elation.component.add("engine.things.sector", function() {
       'fog.enabled':             { type: 'bool', default: false },
       'fog.color':               { type: 'color', default: 0x000000 },
       'fog.factor':              { type: 'float', default: 0.0000008 },
-      'ambient.enabled':         { type: 'bool', default: true },
+      'ambient.enabled':         { type: 'bool', default: false },
       'ambient.color':           { type: 'color', default: 0x333333 },
-      'light.enabled':           { type: 'bool', default: true },
+      'light.enabled':           { type: 'bool', default: false },
       'light.color':             { type: 'color', default: 0xffffff },
-      'light.position':          { type: 'vector3', default: [0,5000,-500] },
+      'light.position':          { type: 'vector3', default: [0,50,-50] },
       'plane.enabled':           { type: 'bool', default: true },
       'skybox.cubePath':         { type: 'string' },
       'skybox.enabled':          { type: 'bool', default: false },
@@ -28,13 +28,13 @@ elation.component.add("engine.things.sector", function() {
     var obj = new THREE.Object3D();
     this.objects['3d'] = obj;
     if (this.properties.light.enabled) {
-      this.spawn('light', {type: 'point', position: this.properties.light.position, color: this.properties.light.color, persist: false});
+      this.spawn('light', null, {type: 'point', position: this.properties.light.position, color: this.properties.light.color, persist: false});
     }
     if (this.properties.ambient.enabled) {
-      this.spawn('light', {type: 'ambient', color: this.properties.ambient.color, persist: false});
+      this.spawn('light', null, {type: 'ambient', color: this.properties.ambient.color, persist: false});
     }
     if (this.properties.terrain.enabled) {
-      this.spawn('terrain', this.properties.terrain.args);
+      this.spawn('terrain', 'ground', this.properties.terrain.args);
     }
     if (this.properties.plane.enabled) {
       var planegeo = new THREE.PlaneGeometry(32,32,32,32)
@@ -47,11 +47,10 @@ elation.component.add("engine.things.sector", function() {
       var plane = new THREE.Mesh(planegeo, planemat);
       obj.add(plane);
     }
-    //this.spawn("gridhelper", {range: 20});
+    //this.spawn("gridhelper", "grid", {range: 20});
     return obj;
   }
   this.setSky = function() {
-    var world = this.engine.systems.get('world');
     if (!this.skytexture) {
       var format = 'jpg';
       var path = this.properties.skybox.cubePath;
@@ -67,7 +66,7 @@ elation.component.add("engine.things.sector", function() {
       texturecube.format = THREE.RGBFormat;
       this.skytexture = texturecube;
     }
-    world.setSky(this.skytexture);
+    this.engine.systems.world.setSky(this.skytexture);
   }
 }, elation.engine.things.generic);
 
