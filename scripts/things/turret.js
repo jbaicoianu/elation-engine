@@ -22,6 +22,7 @@ elation.component.add("engine.things.turret", function(args) {
       'aim': this.aim
     });
 
+    this.lastfire = 0;
     this.pitchvel = new THREE.Vector3();
     this.yawvel = new THREE.Vector3();
 
@@ -36,8 +37,13 @@ elation.component.add("engine.things.turret", function(args) {
     this.hinges['mount'].updateState();
   }
   this.fire = function(amount) {
-    console.log('bang!');
-    //this.spawn('turret_bullet', {}, false);
+    var now = new Date().getTime();
+    if (now > this.lastfire + this.properties.reloadtime) {
+      var aim = this.aim();
+      var bullet = this.spawn('turret_bullet', null, {position: aim.position.toArray(), velocity: aim.velocity.multiplyScalar(this.properties.muzzlespeed).toArray()}, true);
+      setTimeout(elation.bind(bullet, bullet.die), this.properties.reloadtime * 4);
+      this.lastfire = now;
+    }
   }
   this.aim = function() {
     if (!this.parts || !this.parts['Turret_gun']) return;
@@ -66,7 +72,7 @@ elation.component.add("engine.things.turret", function(args) {
     });
     elation.physics.system.add(this.hinges['mount']);
 
-    this.spawn("turretcontroller", {persist: false});
+    this.spawn("turretcontroller", null, {persist: false});
   }
 }, elation.engine.things.generic);
 
@@ -83,7 +89,7 @@ elation.component.add("engine.things.turretcontroller", function(args) {
     });
     this.addBehavior('track_and_fire', this.track_and_fire, 100);
     this.setBehavior('track_and_fire');
-    //this.engine.systems.get('world').scene['world-3d'].add(this.helpers.aim);
+    //this.engine.systems.world.scene['world-3d'].add(this.helpers.aim);
   }
   this.track_and_fire = function() {
     // Ideal solution:
@@ -95,7 +101,7 @@ elation.component.add("engine.things.turretcontroller", function(args) {
 
     // FIXME - target is hardcoded as camera for now; need proper target acquisition logic
     var turret = this.parent,
-        target = this.engine.systems.get('render').views['main'].camera; //this.properties.target;
+        target = this.engine.systems.render.views['main'].camera; //this.properties.target;
     if (turret && target) {
       var aim = turret.aim();
       if (!aim) return;
@@ -128,6 +134,10 @@ elation.component.add("engine.things.turretcontroller", function(args) {
           turret.pitch(this.deadzone(pitch, deadzone, 1));
         }
         */
+        if (Math.abs(yaw3) < deadzone) {
+          turret.fire();
+        }
+        //turret.state['firing'] = false;
       } else {
         //turret.state['firing'] = false;
       }
