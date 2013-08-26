@@ -14,10 +14,10 @@ elation.component.add('engine.things.aicontroller', function() {
     if (!this.activebehavior) {
       // we're not even registered as a thinker yet
       if (this.parent) {
-        this.engine.systems.get('ai').add(this);
+        this.engine.systems.ai.add(this);
       } else {
         elation.events.add(this, 'thing_create', elation.bind(this, function() {
-          this.engine.systems.get('ai').add(this);
+          this.engine.systems.ai.add(this);
         }));
       }
     }
@@ -29,7 +29,7 @@ elation.component.add('engine.things.aicontroller', function() {
       this.behaviors[this.activebehavior[0]].func.call(this);
     } else {
       // nothing to think about...
-      //this.engine.systems.get('ai').remove(this);
+      //this.engine.systems.ai.remove(this);
     }
   }
 }, elation.engine.things.generic);

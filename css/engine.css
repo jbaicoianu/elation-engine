@@ -36,3 +36,21 @@ body {
     zoom: .6;
   }
 }
+.engine_view {
+/*
+  box-shadow: 0px 0px 5px rgba(1,1,1,.5);
+  border-radius: 5px;
+*/
+  min-height: 800px;
+  position: relative;
+}
+.engine_view_fullsize {
+  position: absolute;
+  min-height: auto;
+  overflow: hidden;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}

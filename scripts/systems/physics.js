@@ -1,3 +1,11 @@
+elation.require([
+  "physics.cyclone",
+  "physics.forces",
+  "physics.constraints",
+  "physics.collisions",
+  "physics.processors"
+]);
+
 elation.extend("engine.systems.physics", function(args) {
   elation.implement(this, elation.engine.systems.system);
 

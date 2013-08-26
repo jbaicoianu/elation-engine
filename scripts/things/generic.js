@@ -1,3 +1,8 @@
+elation.require([
+  //"engine.external.three.ColladaLoader",
+  //"engine.external.three.JSONLoader"
+]);
+
 elation.component.add("engine.things.generic", function() {
   this.init = function() {
     this._thingdef = {
@@ -82,6 +87,7 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.migrateProperties = function(props) {
+    //return props;
     // FIXME - once all entries in the db have been updated, this is no longer necessary
     if (!this.propargs) {
       var newprops = {};
@@ -90,7 +96,7 @@ elation.component.add("engine.things.generic", function() {
       }
       var squash = ['physical', 'generic'];
       for (var propgroup in this.args.properties) {
-        if (this.args.properties[propgroup] instanceof Object) {
+        if (!elation.utils.isArray(this.args.properties[propgroup]) && this.args.properties[propgroup] instanceof Object) {
           for (var propname in this.args.properties[propgroup]) {
             var fullpropname = (squash.indexOf(propgroup) != -1 ? propname : propgroup + '.' + propname);
             newprops[fullpropname] = this.args.properties[propgroup][propname];
@@ -104,7 +110,18 @@ elation.component.add("engine.things.generic", function() {
     return this.propargs;
   }
   this.getPropertyValue = function(type, value) {
+    if (value === null) {
+      return;
+    }
     switch (type) {
+      case 'vector2':
+        if (elation.utils.isArray(value)) {
+          value = new THREE.Vector2(+value[0], +value[1]);
+        } else if (elation.utils.isString(value)) {
+          var split = value.split(',');
+          value = new THREE.Vector2(+split[0], +split[1]);
+        }
+        break;
       case 'vector3':
         if (elation.utils.isArray(value)) {
           value = new THREE.Vector3(+value[0], +value[1], +value[2]);
@@ -125,7 +142,9 @@ elation.component.add("engine.things.generic", function() {
         value = !(value === false || value === 'false' || value === 0 || value === '0' || value === '' || value === null || typeof value == 'undefined');
         break;
       case 'texture':
-        value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
+        if (value !== false) {
+          value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
+        }
         break;
     }
     return value;
@@ -144,21 +163,27 @@ elation.component.add("engine.things.generic", function() {
   this.set = function(property, value, forcerefresh) {
     var propval = this.getPropertyValue(this._thingdef.properties[property].type, value);
     var currval = this.get(property);
-    if (currval !== null) {
+    //if (currval !== null) {
       switch (this._thingdef.properties[property].type) {
         case 'vector2':
         case 'vector3':
         case 'vector4':
         case 'quaternion':
-          currval.copy(propval);
+          if (currval === null)  {
+            elation.utils.arrayset(this.properties, property, propval);
+          } else {
+            currval.copy(propval);
+          }
           break;
+        case 'texture':
+          //console.log('TRY TO SET NEW TEX', property, value, forcerefresh);
         default:
           elation.utils.arrayset(this.properties, property, propval);
       }
-    } else {
-      elation.utils.arrayset(this.properties, property, propval);
-    }
-    if (false && forcerefresh && this.objects['3d']) {
+    //} else {
+    //  elation.utils.arrayset(this.properties, property, propval);
+    //}
+    if (forcerefresh && this.objects['3d']) {
       this.initProperties();
       var parent = this.objects['3d'].parent;
       parent.remove(this.objects['3d']);
@@ -411,15 +436,15 @@ elation.component.add("engine.things.generic", function() {
     }
     //this.updateCollisionSize();
   }
-  this.spawn = function(type, spawnargs, orphan) {
-    if (!spawnargs) spawnargs = {};
-    var spawnname = type + Math.floor(Math.random() * 1000);
-    if (typeof elation.engine.things[type] != 'undefined') {
-      var newguy = elation.engine.things[type](spawnname, elation.html.create(), {name: spawnname, type: type, engine: this.engine, properties: spawnargs });
-      if (!orphan) {
-        console.log('\t- new spawn', newguy, spawnargs);
-        this.add(newguy);
-      }
+  this.spawn = function(type, name, spawnargs, orphan) {
+    var newspawn = this.engine.systems.world.spawn(type, name, spawnargs, (orphan ? null : this));
+    return newspawn;
+  }
+  this.die = function() {
+    console.log('die:', this);
+    this.removeDynamics();
+    if (this.parent) {
+      this.parent.remove(this);
     }
   }
   this.worldToLocal = function(worldpos) {
@@ -490,7 +515,7 @@ elation.component.add("engine.things.generic", function() {
 
 /*
   this.createCamera = function(offset, rotation) {
-    //var viewsize = this.engine.systems.get('render').views['main'].size;
+    //var viewsize = this.engine.systems.render.views['main'].size;
     var viewsize = [640, 480]; // FIXME - hardcoded hack!
     this.cameras.push(new THREE.PerspectiveCamera(50, viewsize[0] / viewsize[1], .01, 1e15));
     this.camera = this.cameras[this.cameras.length-1];
@@ -506,7 +531,7 @@ elation.component.add("engine.things.generic", function() {
 
   // Sound functions
   this.playSound = function(sound, volume, position, velocity) {
-    if (this.sounds[sound] && this.engine.systems.get('sound').enabled) {
+    if (this.sounds[sound] && this.engine.systems.sound.enabled) {
       this.updateSound(sound, volume, position, velocity);
       this.sounds[sound].play();
     }

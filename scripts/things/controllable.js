@@ -24,8 +24,8 @@ elation.component.add('engine.things.controllable', function() {
       //this.state[k] = 0;
     }
 
-    this.engine.systems.get('controls').addCommands(contextname, commands);
-    this.engine.systems.get('controls').addBindings(contextname, bindings);
+    this.engine.systems.controls.addCommands(contextname, commands);
+    this.engine.systems.controls.addBindings(contextname, bindings);
     this.controlcontext = contextname;
   }
 }, elation.engine.things.generic);

@@ -1,3 +1,17 @@
+elation.require([
+  "engine.external.three.FlyControls",
+  "engine.external.three.OrbitControls",
+  "engine.things.manipulator",
+  "ui.button",
+  "ui.buttonbar",
+  "ui.slider",
+  "ui.select",
+  "ui.tabs",
+  "ui.treeview",
+  "ui.window",
+  "ui.indicator"
+]);
+
 elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
 elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{/children}');
 
@@ -14,7 +28,7 @@ elation.extend("engine.systems.admin", function(args) {
     console.log('INIT: admin');
 
     elation.html.addclass(this.container, "engine_admin");
-    this.world = this.engine.systems.get('world');
+    this.world = this.engine.systems.world;
 
     this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {world: this.world, admin: this});
     this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
@@ -28,9 +42,9 @@ elation.extend("engine.systems.admin", function(args) {
     }
   }
   this.createCamera = function() {
-    var render = this.engine.systems.get('render');
+    var render = this.engine.systems.render;
     if (render.views['main']) {
-      var view = this.engine.systems.get('render').views['main'];
+      var view = render.views['main'];
       this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
       this.orbitcontrols.rotateDown(Math.PI/4);
       this.orbitcontrols.rotateRight(Math.PI/4);
@@ -70,7 +84,6 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     this.world = this.args.world;
     this.admin = this.args.admin;
     this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: 'Scene'});
-    //this.container.innerHTML = '<h2>Scene <span class="engine_systems_world_sync"></span></h2>';
     this.window.setcontent(this.container);
     //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
     elation.events.add(this.world, 'engine_thing_create,world_thing_add', this);
@@ -147,7 +160,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     var thing = ev.data.value;
     if (thing.properties.pickable) {
       this.selectedthing = ev.data;
-      //this.selectedthing.value.spawn('manipulator', {persist: false});
+      //this.selectedthing.value.spawn('manipulator', null, {persist: false});
       this.manipulator.reparent(thing);
       elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
     }
@@ -205,16 +218,19 @@ elation.component.add("engine.systems.admin.addthing", function() {
     var type = this.form.type.value;
     var name = this.form.name.value;
     if (this.parentthing) {
-      this.parentthing.spawn(type);
+      this.parentthing.spawn(type, name);
       this.window.close();
     }
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
   this.init = function() {
-    elation.html.addclass(this.container, 'engine_admin_inspector style_box');
+    this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_inspector', append: document.body}), {title: 'Thing'});
+    this.window.setcontent(this.container);
+
+    //elation.html.addclass(this.container, 'engine_admin_inspector style_box');
     elation.events.add(this.container, "mousewheel", function(ev) { ev.stopPropagation(); }); // FIXME - hack for mousewheel
-    this.label = elation.html.create({tag: 'h2', append: this.container});
+    //this.label = elation.html.create({tag: 'h2', append: this.container});
     this.tabcontents = {
       properties: elation.engine.systems.admin.inspector.properties(null, elation.html.create()),
       objects: elation.engine.systems.admin.inspector.objects(null, elation.html.create())
@@ -226,7 +242,8 @@ elation.component.add("engine.systems.admin.inspector", function() {
     if (!this.tabs) {
       this.createTabs();
     }
-    this.label.innerHTML = thing.id + ' (' + thing.type + ')';
+    //this.label.innerHTML = thing.id + ' (' + thing.type + ')';
+    this.window.settitle(thing.id + ' (' + thing.type + ')');
     this.tabs.setActiveTab(this.activetab || "properties");
     //this.properties.setThing(thingwrapper);
     //this.objects.setThing(thingwrapper);

@@ -1,3 +1,5 @@
+elation.require("engine.things.controller");
+
 elation.extend("engine.systems.ai", function(args) {
   elation.implement(this, elation.engine.systems.system);
 

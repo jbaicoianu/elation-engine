@@ -1,3 +1,7 @@
+elation.require([
+  "engine.external.audiostage"
+]);
+
 elation.extend("engine.systems.sound", function(args) {
   elation.implement(this, elation.engine.systems.system);
 
@@ -16,7 +20,7 @@ elation.extend("engine.systems.sound", function(args) {
     console.log('SHUTDOWN: sound');
   }
   this.engine_frame = function(ev) {
-    var render = this.engine.systems.get('render');
+    var render = this.engine.systems.render;
     if (render.views['main'] && this.stage.context) {
       var camera = render.views['main'].camera;
 

@@ -1,3 +1,6 @@
+elation.require([
+  "engine.things.generic"
+]);
 elation.extend("engine.systems.world", function(args) {
   elation.implement(this, elation.engine.systems.system);
 
@@ -64,36 +67,62 @@ elation.extend("engine.systems.world", function(args) {
       delete this.children[thing.name];
     }
   }
-  this.load = function(thing, root, logprefix) {
-    if (!logprefix) logprefix = "";;
-    if (typeof root == 'undefined') root = this;
-    var currentobj = false;
-    try {
-      if (typeof elation.engine.things[thing.type] != 'function') {
-        thing.type = 'generic';
-      }
-
-      if (typeof elation.engine.things[thing.type] == 'function') {
-        thing.engine = this.engine;
-        currentobj = elation.engine.things[thing.type](thing.name, elation.html.create(), thing);
-        root.add(currentobj);
-
-        console.log(logprefix + "\t- added new " + thing.type + ": " + thing.parentname + '/' + thing.name, currentobj);
-        if (thing.things) {
-          for (var k in thing.things) {
-            this.load(thing.things[k], currentobj, logprefix + "\t");
-          }
-        }
-      } else {
-        console.error(logprefix + "\t- ***ERROR*** don't know how to handle thing type '" + thing.type + "'", thing);
-      }
-    } catch (e) {
-      console.error(e.stack);
+  this.extract_types = function(thing, types, onlymissing) {
+    if (!types) {
+      types = [];
+    } 
+    if (((onlymissing && typeof elation.engine.things[thing.type] == 'undefined') || !onlymissing) && types.indexOf(thing.type) == -1) {
+      types.push(thing.type);
+      elation.engine.things[thing.type] = null;
     }
-    if (root == this) {
+    if (thing.things) {
+      for (var k in thing.things) {
+        this.extract_types(thing.things[k], types, onlymissing);
+      }
+    }
+    return types;
+  }
+  this.load = function(thing, root, logprefix) {
+    if (!this.root) {
+      var loadtypes = this.extract_types(thing, [], true);
+      if (loadtypes.length > 0) {
+        elation.require(loadtypes.map(function(a) { return 'engine.things.' + a; }), elation.bind(this, function() { this.load(thing, root, logprefix); }));
+        return;
+      }
+    }
+    if (!logprefix) logprefix = "";
+    if (typeof root == 'undefined') root = this;
+    var currentobj = this.spawn(thing.type, thing.name, thing.properties, root);
+    if (thing.things) {
+      for (var k in thing.things) {
+        this.load(thing.things[k], currentobj, logprefix + "\t");
+      }
+    }
+    if (root === this) {
       this.loaded = true;
       elation.events.fire({type: 'engine_world_init', element: this});
     }
+  }
+  this.spawn = function(type, name, spawnargs, parent) {
+    if (!parent) parent = this;
+    if (!name) {
+      name = type + Math.floor(Math.random() * 1000);
+    }
+    var logprefix = "";
+    if (!spawnargs) spawnargs = {};
+    var currentobj = false;
+    try {
+      if (typeof elation.engine.things[type] != 'function') {
+        type = 'generic';
+      }
+      currentobj = elation.engine.things[type](name, elation.html.create(), {type: type, name: name, engine: this.engine, properties: spawnargs});
+      parent.add(currentobj);
+
+      console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+    } catch (e) {
+      console.error(e.stack);
+    }
+    return currentobj;
   }
   this.serialize = function() {
     var ret = {};
