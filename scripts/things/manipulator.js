@@ -92,8 +92,8 @@ elation.component.add('engine.things.manipulator', function() {
     elation.events.add(window, 'mousemove,mouseup', this);
     var mesh = ev.data;
 
-    if (!this.camera) this.camera = this.engine.systems.get('render').views['main'].camera; // FIXME - ugly;
-    this.engine.systems.get('admin').setCameraActive(false); // disable camera controls
+    if (!this.camera) this.camera = this.engine.systems.render.views['main'].camera; // FIXME - ugly;
+    this.engine.systems.admin.setCameraActive(false); // disable camera controls
 
     var action = false;
     if (mesh == this.movehelper.x) action = ['position', 'x'];
@@ -137,7 +137,8 @@ elation.component.add('engine.things.manipulator', function() {
       console.log('unknown action:', ev);
     }
 
-    //ev.stopPropagation();
+    ev.stopPropagation();
+    ev.preventDefault();
   }
   this.mousemove = function(ev) {
     if (this.action) {
@@ -163,12 +164,13 @@ elation.component.add('engine.things.manipulator', function() {
       this.dragstartpos = [ev.clientX, ev.clientY];
     }
     ev.stopPropagation();
+    ev.preventDefault();
   }
   this.mouseup = function(ev) {
     elation.events.remove(window, 'mousemove,mouseup', this);
     ev.stopPropagation();
     ev.preventDefault();
-    this.engine.systems.get('admin').setCameraActive(true); // re-enable camera controls
+    this.engine.systems.admin.setCameraActive(true); // re-enable camera controls
   }
   this.click = function(ev) {
     //ev.stopPropagation();
