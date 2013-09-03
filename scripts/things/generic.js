@@ -146,6 +146,11 @@ elation.component.add("engine.things.generic", function() {
           value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
         }
         break;
+      case 'json':
+        if (value !== false) {
+          value = JSON.decode(value);
+        }
+        break;
     }
     return value;
   }
@@ -207,6 +212,14 @@ elation.component.add("engine.things.generic", function() {
       this.objects['3d'].scale = this.properties.scale;
       this.objects['3d'].useQuaternion = true;
       this.objects['3d']._thing = this;
+
+      // Bounding sphere helper
+      if (false && this.objects['3d'].geometry) {
+        var obj = this.objects['3d'];
+        var spherehelper = new THREE.Mesh(new THREE.SphereGeometry(obj.geometry.boundingSphere.radius, 16, 32), new THREE.MeshBasicMaterial({color: 0x00cccc, opacity: .1, transparent: true, depthWrite: false}));
+        spherehelper.stupidFuck = true;
+        obj.add(spherehelper);
+      }
     }
   }
   this.initDOM = function() {
@@ -441,7 +454,6 @@ elation.component.add("engine.things.generic", function() {
     return newspawn;
   }
   this.die = function() {
-    console.log('die:', this);
     this.removeDynamics();
     if (this.parent) {
       this.parent.remove(this);
