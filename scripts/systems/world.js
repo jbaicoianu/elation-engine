@@ -92,7 +92,7 @@ elation.extend("engine.systems.world", function(args) {
     }
     if (!logprefix) logprefix = "";
     if (typeof root == 'undefined') root = this;
-    var currentobj = this.spawn(thing.type, thing.name, thing.properties, root);
+    var currentobj = this.spawn(thing.type, thing.name, thing.properties, root, false);
     if (thing.things) {
       for (var k in thing.things) {
         this.load(thing.things[k], currentobj, logprefix + "\t");
@@ -103,16 +103,24 @@ elation.extend("engine.systems.world", function(args) {
       elation.events.fire({type: 'engine_world_init', element: this});
     }
   }
-  this.spawn = function(type, name, spawnargs, parent) {
-    if (!parent) parent = this;
-    if (!name) {
-      name = type + Math.floor(Math.random() * 1000);
-    }
-    var logprefix = "";
+  this.spawn = function(type, name, spawnargs, parent, autoload) {
+    if (!name) name = type + Math.floor(Math.random() * 1000);
     if (!spawnargs) spawnargs = {};
+    if (!parent) parent = this;
+    if (typeof autoload == 'undefined') autoload = true;
+
+    var logprefix = "";
     var currentobj = false;
     try {
       if (typeof elation.engine.things[type] != 'function') {
+        if (autoload) {
+          elation.require('engine.things.' + type, elation.bind(this, function() {
+            this.spawn(type, name, spawnargs, parent, false);
+          }));
+
+        }
+        // FIXME - we should be able to return a generic, load the new object asynchronously, and then morph the generic into the specified type
+        // Right now this might end up with weird double-object behavior...
         type = 'generic';
       }
       currentobj = elation.engine.things[type](name, elation.html.create(), {type: type, name: name, engine: this.engine, properties: spawnargs});
