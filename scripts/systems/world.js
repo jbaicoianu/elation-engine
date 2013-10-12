@@ -26,6 +26,10 @@ elation.extend("engine.systems.world", function(args) {
       var world = JSON.parse(localStorage['elation.engine.world.override:' + this.rootname]);
       this.load(world);
     } 
+    if (document.location.hash) {
+      this.parseDocumentHash();
+    }
+    elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
 
     // If no local world override, load from args
     if (!this.loaded && !elation.utils.isEmpty(args)) {
@@ -34,10 +38,12 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.engine_frame = function(ev) {
     //console.log('FRAME: world', ev);
+/*
     if (ev.timeStamp > this.lastpersist + this.persistdelay) {
       this.persist();
       this.lastpersist = ev.timeStamp;
     }
+*/
   }
   this.engine_stop = function(ev) {
     console.log('SHUTDOWN: world');
@@ -48,12 +54,19 @@ elation.extend("engine.systems.world", function(args) {
     if (thing.objects['3d']) {
       this.scene['world-3d'].add(thing.objects['3d']);
     }
+    if (thing.objects['dynamics']) {
+      this.engine.systems.physics.add(thing.objects['dynamics']);
+    }
     if (thing.container) {
       //this.renderer['world-dom'].domElement.appendChild(thing.container);
     }
     elation.events.add(thing, 'thing_add', elation.bind(this, function(ev) {
       elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
     }));
+    elation.events.add(thing, 'thing_remove', elation.bind(this, function(ev) {
+      elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
+    }));
+    elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
   }
   this.remove = function(thing) {
     if (this.children[thing.name]) {
@@ -63,8 +76,8 @@ elation.extend("engine.systems.world", function(args) {
       if (thing.container) {
         //this.renderer['world-dom'].domElement.removeChild(thing.container);
       }
-      elation.events.fire({type: 'engine_thing_destroy', element: thing});
       delete this.children[thing.name];
+      elation.events.fire({type: 'world_thing_remove', element: this, data: {thing: thing}});
     }
   }
   this.extract_types = function(thing, types, onlymissing) {
@@ -82,8 +95,37 @@ elation.extend("engine.systems.world", function(args) {
     }
     return types;
   }
+  this.reset = function() {
+    for (var k in this.children) {
+      this.remove(this.children[k]);
+    }
+  }
+  this.createNew = function() {
+    this.reset();
+    this.spawn("sector", "default");
+  }
+  this.saveLocal = function(name) {
+    if (!name) name = this.rootname;
+    console.log('Saved local world: ' + name);
+    var key = 'elation.engine.world.override:' + name;
+    localStorage[key] = JSON.stringify(this.serialize());
+  }
+  this.loadLocal = function(name) {
+    console.log('Load local world: ' + name);
+    this.reset();
+    var key = 'elation.engine.world.override:' + name;
+    this.rootname = name;
+    if (localStorage[key]) {
+      var world = JSON.parse(localStorage[key]);
+      this.load(world);
+    } else {
+      this.spawn("sector", "default");
+    }
+  }
   this.load = function(thing, root, logprefix) {
+    if (!thing) return;
     if (!this.root) {
+      this.currentlyloaded = thing;
       var loadtypes = this.extract_types(thing, [], true);
       if (loadtypes.length > 0) {
         elation.require(loadtypes.map(function(a) { return 'engine.things.' + a; }), elation.bind(this, function() { this.load(thing, root, logprefix); }));
@@ -103,30 +145,43 @@ elation.extend("engine.systems.world", function(args) {
       elation.events.fire({type: 'engine_world_init', element: this});
     }
   }
+  this.reload = function() {
+    if (this.rootname) {
+      this.loadLocal(this.rootname);
+    }
+  }
   this.spawn = function(type, name, spawnargs, parent, autoload) {
-    if (!name) name = type + Math.floor(Math.random() * 1000);
+    if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
     if (!spawnargs) spawnargs = {};
     if (!parent) parent = this;
     if (typeof autoload == 'undefined') autoload = true;
 
     var logprefix = "";
     var currentobj = false;
+    var realtype = type;
+    var initialized = false;
     try {
       if (typeof elation.engine.things[type] != 'function') {
         if (autoload) {
-          elation.require('engine.things.' + type, elation.bind(this, function() {
-            this.spawn(type, name, spawnargs, parent, false);
+          // Asynchronously load the new object type's definition, and create the real object when we're done
+          elation.require('engine.things.' + realtype, elation.bind(this, function() {
+            if (currentobj) { 
+              currentobj.die(); 
+            }
+            this.spawn(realtype, name, spawnargs, parent, false);
           }));
 
         }
         // FIXME - we should be able to return a generic, load the new object asynchronously, and then morph the generic into the specified type
         // Right now this might end up with weird double-object behavior...
         type = 'generic';
-      }
-      currentobj = elation.engine.things[type](name, elation.html.create(), {type: type, name: name, engine: this.engine, properties: spawnargs});
-      parent.add(currentobj);
+      } else {
+        currentobj = elation.engine.things[type](name, elation.html.create(), {type: realtype, name: name, engine: this.engine, properties: spawnargs});
+        parent.add(currentobj);
+        //currentobj.reparent(parent);
 
-      console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+        console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+      }
     } catch (e) {
       console.error(e.stack);
     }
@@ -138,10 +193,6 @@ elation.extend("engine.systems.world", function(args) {
       ret[k] = this.children[k].serialize();
     }
     return ret[k]; // FIXME - dumb
-  }
-  this.persist = function() {
-    localStorage['elation.engine.world.override:' + this.rootname] = JSON.stringify(this.serialize());
-    //console.log('persist', localStorage['elation.engine.world.override']);
   }
   this.setSky = function(texture) {
     if (texture !== false) {
@@ -163,7 +214,7 @@ elation.extend("engine.systems.world", function(args) {
 
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
-        console.log('create sky mesh');
+        console.log('create sky mesh', this.scene['sky']);
       }
       this.skyenabled = true;
     } else {
@@ -171,6 +222,17 @@ elation.extend("engine.systems.world", function(args) {
     }
     if (this.skyenabled) {
       
+    }
+  }
+  this.parseDocumentHash = function() {
+    var parsedurl = elation.utils.parseURL(document.location.hash);
+    if (parsedurl.hashargs) {
+      if (parsedurl.hashargs['world.load'] && parsedurl.hashargs['world.load'] != this.rootname) {
+        this.loadLocal(parsedurl.hashargs['world.load']);
+      }
+      if (+parsedurl.hashargs['world.paused']) {
+        this.engine.systems.physics.timescale = 0;
+      }
     }
   }
 });
