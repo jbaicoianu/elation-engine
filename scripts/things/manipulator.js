@@ -1,17 +1,17 @@
 elation.component.add('engine.things.manipulator', function() {
   this.postinit = function() {
     elation.events.add(this, "mouseover,mouseout,mousedown", this);
+    this.defaultsize = 4;
+    this.opacities = [0.5, 0.8];
+    this.origin = new THREE.Vector3(0,0,0);
+    this.axes = {
+      x: new THREE.Vector3(1,0,0),
+      y: new THREE.Vector3(0,1,0),
+      z: new THREE.Vector3(0,0,1)
+    };
+    this.dragline = new THREE.Vector2();
+    this.projector = new THREE.Projector();
   }
-  this.defaultsize = 4;
-  this.opacities = [0.5, 0.8];
-  this.origin = new THREE.Vector3(0,0,0);
-  this.axes = {
-    x: new THREE.Vector3(1,0,0),
-    y: new THREE.Vector3(0,1,0),
-    z: new THREE.Vector3(0,0,1)
-  };
-  this.dragline = new THREE.Vector2();
-  this.projector = new THREE.Projector();
 
   this.createObject3D = function() {
     var obj = new THREE.Object3D();
@@ -53,14 +53,14 @@ elation.component.add('engine.things.manipulator', function() {
 
     var rotation = new THREE.Matrix4();
     if ( dir.y > 0.999 ) {
-      rotation.setRotationFromEuler(new THREE.Vector3( 0, 0, 0 ));
+      rotation.makeRotationFromEuler(new THREE.Euler( 0, 0, 0 ));
     } else if ( dir.y < -0.999 ) {
-      rotation.setRotationFromEuler(new THREE.Vector3( Math.PI, 0, 0 ));
+      rotation.makeRotationFromEuler(new THREE.Euler( Math.PI, 0, 0 ));
     } else {
 	    var axis = new THREE.Vector3( dir.z, 0, -dir.x ).normalize();
 	    var radians = Math.acos( dir.y );
 	    var quaternion = new THREE.Quaternion().setFromAxisAngle( axis, radians );
-	    rotation.setRotationFromQuaternion( quaternion );
+	    rotation.makeRotationFromQuaternion( quaternion );
     }
     arrowgeo.applyMatrix(rotation);
     return new THREE.Mesh(arrowgeo, mat);
@@ -89,11 +89,15 @@ elation.component.add('engine.things.manipulator', function() {
     }
   }
   this.mousedown = function(ev) {
+    ev.stopPropagation();
+    ev.preventDefault();
+
     elation.events.add(window, 'mousemove,mouseup', this);
     var mesh = ev.data;
 
     if (!this.camera) this.camera = this.engine.systems.render.views['main'].camera; // FIXME - ugly;
     this.engine.systems.admin.setCameraActive(false); // disable camera controls
+    this.parent.objects.dynamics.mass = 0;
 
     var action = false;
     if (mesh == this.movehelper.x) action = ['position', 'x'];
@@ -114,6 +118,7 @@ elation.component.add('engine.things.manipulator', function() {
           var start2d = this.projector.projectVector(this.localToWorld(this.origin.clone()), this.camera);
           var end2d = this.projector.projectVector(this.localToWorld(this.axes[action[1]].clone()), this.camera);
           this.dragline.set(end2d.x - start2d.x, end2d.y - start2d.y).normalize();
+          elation.events.fire({type: 'thing_drag_start', element: this.parent});
           break;
         case 'orientation':
           // Calculate the tangent vector at the point on the ring where the user clicked, and use that for the drag line
@@ -130,6 +135,7 @@ elation.component.add('engine.things.manipulator', function() {
             var start2d = this.projector.projectVector(intersects[0].point.clone(), this.camera);
             var end2d = this.projector.projectVector(intersects[0].point.clone().add(tangent), this.camera);
             this.dragline.set(end2d.x - start2d.x, end2d.y - start2d.y).normalize();
+            elation.events.fire({type: 'thing_rotate_start', element: this.parent});
           }
           break;
       }
@@ -137,12 +143,17 @@ elation.component.add('engine.things.manipulator', function() {
       console.log('unknown action:', ev);
     }
 
-    ev.stopPropagation();
-    ev.preventDefault();
   }
   this.mousemove = function(ev) {
+    ev.stopPropagation();
+    ev.preventDefault();
+
     if (this.action) {
       var dragdiff = new THREE.Vector2(ev.clientX - this.dragstartpos[0], this.dragstartpos[1] - ev.clientY);
+      if (ev.shiftKey) {
+        dragdiff.x *= .1;
+        dragdiff.y *= .1;
+      }
       switch (this.action[0]) {
         case 'position':
           // project the dragged vector onto the line formed by the axis to determine movement amount
@@ -150,27 +161,39 @@ elation.component.add('engine.things.manipulator', function() {
           var camerapos = new THREE.Vector3().getPositionFromMatrix(this.camera.matrixWorld);
           var dist = this.localToWorld(this.origin.clone()).sub(camerapos);
           var move = new THREE.Vector3();
-          move[this.action[1]] = this.dragline.dot(dragdiff) / dist.length();
-          this.parent.properties.position.copy(this.localToWorld(move));
+          move[this.action[1]] = dragdiff.dot(this.dragline) / Math.log(dist.length());
+          //this.parent.properties.position.copy(this.localToWorld(move));
+          var mat = this.parent.objects['3d'].matrix;//new THREE.Matrix4().getInverse(this.parent.matrix);
+          move.applyMatrix4(mat);
+          this.parent.properties.position.copy(move);
+          elation.events.fire({type: 'thing_drag_move', element: this.parent});
           break;
         case 'orientation':
           // FIXME - for some axes and camera locations, the rotations seem to get reversed...
-          var euler = new THREE.Vector3();
+          var euler = new THREE.Euler();
           euler[this.action[1]] = -this.dragline.dot(dragdiff) * Math.PI/180;
           var quat = new THREE.Quaternion().setFromEuler(euler);
           this.parent.properties.orientation.multiply(quat);
+          elation.events.fire({type: 'thing_rotate_move', element: this.parent});
           break;
       }
       this.dragstartpos = [ev.clientX, ev.clientY];
     }
-    ev.stopPropagation();
-    ev.preventDefault();
   }
   this.mouseup = function(ev) {
     elation.events.remove(window, 'mousemove,mouseup', this);
+    switch (this.action[0]) {
+      case 'position':
+        elation.events.fire({type: 'thing_drag_end', element: this.parent});
+        break;
+      case 'orientation':
+        elation.events.fire({type: 'thing_rotate_end', element: this.parent});
+        break;
+    }
     ev.stopPropagation();
     ev.preventDefault();
     this.engine.systems.admin.setCameraActive(true); // re-enable camera controls
+    this.parent.objects.dynamics.mass = this.parent.properties.mass;
   }
   this.click = function(ev) {
     //ev.stopPropagation();
