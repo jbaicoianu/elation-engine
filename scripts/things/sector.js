@@ -9,10 +9,9 @@ elation.component.add("engine.things.sector", function() {
       'light.enabled':           { type: 'bool', default: false },
       'light.color':             { type: 'color', default: 0xffffff },
       'light.position':          { type: 'vector3', default: [0,50,-50] },
-      'plane.enabled':           { type: 'bool', default: true },
+      'plane.enabled':           { type: 'bool', default: false },
       'skybox.cubePath':         { type: 'string' },
       'skybox.enabled':          { type: 'bool', default: false },
-      'skybox.cubePath':         { type: 'string' },
       'terrain.enabled':         { type: 'bool', default: false },
       'terrain.args.simple':     { type: 'bool', default: true },
       'terrain.args.color':      { type: 'color', default: 0x998877 },
@@ -38,7 +37,7 @@ elation.component.add("engine.things.sector", function() {
     }
     if (this.properties.plane.enabled) {
       var planegeo = new THREE.PlaneGeometry(32,32,32,32)
-      var rot = new THREE.Matrix4().setRotationFromEuler(new THREE.Vector3(-Math.PI/2, 0, 0));
+      var rot = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
       planegeo.applyMatrix(rot);
 
       var planemat = new THREE.MeshBasicMaterial({color: 0xeeeeee, wireframe: true, opacity: 0.1, transparent: true});
