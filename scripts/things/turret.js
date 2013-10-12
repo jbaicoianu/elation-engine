@@ -9,11 +9,11 @@ elation.component.add("engine.things.turret", function(args) {
       'yawspeed':        { type: 'angle', default: Math.PI / 2 },
       'maxpitchdegrees': { type: 'angle', default: 90 },
       'minpitchdegrees': { type: 'angle', default: -44 },
-      'reloadtime':      { type: 'integer', default: 2000 },
+      'reloadtime':      { type: 'int', default: 2000 },
       'muzzleoffset':    { type: 'vector3', default: [0,0,0] },
       'muzzlespeed':     { type: 'float', default: 150.0 },
       'range':           { type: 'float', default: 300.0 },
-      'render.scene':    { default: '/media/space/models/turret/A1 Turret.js' },
+      'render.scene':    { type: 'string', default: '/media/space/models/turret/A1 Turret.js' },
     });
     this.defineActions({
       'pitch': this.pitch,
