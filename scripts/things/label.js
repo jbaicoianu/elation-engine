@@ -13,7 +13,8 @@ elation.component.add("engine.things.label", function() {
     });
   }
   this.createObject3D = function() {
-    var geometry = new THREE.TextGeometry( this.properties.text, {
+    var text = this.properties.text || this.name;
+    var geometry = new THREE.TextGeometry( text, {
       size: this.properties.size,
       height: this.properties.thickness || this.properties.size / 2,
       curveSegments: this.properties.segments,
