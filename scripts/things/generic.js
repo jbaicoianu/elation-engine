@@ -27,10 +27,12 @@ elation.component.add("engine.things.generic", function() {
       'orientation':    { type: 'quaternion', default: [0, 0, 0, 1], comment: 'Object orientation, relative to parent' },
       'scale':          { type: 'vector3', default: [1, 1, 1], comment: 'Object scale, relative to parent' },
       'velocity':       { type: 'vector3', default: [0, 0, 0], comment: 'Object velocity (m/s)' },
+      'acceleration':   { type: 'vector3', default: [0, 0, 0], comment: 'Object acceleration (m/s^2)' },
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
       'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
+      'physical':       { type: 'bool', default: true, comment: 'Simulate physically ' },
       'persist':        { type: 'bool', default: true, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
@@ -60,7 +62,7 @@ elation.component.add("engine.things.generic", function() {
     if (typeof this.postinit == 'function') {
       this.postinit();
     }
-    this.migrateProperties();
+    //this.migrateProperties();
     this.init3D();
     this.initDOM();
     this.initPhysics();
@@ -87,7 +89,7 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.migrateProperties = function(props) {
-    //return props;
+    return (props && props.generic ? props.generic : props);
     // FIXME - once all entries in the db have been updated, this is no longer necessary
     if (!this.propargs) {
       var newprops = {};
@@ -141,6 +143,12 @@ elation.component.add("engine.things.generic", function() {
       case 'bool':
         value = !(value === false || value === 'false' || value === 0 || value === '0' || value === '' || value === null || typeof value == 'undefined');
         break;
+      case 'float':
+        value = +value;
+        break;
+      case 'int':
+        value = value | 0;
+        break;
       case 'texture':
         if (value !== false) {
           value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
@@ -148,7 +156,7 @@ elation.component.add("engine.things.generic", function() {
         break;
       case 'json':
         if (value !== false) {
-          value = JSON.decode(value);
+          value = (elation.utils.isString(value) ? JSON.decode(value) : value);
         }
         break;
     }
@@ -197,6 +205,7 @@ elation.component.add("engine.things.generic", function() {
       parent.add(this.objects['3d']);
     }
     if (this.objects.dynamics) {
+      this.objects.dynamics.mass = this.properties.mass;
       this.objects.dynamics.updateState();
     }
   }
@@ -205,20 +214,31 @@ elation.component.add("engine.things.generic", function() {
     return elation.utils.arrayget(this.properties, property, defval);
   }
   this.init3D = function() {
+    if (this.objects['3d']) {
+      if (this.objects['3d'].parent) { this.objects['3d'].parent.remove(this.objects['3d']); }
+    }
     this.objects['3d'] = this.createObject3D();
     if (this.objects['3d']) {
       this.objects['3d'].position = this.properties.position;
       this.objects['3d'].quaternion = this.properties.orientation;
       this.objects['3d'].scale = this.properties.scale;
-      this.objects['3d'].useQuaternion = true;
-      this.objects['3d']._thing = this;
+      //this.objects['3d'].useQuaternion = true;
+      this.objects['3d'].userData.thing = this;
 
       // Bounding sphere helper
       if (false && this.objects['3d'].geometry) {
         var obj = this.objects['3d'];
         var spherehelper = new THREE.Mesh(new THREE.SphereGeometry(obj.geometry.boundingSphere.radius, 16, 32), new THREE.MeshBasicMaterial({color: 0x00cccc, opacity: .1, transparent: true, depthWrite: false}));
-        spherehelper.stupidFuck = true;
+        spherehelper.isBoundingSphere = true;
         obj.add(spherehelper);
+      }
+    }
+    if (this.children.length > 0) {
+      // Things were added during initialization, so make sure they're added to the scene
+      for (var i = 0; i < this.children.length; i++) {
+        if (this.children[i].objects['3d'] && !this.children[i].objects['3d'].parent) {
+          this.objects['3d'].add(this.children[i].objects['3d']);
+        }
       }
     }
   }
@@ -229,7 +249,10 @@ elation.component.add("engine.things.generic", function() {
     //this.updateDOM();
   }
   this.initPhysics = function() {
-    this.createDynamics();
+    if (this.properties.physical) {
+      this.createDynamics();
+      this.createForces();
+    }
   }
   this.createObject3D = function() {
     if (this.properties.exists === false) return;
@@ -326,15 +349,16 @@ elation.component.add("engine.things.generic", function() {
       thing.parent = this;
       if (this.objects && thing.objects && this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].add(thing.objects['3d']);
-        elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       } else if (thing instanceof THREE.Object3D) {
         this.objects['3d'].add(thing);
-        elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
+      }
+      if (this.objects && thing.objects && this.objects['dynamics'] && thing.objects['dynamics']) {
+        this.objects['dynamics'].add(thing.objects['dynamics']);
       }
       if (this.container && thing.container) {
         this.container.appendChild(thing.container);
       }
-      elation.events.add(thing, 'thing_add', this);
+      elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       return true;
     } else {
       console.log("Couldn't add ", thing, " already exists in ", this);
@@ -346,7 +370,13 @@ elation.component.add("engine.things.generic", function() {
       if (this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].remove(thing.objects['3d']);
       }
-      this.container.removeChild(thing.container);
+      if (thing.container.parentNode) {
+        thing.container.parentNode.removeChild(thing.container);
+      }
+      if (thing.objects['dynamics']) {
+        elation.physics.system.remove(thing.objects['dynamics']);
+      }
+      elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
     } else {
       console.log("Couldn't remove ", thing, " doesn't exist in ", this);
@@ -362,18 +392,35 @@ elation.component.add("engine.things.generic", function() {
     return false;
   }
   this.createDynamics = function() {
-    if (!this.objects['dynamics']) {
-      this.objects['dynamics'] = new elation.physics.rigidbody({
+    if (!this.objects['dynamics'] && this.engine.systems.physics) {
+      var dyn = this.objects['dynamics'] = new elation.physics.rigidbody({
         position: this.properties.position,
         orientation: this.properties.orientation,
         mass: this.properties.mass,
         velocity: this.properties.velocity,
+        acceleration: this.properties.acceleration,
         angular: this.properties.angular,
         object: this
       });
-      elation.physics.system.add(this.objects['dynamics']);
+      //elation.physics.system.add(this.objects['dynamics']);
 
-      elation.events.add(this.objects['dynamics'], "dynamicsupdate,bounce", this);
+      // Create appropriate collider for the geometry associated with this thing
+      if (this.objects['3d'] && this.objects['3d'].geometry) {
+        var geom = this.objects['3d'].geometry;
+        if (geom instanceof THREE.SphereGeometry) {
+          if (!geom.boundingSphere) geom.computeBoundingSphere();
+          dyn.setCollider('sphere', {radius: geom.boundingSphere.radius});
+        } else if (geom instanceof THREE.PlaneGeometry) {
+          // FIXME - this only works on non-deformed planes, and right now only at the origin
+          var pnorm = this.localToWorld(geom.faces[0].normal.clone());
+          var poffset = 0; // FIXME - need to calculate real offset, given world position and plane normal
+          dyn.setCollider('plane', {normal: pnorm, offset: poffset});
+        } else {
+          if (!geom.boundingBox) geom.computeBoundingBox();
+          dyn.setCollider('box', geom.boundingBox);
+        }
+      }
+      elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
     }
   }
   this.removeDynamics = function() {
@@ -381,6 +428,8 @@ elation.component.add("engine.things.generic", function() {
       elation.physics.system.remove(this.objects['dynamics']);
       delete this.objects['dynamics'];
     }
+  }
+  this.createForces = function() {
   }
   this.loadJSON = function(url, texturepath) {
     if (typeof texturepath == 'undefined') {
@@ -411,7 +460,21 @@ elation.component.add("engine.things.generic", function() {
     this.extractEntities(scenedata.scene);
     //this.updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
-    this.objects['3d'].add(scenedata.scene);
+    //this.objects['3d'].add(scenedata.scene);
+    var parent = this.objects['3d'].parent;
+    parent.remove(this.objects['3d']);
+    this.objects['3d'] = new THREE.Object3D();
+    this.objects['3d'].position = this.properties.position;
+    this.objects['3d'].quaternion = this.properties.orientation;
+    this.objects['3d'].scale = this.properties.scale;
+    this.objects['3d'].userData.thing = this;
+    for (var i = 0; i < scenedata.scene.children.length; i++) {
+      var obj = scenedata.scene.children[i];
+      scenedata.scene.remove(obj);
+      this.objects['3d'].add(obj);
+    }
+    this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
+    parent.add(this.objects['3d']);
   }
   this.loadCollada = function(url) {
     var loader = new THREE.ColladaLoader();
@@ -425,6 +488,8 @@ elation.component.add("engine.things.generic", function() {
     collada.scene.rotation.x = -Math.PI / 2;
     collada.scene.rotation.z = Math.PI;
     this.extractEntities(collada.scene);
+    collada.scene.computeBoundingSphere();
+    collada.scene.computeBoundingBox();
     //this.updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: collada.scene});
     this.objects['3d'].add(collada.scene);
@@ -460,10 +525,20 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.worldToLocal = function(worldpos) {
+    if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
     return this.objects['3d'].worldToLocal(worldpos);
   }
   this.localToWorld = function(localpos) {
+    if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
     return this.objects['3d'].localToWorld(localpos);
+  }
+  this.worldToParent = function(worldpos) {
+    if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    return this.objects['3d'].parent.worldToLocal(worldpos);
+  }
+  this.localToParent = function(localpos) {
+    if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    return localpos.applyMatrix4(this.objects['3d'].matrix);
   }
   this.serialize = function() {
     var ret = {
@@ -492,6 +567,7 @@ elation.component.add("engine.things.generic", function() {
             break;
           case 'texture':
             propval = propval.sourceFile;
+            break;
           /*
           case 'color':
             propval = propval.getHex();
@@ -499,7 +575,8 @@ elation.component.add("engine.things.generic", function() {
           */
         }
         if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
-          elation.utils.arrayset(ret.properties, k, propval);
+          //elation.utils.arrayset(ret.properties, k, propval);
+          ret.properties[k] = propval;
           numprops++;
         }
       }
@@ -535,7 +612,7 @@ elation.component.add("engine.things.generic", function() {
       this.camera.position.copy(offset)
     }
     if (rotation) {
-      this.camera.eulerOrder = "YZX";
+      //this.camera.eulerOrder = "YZX";
       this.camera.rotation.copy(rotation);
     }
     this.objects['3d'].add(this.camera);
