@@ -19,7 +19,7 @@ THREE.FlyControls = function ( object, domElement ) {
 
 	// disable default target object behavior
 
-	this.object.useQuaternion = true;
+	//this.object.useQuaternion = true;
 
 	// internals
 
@@ -194,8 +194,8 @@ THREE.FlyControls = function ( object, domElement ) {
 		this.tmpQuaternion.set( this.rotationVector.x * rotMult, this.rotationVector.y * rotMult, this.rotationVector.z * rotMult, 1 ).normalize();
 		this.object.quaternion.multiply( this.tmpQuaternion );
 
+		this.object.matrix.makeRotationFromQuaternion( this.object.quaternion );
 		this.object.matrix.setPosition( this.object.position );
-		this.object.matrix.setRotationFromQuaternion( this.object.quaternion );
 		this.object.matrixWorldNeedsUpdate = true;
 
 
