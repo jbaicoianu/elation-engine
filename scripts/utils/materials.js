@@ -17,7 +17,15 @@ elation.extend("engine.utils.materials", new function() {
   }
   this.getTexture = function(url, repeat, mirrored) {
     if (!this.texturecache[url]) {
-      this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
+      if (url.match(/^data:/)) {
+        var img = document.createElement('IMG');
+        img.src = url;
+        this.texturecache[url] = new THREE.Texture(img);
+        this.texturecache[url].needsUpdate = true;
+        this.texturecache[url].sourceFile = url;
+      } else {
+        this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
+      }
       this.texturecache[url].anisotropy = 16;
     }
     if (repeat) {
@@ -319,6 +327,31 @@ console.log(chunks[k], chunks[k].uniforms);
         }
       }
     }
+  }
+  this.getTextureLabel = function(text) {
+    var c = elation.html.create('canvas');
+    var ctx = c.getContext('2d');
+
+    var fontsize = 12;
+    ctx.font = fontsize + 'px monospace';
+
+    var size = ctx.measureText(text);
+    c.width = size.width;
+    c.height = fontsize;
+
+    ctx.fillStyle = '#0f0';
+    ctx.fillText(text, 0, fontsize);
+
+/*
+document.body.appendChild(c);
+c.style.position = 'fixed';
+c.style.top = c.style.left = '50%';
+c.style.border = '2px solid red';
+c.style.zIndex = 4500;
+*/
+    var tex = new THREE.Texture(c);
+    tex.needsUpdate = true;
+    return tex;
   }
 });
 
