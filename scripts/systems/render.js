@@ -11,8 +11,7 @@ elation.require([
   "engine.external.three.render.FilmPass",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
-  "engine.utils.materials",
-  "engine.systems.render.view"
+  "engine.utils.materials"
 ]);
 
 elation.extend("engine.systems.render", function(args) {
@@ -30,8 +29,11 @@ elation.extend("engine.systems.render", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: render');
-    this.renderer = new THREE.WebGLRenderer({antialias: false});
+    this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false});
     this.renderer.autoClear = false;
+    this.renderer.shadowMapEnabled = true;
+    this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
+
   }
   this.system_detach = function(ev) {
     console.log('SHUTDOWN: render');
@@ -57,8 +59,9 @@ elation.component.add("engine.systems.render.view", function() {
     if (this.args.fullsize == 1) {
       elation.html.addclass(this.container, "engine_view_fullsize");
     }
-    elation.events.add(window, "resize", this);
-    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,click,touchstart,touchmove,touchend", this);
+    this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
+    elation.events.add(window, "resize,keydown,keyup", this);
+    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,dragover,click,touchstart,touchmove,touchend", this);
     if (!this.args.engine) {
       console.log("ERROR: couldn't create view, missing engine parameter");
     } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
@@ -77,15 +80,16 @@ elation.component.add("engine.systems.render.view", function() {
     }
     this.rendersystem.view_add(this.id, this);
 
-    var cam = new THREE.PerspectiveCamera(50, this.container.offsetWidth / this.container.offsetHeight, .01, 500000000);
+    var cam = new THREE.PerspectiveCamera(50, this.container.offsetWidth / this.container.offsetHeight, 1e-2, 1e4);
 
     cam.position.x = 0;
     cam.position.z = 0;
     cam.position.y = 1;
-cam.eulerOrder = "YXZ";
-cam.rotation.x = -Math.PI/24;
-//cam.rotation.y = -Math.PI/4;
+    cam.rotation.order = "YXZ";
+    cam.rotation.x = -Math.PI/24;
+    //cam.rotation.y = -Math.PI/4;
     this.setcamera(cam);
+
     this.setscene(this.engine.systems.world.scene['world-3d']);
     this.setskyscene(this.engine.systems.world.scene['sky']);
     //console.log(this.engine.systems.world.scene['world-3d']);
@@ -144,12 +148,14 @@ cam.rotation.x = -Math.PI/24;
       if (this.skycamera) {
         this.skycamera.rotation.copy(this.camera.rotation);
         this.skycamera.quaternion.copy(this.camera.quaternion);
-        this.skycamera.useQuaternion = this.camera.useQuaternion;
+        this.skycamera.matrix.copy(this.camera.matrix);
       }
       if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
         this.setrendersize(this.size[0], this.size[1]);
       }
       var dims = elation.html.dimensions(this.container);
+
+      this.setcameranearfar();
 
       if (this.pickingactive) {
         this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
@@ -171,12 +177,79 @@ cam.rotation.x = -Math.PI/24;
   this.setscene = function(scene) {
     this.scene = scene;
   }
+  this.setcameranearfar = function(near, far) {
+    /*
+    if (!this.camdebug) {
+      this.camdebug = elation.ui.window('camdebug', elation.html.create({append: document.body}), {title: 'Camera Debug'});
+    }
+    */
+    if (!near || !far) {
+      near = Infinity, far = 0;
+      var nearradius = 0, farradius = 0;
+      var campos = new THREE.Vector3().getPositionFromMatrix(this.camera.matrixWorld);
+      var objpos = new THREE.Vector3();
+      var frustum = new THREE.Frustum();
+      var frustmat = new THREE.Matrix4().makePerspective( this.camera.fov, this.camera.aspect, 0.00001, 9e99).multiply(this.camera.matrixWorldInverse);
+      //frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( this.camera.projectionMatrix, this.camera.matrixWorldInverse ) );
+      frustum.setFromMatrix(frustmat);
+      var within = [], nearnode = null, farnode = null;
+
+      this.scene.traverse(elation.bind(this, function(node) {
+        objpos.getPositionFromMatrix(node.matrixWorld);
+        if (!node.isBoundingSphere && node.geometry && node.geometry.boundingSphere && frustum.intersectsSphere({center: objpos, radius: node.geometry.boundingSphere.radius})) {
+          var distsq = objpos.distanceToSquared(campos);
+          var rsq = node.geometry.boundingSphere.radius * node.geometry.boundingSphere.radius;
+          var tdist = distsq - rsq;
+          if (tdist <= 0) {
+            within.push(node);
+          } else {
+            near = distsq;
+            nearnode = node;
+          }
+          if (distsq + rsq > far) {
+            far = distsq + rsq;
+            farradius = node.geometry.boundingSphere.radius;
+            farnode = node;
+          }
+        }
+      }));
+      if (nearnode) {
+        within.push(nearnode);
+      }
+      if (within.length > 0) {
+        var vpos = new THREE.Vector3();
+        for (var n = 0; n < within.length; n++) {
+          for (var i = 0; i < within[n].geometry.vertices.length; i++) {
+            vpos.copy(within[n].geometry.vertices[i]);
+            within[n].localToWorld(vpos);
+            if (true) { //frustum.containsPoint(vpos)) {
+              var dsq = vpos.distanceToSquared(campos);
+              if (dsq < near) {
+                near = dsq;
+                nearnode = within[n];
+              }
+            }
+          }
+        }
+      }
+      near = Math.max(Math.sqrt(near), 0.00001);
+      far = Math.max(Math.sqrt(far), 10);
+    }
+    //console.log('set near/far:', near, far, (nearnode && nearnode.userData.thing ? nearnode.userData.thing.name : nearnode), (farnode && farnode.userData.thing ? farnode.userData.thing.name : farnode), nearradius, farradius);
+    //var nearthing = this.getParentThing(nearnode);
+    //this.camdebug.setcontent("<ul><li>Near: " + near + "</li><li>Far: " + far + "</li><li>Nearest Object: " + (nearthing ? nearthing.name : '(unknown:' + (nearnode ? nearnode.name || nearnode.id : "") + ')') + "</li></ul>");
+    if (near != Infinity && far != 0) {
+      //this.camera.near = near * .5;
+      this.camera.far = far * 1.2;
+      this.camera.updateProjectionMatrix();
+    }
+
+  }
   this.setskyscene = function(scene) {
     this.skyscene = scene || new THREE.Scene();
     this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
     this.skycamera.rotation = this.camera.rotation;
     this.skycamera.quaternion = this.camera.quaternion;
-    this.skycamera.useQuaternion = this.camera.useQuaternion;
     this.skyscene.add(this.skycamera);
   }
   this.getscene = function(obj) {
@@ -232,15 +305,22 @@ cam.rotation.x = -Math.PI/24;
   this.mousedown = function(ev) {
     if (this.pickingactive && this.pickingobject) {
       this.cancelclick = false;
-      var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY});
+      var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
       for (var i = 0; i < fired.length; i++) {
-        if (fired[i].cancelBubble) ev.stopPropagation();
+        if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
+        if (fired[i].returnValue === false) { ev.preventDefault(); }
       }
     }
   }
   this.mousemove = function(ev) {
     this.mousepos = [ev.clientX, ev.clientY];
     this.cancelclick = true;
+  }
+  this.dragover = function(ev) {
+    if (!this.pickingactive) {
+      this.pickingactive = true;
+    }
+    this.mousemove(ev);
   }
   this.mouseout = function(ev) {
     if (this.pickingactive) {
@@ -257,7 +337,7 @@ cam.rotation.x = -Math.PI/24;
   }
   this.mouseup = function(ev) {
     if (this.pickingactive && this.pickingobject) {
-      var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+      var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
       for (var i = 0; i < fired.length; i++) {
         if (fired[i].cancelBubble) ev.stopPropagation();
       }
@@ -288,9 +368,19 @@ cam.rotation.x = -Math.PI/24;
     this.mouseup();
     this.click();
   }
+  this.keydown = function(ev) {
+    for (var k in this.keystates) {
+      this.keystates[k] = ev[k];
+    }
+  }
+  this.keyup = function(ev) {
+    for (var k in this.keystates) {
+      this.keystates[k] = ev[k];
+    }
+  }
   this.getParentThing = function(obj) {
     while (obj) {
-      if (obj._thing) return obj._thing;
+      if (obj.userData.thing) return obj.userData.thing;
       obj = obj.parent;
     }
     return null;
@@ -361,7 +451,7 @@ cam.rotation.x = -Math.PI/24;
         realmaterials[objid] = node.material;
         realvisible[objid] = node.visible;
         var parent = this.getParentThing(node);
-        if (parent.properties.mouseevents) {
+        if (parent && parent.properties && parent.properties.mouseevents) {
           node.material = this.getPickingMaterial(objid);
         } else {
           node.visible = false;
@@ -393,7 +483,7 @@ cam.rotation.x = -Math.PI/24;
         }
         this.pickingobject = objects[pickid];
         if (this.pickingobject) {
-          elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+          elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
         }
       }
       
@@ -404,14 +494,5 @@ cam.rotation.x = -Math.PI/24;
         this.pickingobject = false;
       }
     }
-  }
-  this.getThingFromObject = function(obj) {
-    while (obj) {
-      if (obj._thing) {
-        return obj._thing;
-      }
-      obj = obj.parent;
-    }
-    return;
   }
 });
