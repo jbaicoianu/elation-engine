@@ -171,3 +171,43 @@ span.engine_thing_object_Camera:before {
   margin: 0;
   padding: 0 .2em;
 }
+.engine_admin_definething pre {
+  margin: 0;
+}
+.engine_admin_definething .ui_accordion_title {
+}
+.engine_admin_definething input {
+  display: block;
+}
+.engine_admin_definething textarea {
+  width: 100%;
+  min-height: 10em;
+}
+.engine_thing_function {
+  color: #666;
+}
+.engine_thing_function.engine_thing_function_own {
+  color: white;
+}
+.engine_admin_definething_inherited .ui_accordion_title {
+  font-size: .8em;
+}
+.engine_admin_definething_inherited::before {
+  content: 'Inherited';
+  display: block;
+  margin-top: .2em;
+  padding: .2em;
+  text-align: center;
+}
+.engine_admin_worldcontrol {
+  max-width: 100%;
+}
+.engine_admin_worldcontrol .ui_buttonbar {
+  display: inline-block;
+}
+.engine_admin_worldcontrol .ui_slider label {
+  width: 8em;
+}
+.engine_admin_worldcontrol .ui_slider .ui_slider_track {
+  width: 16em;
+}
