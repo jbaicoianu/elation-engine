@@ -3,20 +3,8 @@ elation.component.add('engine.things.ball', function() {
     this.defineProperties({
       radius: { type: 'float', default: 1 },
       lifetime: { type: 'float', default: 0 },
+      gravity: { type: 'bool', default: true },
     });
-    this.engine.systems.controls.addContext('ball', {
-      'doshit': ['keyboard_space', elation.bind(this, function(ev) { 
-        if (ev.value == 1) {
-          console.log('dur', this, ev);
-          var cam = this.engine.systems.render.views['main'].camera;
-          var campos = cam.localToWorld(new THREE.Vector3(0,0,0));
-          var camdir = cam.localToWorld(new THREE.Vector3(0,0,-1)).sub(campos).normalize();
-          camdir.multiplyScalar(12);
-          var foo = this.engine.systems.world.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30 });
-        }
-      })]
-    });
-    this.engine.systems.controls.activateContext('ball');
     if (this.properties.lifetime != 0) {
       this.age = 0;
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, function(ev) { this.age += ev.data.delta * this.engine.systems.physics.timescale; if (this.age > this.properties.lifetime) this.die(); }));
@@ -37,6 +25,9 @@ elation.component.add('engine.things.ball', function() {
   }
   this.createForces = function() {
 		this.objects.dynamics.setDamping(.9);
-		this.objects.dynamics.addForce('gravity', new THREE.Vector3(0,-9.8,0));
+		this.objects.dynamics.restitution = .9;
+    if (this.properties.gravity) {
+  		this.objects.dynamics.addForce('gravity', new THREE.Vector3(0,-9.8,0));
+    }
   } 
 }, elation.engine.things.generic);
