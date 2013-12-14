@@ -39,7 +39,8 @@ elation.extend("engine.main", function(name) {
   this.run = function(ts) {
     // recursively request another frame until we're no longer running
     if (this.running) {
-      this.frame(elation.bind(this, this.run));
+      if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
+      this.frame(this.boundfunc);
     }
     var evdata = {
       ts: ts,
