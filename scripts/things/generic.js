@@ -32,7 +32,7 @@ elation.component.add("engine.things.generic", function() {
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
       'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
-      'physical':       { type: 'bool', default: true, comment: 'Simulate physically ' },
+      'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'persist':        { type: 'bool', default: true, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
@@ -207,6 +207,9 @@ elation.component.add("engine.things.generic", function() {
     if (this.objects.dynamics) {
       this.objects.dynamics.mass = this.properties.mass;
       this.objects.dynamics.updateState();
+      if (this.objects.dynamics.collider) {
+        this.objects.dynamics.collider.getInertialMoment();
+      }
     }
   }
   this.get = function(property, defval) {
@@ -373,8 +376,8 @@ elation.component.add("engine.things.generic", function() {
       if (thing.container.parentNode) {
         thing.container.parentNode.removeChild(thing.container);
       }
-      if (thing.objects['dynamics']) {
-        elation.physics.system.remove(thing.objects['dynamics']);
+      if (thing.objects['dynamics'] && thing.objects['dynamics'].parent) {
+        thing.objects['dynamics'].parent.remove(thing.objects['dynamics']);
       }
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
@@ -402,7 +405,7 @@ elation.component.add("engine.things.generic", function() {
         angular: this.properties.angular,
         object: this
       });
-      //elation.physics.system.add(this.objects['dynamics']);
+      //this.engine.systems.physics.add(this.objects['dynamics']);
 
       // Create appropriate collider for the geometry associated with this thing
       if (this.objects['3d'] && this.objects['3d'].geometry) {
@@ -415,6 +418,12 @@ elation.component.add("engine.things.generic", function() {
           var pnorm = this.localToWorld(geom.faces[0].normal.clone());
           var poffset = 0; // FIXME - need to calculate real offset, given world position and plane normal
           dyn.setCollider('plane', {normal: pnorm, offset: poffset});
+        } else if (geom instanceof THREE.CylinderGeometry) {
+          if (geom.radiusTop == geom.radiusBottom) {
+            dyn.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
+          } else {
+            console.log('FIXME - cylinder collider only supports uniform cylinders for now');
+          }
         } else {
           if (!geom.boundingBox) geom.computeBoundingBox();
           dyn.setCollider('box', geom.boundingBox);
@@ -425,7 +434,7 @@ elation.component.add("engine.things.generic", function() {
   }
   this.removeDynamics = function() {
     if (this.objects['dynamics']) {
-      elation.physics.system.remove(this.objects['dynamics']);
+      this.engine.systems.physics.remove(this.objects['dynamics']);
       delete this.objects['dynamics'];
     }
   }
