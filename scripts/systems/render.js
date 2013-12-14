@@ -1,5 +1,6 @@
 elation.require([
   "engine.external.three.stats",
+  "engine.external.three.render.CSS3DRenderer",
   "engine.external.three.render.EffectComposer",
   "engine.external.three.render.RenderPass",
   "engine.external.three.render.ShaderPass",
@@ -30,6 +31,7 @@ elation.extend("engine.systems.render", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: render');
     this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false});
+    this.cssrenderer = new THREE.CSS3DRenderer();
     this.renderer.autoClear = false;
     this.renderer.shadowMapEnabled = true;
     this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
@@ -77,6 +79,10 @@ elation.component.add("engine.systems.render.view", function() {
     this.rendersystem = this.engine.systems.render;
     if (!this.rendersystem.renderer.domElement.parentNode) {
       this.container.appendChild(this.rendersystem.renderer.domElement);
+    }
+    if (!this.rendersystem.cssrenderer.domElement.parentNode) {
+      this.container.appendChild(this.rendersystem.cssrenderer.domElement);
+      elation.html.addclass(this.rendersystem.cssrenderer.domElement, 'engine_systems_render_css3d');
     }
     this.rendersystem.view_add(this.id, this);
 
@@ -162,6 +168,9 @@ elation.component.add("engine.systems.render.view", function() {
       }
       if (!this.pickingdebug) {
         this.composer.render(delta);
+      }
+      if (this.rendersystem.cssrenderer) {
+        this.rendersystem.cssrenderer.render(this.scene, this.camera);
       }
     }
     this.stats.update();
@@ -270,6 +279,7 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.setrendersize = function(width, height) {
     this.rendersystem.renderer.setSize(width, height);  
+    this.rendersystem.cssrenderer.setSize(width, height);  
     this.composer.setSize(width, height);
     if (this.effects['FXAA']) {
       this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / width, 1 / height);
