@@ -76,7 +76,7 @@
 .engine_admin_inspector ul {
   list-style: none;
   padding-left: .5em;
-  margin: .5 0;
+  margin: .5em 0;
 }
 .engine_admin_inspector .engine_admin_inspector_contents {
   overflow: auto;

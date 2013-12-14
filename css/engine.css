@@ -47,7 +47,7 @@ body {
 }
 .engine_view_fullsize {
   position: absolute;
-  min-height: auto;
+  min-height: 0;
   overflow: hidden;
   z-index: 1;
   top: 0;
