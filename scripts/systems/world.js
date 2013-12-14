@@ -21,11 +21,6 @@ elation.extend("engine.systems.world", function(args) {
 
     this.rootname = (args ? args.parentname + '/' + args.name : '/');
 
-    // First check localStorage for an overridden world definition
-    if (false && localStorage && localStorage['elation.engine.world.override:' + this.rootname]) {
-      var world = JSON.parse(localStorage['elation.engine.world.override:' + this.rootname]);
-      this.load(world);
-    } 
     if (document.location.hash) {
       this.parseDocumentHash();
     }
@@ -38,12 +33,6 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.engine_frame = function(ev) {
     //console.log('FRAME: world', ev);
-/*
-    if (ev.timeStamp > this.lastpersist + this.persistdelay) {
-      this.persist();
-      this.lastpersist = ev.timeStamp;
-    }
-*/
   }
   this.engine_stop = function(ev) {
     console.log('SHUTDOWN: world');
@@ -112,15 +101,31 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.loadLocal = function(name) {
     console.log('Load local world: ' + name);
+    this.rootname = name;
     this.reset();
     var key = 'elation.engine.world.override:' + name;
-    this.rootname = name;
     if (localStorage[key]) {
       var world = JSON.parse(localStorage[key]);
       this.load(world);
     } else {
       this.spawn("sector", "default");
     }
+    var dochash = "world.load=" + name;
+    if (this.engine.systems.physics.timescale == 0) {
+      dochash += "&world.paused=1";
+    }
+    document.location.hash = dochash;
+  }
+  this.listLocalOverrides = function() {
+    var overrides = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (key.match(/elation\.engine\.world\.override:/)) {
+        var name = key.substr(key.indexOf(':')+1);
+        overrides.push(name);
+      } 
+    }
+    return overrides;
   }
   this.load = function(thing, root, logprefix) {
     if (!thing) return;
@@ -133,7 +138,10 @@ elation.extend("engine.systems.world", function(args) {
       }
     }
     if (!logprefix) logprefix = "";
-    if (typeof root == 'undefined') root = this;
+    if (typeof root == 'undefined') {
+      //this.rootname = (thing.parentname ? thing.parentname : '') + '/' + thing.name;
+      root = this;
+    }
     var currentobj = this.spawn(thing.type, thing.name, thing.properties, root, false);
     if (thing.things) {
       for (var k in thing.things) {
@@ -147,6 +155,7 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.reload = function() {
     if (this.rootname) {
+console.log('reload');
       this.loadLocal(this.rootname);
     }
   }
@@ -227,11 +236,11 @@ elation.extend("engine.systems.world", function(args) {
   this.parseDocumentHash = function() {
     var parsedurl = elation.utils.parseURL(document.location.hash);
     if (parsedurl.hashargs) {
-      if (parsedurl.hashargs['world.load'] && parsedurl.hashargs['world.load'] != this.rootname) {
-        this.loadLocal(parsedurl.hashargs['world.load']);
-      }
       if (+parsedurl.hashargs['world.paused']) {
         this.engine.systems.physics.timescale = 0;
+      }
+      if (parsedurl.hashargs['world.load'] && parsedurl.hashargs['world.load'] != this.rootname) {
+        this.loadLocal(parsedurl.hashargs['world.load']);
       }
     }
   }

@@ -20,7 +20,7 @@ elation.template.add('engine.systems.admin.inspector.property', '{?children}<spa
 elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.id} ({type})</span>');
 elation.template.add('engine.systems.admin.inspector.function', '<span class="engine_thing_function{?function.own} engine_thing_function_own{/function.own}" title="this.{function.name} = {function.content}">{function.name}</span>');
 
-elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" elation:component="ui.select" elation:args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
+elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" data-elation-component="ui.select" data-elation-args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
 elation.template.add('engine.systems.admin.definething', '<input name="thingtype" placeholder="type name"> <textarea name="thingdef">function() {}</textarea> <input type="submit">');
 
 elation.extend("engine.systems.admin", function(args) {
@@ -131,9 +131,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
     this.admin = this.args.admin;
-    this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: 'Scene', controls: false});
-    this.window.setcontent(this.container);
-    //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
+
     elation.events.add(this.world, 'engine_thing_create,world_thing_add,world_thing_remove', this);
     this.create();
 
@@ -142,6 +140,14 @@ elation.component.add("engine.systems.admin.scenetree", function() {
 
   }
   this.create = function() {
+    var title = elation.html.create({tag: 'h2'});
+    title.innerHTML = "Scene: ";
+    var overrides = this.world.listLocalOverrides();
+    var select = elation.ui.select(null, elation.html.create({tag: 'span', append: title}), {items: overrides, selected: this.world.rootname}, {ui_select_change: elation.bind(this, this.changeScene)});
+    this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: title, controls: false});
+    this.window.setcontent(this.container);
+    //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
+
     this.treeview = elation.ui.treeview(null, elation.html.create({tag: 'div', classname: 'engine_admin_scenetree_list', append: this.container}), {
       items: this.world.children,
       attrs: {
@@ -238,6 +244,12 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     var thing = this.hoverthing.value;
     thing.parent.remove(thing);
     this.treeview.setItems(this.world.children);
+  }
+  this.changeScene = function(ev) {
+    if (ev.data) {
+      this.world.loadLocal(ev.data);
+    }
+    ev.target.select.blur();
   }
 });
 elation.component.add("engine.systems.admin.addthing", function() {
