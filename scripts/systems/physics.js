@@ -2,6 +2,7 @@ elation.require(["physics.cyclone"]);
 
 elation.extend("engine.systems.physics", function(args) {
   elation.implement(this, elation.engine.systems.system);
+  this.system = false;
   this.timescale = 1;
   this.debugwindows = {};
   this.debugvis = {};
@@ -9,11 +10,12 @@ elation.extend("engine.systems.physics", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: physics');
+    this.system = new elation.physics.system({autostart: false});
     this.initstats();
   }
   this.engine_start = function(ev) {
     //console.log("PHYSICS: starting");
-    elation.physics.system.start();
+    this.system.start();
     this.lasttime = new Date().getTime();
     if (this.interval) {
       clearInterval(this.interval);
@@ -21,7 +23,7 @@ elation.extend("engine.systems.physics", function(args) {
 /*
     this.interval = setInterval(elation.bind(this, function() {
       var now = new Date().getTime();
-        elation.physics.system.step(this.timescale * (now - this.lasttime) / 1000);
+        this.system.step(this.timescale * (now - this.lasttime) / 1000);
         if (this.stats) this.stats.update();
       this.lasttime = now;
     }), 1000/40);
@@ -49,13 +51,13 @@ elation.extend("engine.systems.physics", function(args) {
     this.stats.domElement.childNodes[0].childNodes[1].style.backgroundColor = '#900';
   }
   this.add = function(obj) {
-    elation.physics.system.add(obj);
+    this.system.add(obj);
   }
   this.remove = function(obj) {
-    elation.physics.system.remove(obj);
+    this.system.remove(obj);
   }
   this.step = function(delta) {
-    elation.physics.system.step(this.timescale * delta);
+    this.system.step(this.timescale * delta);
     if (this.stats) this.stats.update();
     if (this.debugthing) {
       this.debugupdate(this.debugthing);
@@ -76,7 +78,7 @@ elation.extend("engine.systems.physics", function(args) {
 
     }
     if (!this.debugvis[thing.name]) {
-      this.debugvis[thing.name]= thing.spawn('physics_vis', thing.name + '_physvis', {target: thing, pickable: false, persist: false, physical: false});
+      this.debugvis[thing.name]= thing.spawn('physics_vis', thing.name + '_physvis', {target: thing, pickable: false, persist: false, physical: false, window: this.debugwindows[thing.name]});
     }
     if (!this.debugthings[thing.name]) {
       this.debugthings[thing.name] = thing;
@@ -127,7 +129,8 @@ elation.component.add("engine.things.physics_vis", function(args) {
   this.postinit = function() {
     this.defineProperties({
       target: { type: 'thing' },
-      forcescale: { type: 'float', default: .1 }
+      forcescale: { type: 'float', default: .1 },
+      window: { type: 'object' }
     });
   }
   this.createObject3D = function() {
@@ -164,6 +167,14 @@ elation.component.add("engine.things.physics_vis", function(args) {
       }
 
     }
+
+    if (this.properties.window) {
+      var foo = new THREE.CSS3DSprite(this.properties.window.container);
+      foo.position.set(2.5,0,0);
+      foo.scale.set(.01,.01,.01);
+      this.objects['3d'].add(foo);
+    }
+
     return this.objects['3d'];
   }
   
@@ -188,6 +199,9 @@ elation.component.add("engine.things.physics_collider", function(args) {
         break;
       case 'plane':
         obj = this.createBoundingPlane(collider);
+        break;
+      case 'cylinder':
+        obj = this.createBoundingCylinder(collider);
         break;
       case 'box':
       default:
@@ -251,8 +265,8 @@ console.log(this.properties.body);
     var forward = new THREE.Vector3(0,0,-1);
     this.arrows = { 
       forward: new THREE.ArrowHelper(forward, new THREE.Vector3(0,0,0), 2, 0x00ffff),
-      forward_world: new THREE.ArrowHelper(this.properties.body.getWorldDirection(forward.clone()), new THREE.Vector3(0,0,0), 2, 0x00ff66),
-      forward_local: new THREE.ArrowHelper(this.properties.body.getLocalDirection(forward.clone()), new THREE.Vector3(0,0,0), 2, 0x0066ff)
+      forward_world: new THREE.ArrowHelper(this.properties.body.localToWorldDir(forward.clone()), new THREE.Vector3(0,0,0), 2, 0x00ff66),
+      forward_local: new THREE.ArrowHelper(this.properties.body.worldToLocalDir(forward.clone()), new THREE.Vector3(0,0,0), 2, 0x0066ff)
     };
     outline.add(this.arrows.forward);
     outline.add(this.arrows.forward_world);
@@ -268,6 +282,7 @@ console.log(this.properties.body);
     var spherewiremat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
     var outline = new THREE.Mesh(spheregeo, spherewiremat);
     //outline.add(new THREE.Mesh(spheregeo, spheremat));
+
     return outline;
   }
   this.createBoundingPlane = function(collider) {
@@ -276,8 +291,13 @@ console.log(this.properties.body);
 // FIXME - this only really works for horizontal planes
 var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
 plane.applyMatrix(mat);
-console.log(mat.toArray());
     var mesh = new THREE.Mesh(plane, planemat);
+    return mesh;
+  }
+  this.createBoundingCylinder = function(collider) {
+    var cyl = new THREE.CylinderGeometry(collider.radius, collider.radius, collider.height, 16, 1);
+    var cylmat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
+    var mesh = new THREE.Mesh(cyl, cylmat);
     return mesh;
   }
   this.createCG = function() {
@@ -299,12 +319,14 @@ console.log(mat.toArray());
     var cg = new THREE.Mesh(new THREE.SphereGeometry(.05), new THREE.MeshPhongMaterial({emissive: 0x666600, map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 1}));
     return cg;
   }
+  /*
   this.engine_frame = function() {
     var forward = new THREE.Vector3(0,0,-1);
     this.arrows.forward.setDirection(forward);
-    this.arrows.forward_world.setDirection(this.properties.body.getWorldDirection(forward.clone()));
-    this.arrows.forward_local.setDirection(this.properties.body.getLocalDirection(forward.clone()));
+    this.arrows.forward_world.setDirection(this.properties.body.localToWorldDir(forward.clone()));
+    this.arrows.forward_local.setDirection(this.properties.body.worldToLocalDir(forward.clone()));
   }
+  */
   this.physics_collide = function(ev) {
     var collision = ev.data;
     // FIXME - this is inefficient as all hell.  We should use a particle system, or at LEAST re-use and limit the max collisions visualized at once
@@ -328,6 +350,7 @@ elation.component.add("engine.things.physics_collision", function(args) {
     });
     this.spawntime = new Date().getTime();
     this.elapsed = 0;
+    elation.events.add(this.properties.collision.bodies[0], 'physics_collision_resolved', this);
     elation.events.add(this.engine, 'engine_frame', this);
   }
   this.createObject3D = function() {
@@ -351,20 +374,8 @@ elation.component.add("engine.things.physics_collision", function(args) {
     this.materials.push(planemat);
     this.objects['3d'] = obj;
 
-console.log('IMPULSES', collision, collision.impulses);
+    //console.log('IMPULSES', collision, collision.impulses, collision.contactToWorld);
     var origin = new THREE.Vector3(0,0,0);
-    for (var i = 0; i < collision.impulses.length; i++) {
-      if (collision.impulses[i]) {
-        var len = collision.impulses[i].length();
-        if (len > 0) {
-          var dir = collision.impulses[i].clone().divideScalar(len);
-          var impulsearrow = this.generateArrow(dir, origin, len * this.properties.forcescale, 0x990099);
-          //obj.add(impulsearrow);
-          // FIXME - need to remove object from proper parent when done fading
-          collision.bodies[i].object.objects['3d'].add(impulsearrow);
-        }
-      }
-    }
 
     var m = collision.contactToWorld.elements;
     var arrowaxisx = this.generateArrow(new THREE.Vector3(m[0], m[1], m[2]), origin, 1, 0xff0000);
@@ -374,6 +385,7 @@ console.log('IMPULSES', collision, collision.impulses);
     var arrowaxisz = this.generateArrow(new THREE.Vector3(m[8], m[9], m[10]), origin, 1, 0x0000ff);
     obj.add(arrowaxisz);
 
+    this.arrows = [arrowaxisx, arrowaxisy, arrowaxisz];
     return obj;
   }
   this.generateArrow = function(dir, origin, len, color) {
@@ -437,6 +449,23 @@ console.log('IMPULSES', collision, collision.impulses);
     tex.needsUpdate = true; 
     return tex;
   }
+  this.physics_collision_resolved = function(ev) {
+    var collision = ev.data;
+    var origin = new THREE.Vector3(0,0,0);
+    for (var i = 0; i < collision.impulses.length; i++) {
+      if (collision.impulses[i]) {
+        var len = collision.impulses[i].length();
+        if (len > 0) {
+          var dir = collision.impulses[i].clone().divideScalar(len);
+          var impulsearrow = this.generateArrow(dir, origin, len * this.properties.forcescale, 0x990099);
+          this.arrows.push(impulsearrow);
+          //obj.add(impulsearrow);
+          // FIXME - need to remove object from proper parent when done fading
+          collision.bodies[i].object.objects['3d'].add(impulsearrow);
+        }
+      }
+    }
+  }
   this.engine_frame = function(ev) {
     var fadetime = this.properties.fadetime;
     this.elapsed += ev.data.delta * this.engine.systems.physics.timescale;
@@ -446,6 +475,9 @@ console.log('IMPULSES', collision, collision.impulses);
         this.materials[i].opacity = opacity;
       }
     } else {
+      for (var i = 0; i < this.arrows.length; i++) {
+        this.arrows[i].parent.remove(this.arrows[i]);
+      }
       elation.events.remove(this.engine, 'engine_frame', this);
       this.die();
     }
@@ -463,7 +495,7 @@ elation.component.add("engine.things.physics_forces_gravity", function(args) {
     elation.events.add(this.properties.force, 'physics_force_apply', this);
   }
   this.createObject3D = function() {
-    var grav = this.properties.body.getLocalDirection(this.properties.force.gravsum.clone());
+    var grav = this.properties.body.worldToLocalDir(this.properties.force.gravsum.clone());
     var len = grav.length();
     grav.divideScalar(len);
     this.arrow = new THREE.ArrowHelper(grav, new THREE.Vector3(0,0,0), len, 0xff00ff);
@@ -486,7 +518,7 @@ var mapB = THREE.ImageUtils.loadTexture( "/media/space/textures/sprite1.png" );
     return obj;
   }
   this.physics_force_apply = function() {
-    var grav = this.properties.body.getLocalDirection(this.properties.force.gravsum.clone());
+    var grav = this.properties.body.worldToLocalDir(this.properties.force.gravsum.clone());
     var len = grav.length();
     grav.divideScalar(len);
     this.arrow.setDirection(grav);
@@ -532,7 +564,7 @@ elation.component.add("engine.things.physics_forces_buoyancy", function(args) {
   this.physics_force_apply = function(ev) {
     this.inside.scale.y = Math.max(0.01, this.properties.force.submerged); 
     var len = this.properties.force.force.length();
-    var grav = this.properties.body.getLocalDirection(new THREE.Vector3(0,1,0));
+    var grav = this.properties.body.worldToLocalDir(new THREE.Vector3(0,1,0));
     if (len > .1) {
       if (!this.arrow.parent) {
         this.objects['3d'].add(this.arrow);
