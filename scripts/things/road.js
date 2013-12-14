@@ -3,7 +3,7 @@ elation.require("engine.things.pathedit");
 elation.component.add("engine.things.road", function(args) {
   this.postinit = function() {
     this.defineProperties({
-      'path': { type: 'array' }
+      'path': { type: 'json' }
     });
   }
   this.createMaterial = function(params) {
