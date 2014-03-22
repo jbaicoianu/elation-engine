@@ -18,6 +18,7 @@ elation.extend("engine.systems.world", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: world');
     this.loaded = false;
+    this.loading = false;
 
     this.rootname = (args ? args.parentname + '/' + args.name : '/');
 
@@ -27,8 +28,12 @@ elation.extend("engine.systems.world", function(args) {
     elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
 
     // If no local world override, load from args
-    if (!this.loaded && !elation.utils.isEmpty(args)) {
-      this.load(args);
+    if (!this.loaded && !this.loading) {
+      if (!elation.utils.isEmpty(args)) {
+        this.load(args);
+      } else {
+        this.createDefaultScene();
+      }
     }
   }
   this.engine_frame = function(ev) {
@@ -49,13 +54,19 @@ elation.extend("engine.systems.world", function(args) {
     if (thing.container) {
       //this.renderer['world-dom'].domElement.appendChild(thing.container);
     }
-    elation.events.add(thing, 'thing_add', elation.bind(this, function(ev) {
-      elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
-    }));
-    elation.events.add(thing, 'thing_remove', elation.bind(this, function(ev) {
-      elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
-    }));
+    elation.events.add(thing, 'thing_add,thing_remove', this);
     elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
+  }
+  this.thing_add = function(ev) {
+    elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
+    elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+  }
+  this.thing_remove = function(ev) {
+    elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
+    elation.events.remove(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+  }
+  this.thing_change = function(ev) {
+    elation.events.fire({type: 'world_thing_change', element: this, data: ev.data});
   }
   this.remove = function(thing) {
     if (this.children[thing.name]) {
@@ -108,7 +119,7 @@ elation.extend("engine.systems.world", function(args) {
       var world = JSON.parse(localStorage[key]);
       this.load(world);
     } else {
-      this.spawn("sector", "default");
+      //this.spawn("sector", "default");
     }
     var dochash = "world.load=" + name;
     if (this.engine.systems.physics.timescale == 0) {
@@ -129,6 +140,7 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.load = function(thing, root, logprefix) {
     if (!thing) return;
+    this.loading = true;
     if (!this.root) {
       this.currentlyloaded = thing;
       var loadtypes = this.extract_types(thing, [], true);
@@ -150,6 +162,8 @@ elation.extend("engine.systems.world", function(args) {
     }
     if (root === this) {
       this.loaded = true;
+      this.loading = false;
+      this.dirty = true;
       elation.events.fire({type: 'engine_world_init', element: this});
     }
   }
@@ -158,6 +172,44 @@ elation.extend("engine.systems.world", function(args) {
 console.log('reload');
       this.loadLocal(this.rootname);
     }
+  }
+  this.createDefaultScene = function() {
+    var scenedef = {
+      type: 'sector',
+      name: 'default',
+      properties: {
+        persist: true
+      },
+      things: {
+        ground: {
+          type: 'terrain',
+          name: 'ground',
+          properties: {
+            'textures.map': '/media/space/textures/dirt.jpg',
+            'textures.normalMap': '/media/space/textures/dirt-normal.jpg',
+            'textures.mapRepeat': [ 100, 100 ],
+            'persist': true,
+            'position': [0,0,100]
+          }
+        },
+        sun: {
+          type: 'light',
+          name: 'sun',
+          properties: {
+            type: 'directional',
+            position: [ -20, 50, 25 ],
+            persist: true
+          }
+        },
+        bob: {
+          type: 'builder',
+          name: 'bob'
+        }
+      }
+    };
+
+    this.load(scenedef);
+
   }
   this.spawn = function(type, name, spawnargs, parent, autoload) {
     if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
@@ -185,7 +237,7 @@ console.log('reload');
         // Right now this might end up with weird double-object behavior...
         type = 'generic';
       } else {
-        currentobj = elation.engine.things[type](name, elation.html.create(), {type: realtype, name: name, engine: this.engine, properties: spawnargs});
+        currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, properties: spawnargs});
         parent.add(currentobj);
         //currentobj.reparent(parent);
 
@@ -207,7 +259,7 @@ console.log('reload');
     if (texture !== false) {
       if (!this.scene['sky']) {
         this.scene['sky'] = new THREE.Scene();
-        var skygeom = new THREE.CubeGeometry(1,1,1, 10, 10, 10);
+        var skygeom = new THREE.BoxGeometry(1,1,1, 10, 10, 10);
         var skymat = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide, wireframe: true, depthWrite: false});
 
         var shader = THREE.ShaderLib[ "cube" ];
@@ -224,6 +276,7 @@ console.log('reload');
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
         console.log('create sky mesh', this.scene['sky']);
+
       }
       this.skyenabled = true;
     } else {
