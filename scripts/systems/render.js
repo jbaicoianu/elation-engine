@@ -1,5 +1,6 @@
 elation.require([
   "engine.external.three.stats",
+  "engine.external.threex.renderstats",
   "engine.external.three.render.CSS3DRenderer",
   "engine.external.three.render.EffectComposer",
   "engine.external.three.render.RenderPass",
@@ -10,9 +11,11 @@ elation.require([
   "engine.external.three.render.BleachBypassShader",
   "engine.external.three.render.FilmShader",
   "engine.external.three.render.FilmPass",
+  "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
-  "engine.utils.materials"
+  "engine.utils.materials",
+  "engine.geometries",
 ]);
 
 elation.extend("engine.systems.render", function(args) {
@@ -33,19 +36,44 @@ elation.extend("engine.systems.render", function(args) {
     this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false});
     this.cssrenderer = new THREE.CSS3DRenderer();
     this.renderer.autoClear = false;
+    this.renderer.setClearColor(0x000000, true);
     this.renderer.shadowMapEnabled = true;
     this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    this.lastframetime = 0;
 
+    elation.events.add(this.engine.systems.world, 'world_thing_add,world_thing_remove,world_thing_change', this);
+    // FIXME - globally-bound events are dirty, things should fire events when their properties change
+    elation.events.add(null, 'physics_update,thing_drag_move,thing_rotate_move,engine_texture_load', elation.bind(this, this.setdirty));
+  }
+  this.setdirty = function() {
+    this.dirty = true;
   }
   this.system_detach = function(ev) {
     console.log('SHUTDOWN: render');
   }
   this.engine_frame = function(ev) {
     //console.log('FRAME: render');
-    this.renderer.clear();
-    for (var k in this.views) {
-      this.views[k].render(ev.data.delta);
+    this.lastframetime += ev.data.delta;
+    if (this.dirty) {
+      this.dirty = false;
+      this.renderer.clear();
+      for (var k in this.views) {
+        this.views[k].render(this.lastframetime);
+      }
+      this.lastframetime = 0;
     }
+    for (var k in this.views) {
+      this.views[k].updatePickingObject();
+    }
+  }
+  this.world_thing_add = function(ev) {
+    this.setdirty();
+  }
+  this.world_thing_remove = function(ev) {
+    this.setdirty();
+  }
+  this.world_thing_change = function(ev) {
+    this.setdirty();
   }
 });
 
@@ -100,6 +128,15 @@ elation.component.add("engine.systems.render.view", function() {
     this.setskyscene(this.engine.systems.world.scene['sky']);
     //console.log(this.engine.systems.world.scene['world-3d']);
 
+    // Depth shader, used for SSAO, god rays, etc
+    var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+    var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+    this.depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
+    this.depthMaterial.blending = THREE.NoBlending;
+    this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+
+
     this.composer = new THREE.EffectComposer(this.rendersystem.renderer);
     var mainpass = new THREE.RenderPass(this.scene, this.camera, null, null, 0)
     if (this.skyscene) {
@@ -116,12 +153,21 @@ elation.component.add("engine.systems.render.view", function() {
     this.effects['copy'].renderToScreen = true;
 
     this.effects['FXAA'] = new THREE.ShaderPass( THREE.FXAAShader );
-    this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / this.size[0], 1 / this.size[1]);
+    this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / this.container.offsetWidth, 1 / this.container.offsetHeight);
     this.effects['FXAA'].renderToScreen = true;
+
+    this.effects['SSAO'] = new THREE.ShaderPass( THREE.SSAOShader );
+    this.effects['SSAO'].uniforms[ 'size' ].value.set( this.container.offsetWidth, this.container.offsetHeight);
+    this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
+    this.effects['SSAO'].uniforms[ 'cameraNear' ].value = cam.near;
+    this.effects['SSAO'].uniforms[ 'cameraFar' ].value = cam.far;
+    //this.effects['SSAO'].clear = true;
+    //this.effects['SSAO'].renderToScreen = true;
 
     //this.composer.addPass(this.effects['bleach']);
     //this.composer.addPass(this.effects['sepia']);
     //this.composer.addPass(this.effects['film']);
+    //this.composer.addPass(this.effects['SSAO']);
     this.composer.addPass( this.effects['FXAA'] );
     //this.composer.addPass( this.effects['copy'] );
 
@@ -129,23 +175,28 @@ elation.component.add("engine.systems.render.view", function() {
     this.stats.domElement.style.position = 'absolute';
     this.stats.domElement.style.top = '0px';
     this.container.appendChild(this.stats.domElement);
+
+    this.renderstats = new THREEx.RendererStats()
+    this.renderstats.domElement.style.position = 'absolute'
+    this.renderstats.domElement.style.right = '0px'
+    this.renderstats.domElement.style.bottom = '0px'
+    this.container.appendChild( this.renderstats.domElement )
+
+    elation.events.add(mainpass, 'render', elation.bind(this, this.updateRenderStats));
+
     this.getsize();
 
     this.glcontext = this.rendersystem.renderer.getContext();
 
     if (this.picking) {
+      this.mousepos = [0, 0];
+      this.lastmousepos = [-1, -1];
       this.initPickingMaterial();
 
-      this.pickingmaterials = [];
-      this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true});
-      this.pickingtarget.generateMipmaps = false;
-      this.pickingbuffer = new Uint8Array(4);
-      this.picknum = 0;
       this.pickingdebug = false;
 
-
-      this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; })});
-      this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
+      this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
+      //this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
       this.engine.systems.controls.activateContext('view');
     }
   }
@@ -159,14 +210,32 @@ elation.component.add("engine.systems.render.view", function() {
       if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
         this.setrendersize(this.size[0], this.size[1]);
       }
-      var dims = elation.html.dimensions(this.container);
 
       this.setcameranearfar();
 
+      var dims = elation.html.dimensions(this.container);
       if (this.pickingactive) {
-        this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
+        //if (this.pickingdebug || this.picknum++ % 3 == 0 || delta > 0.05) {
+          this.updatePickingTarget();
+        //}
       }
-      if (!this.pickingdebug) {
+      if (this.pickingdebug) {
+        if (!this.pickingdebugscene) {
+          // If this is our first time showing the picking debug screen, create the scene, 
+          // camera, and quad to display it
+          this.pickingdebugscene = new THREE.Scene();
+          this.pickingdebugcam = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
+          this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({map: this.pickingtarget})));
+          //plane.position.set(0,0,-1);
+          this.pickingdebugscene.add(this.pickingdebugcam);
+        }
+        this.rendersystem.renderer.clear();
+        this.rendersystem.renderer.render(this.pickingdebugscene, this.pickingdebugcam);
+      } else {
+        this.scene.overrideMaterial = this.depthMaterial;
+        this.rendersystem.renderer.render(this.scene, this.camera, this.depthTarget, true);
+
+        this.scene.overrideMaterial = null;
         this.composer.render(delta);
       }
       if (this.rendersystem.cssrenderer) {
@@ -177,6 +246,9 @@ elation.component.add("engine.systems.render.view", function() {
     this.size_old[0] = this.size[0];
     this.size_old[1] = this.size[1];
 //this.camera.rotation.y += Math.PI/32 * delta;
+  }
+  this.updateRenderStats = function() {
+    this.renderstats.update(this.rendersystem.renderer);
   }
 
   this.setcamera = function(camera) {
@@ -195,7 +267,7 @@ elation.component.add("engine.systems.render.view", function() {
     if (!near || !far) {
       near = Infinity, far = 0;
       var nearradius = 0, farradius = 0;
-      var campos = new THREE.Vector3().getPositionFromMatrix(this.camera.matrixWorld);
+      var campos = new THREE.Vector3().setFromMatrixPosition(this.camera.matrixWorld);
       var objpos = new THREE.Vector3();
       var frustum = new THREE.Frustum();
       var frustmat = new THREE.Matrix4().makePerspective( this.camera.fov, this.camera.aspect, 0.00001, 9e99).multiply(this.camera.matrixWorldInverse);
@@ -204,7 +276,7 @@ elation.component.add("engine.systems.render.view", function() {
       var within = [], nearnode = null, farnode = null;
 
       this.scene.traverse(elation.bind(this, function(node) {
-        objpos.getPositionFromMatrix(node.matrixWorld);
+        objpos.setFromMatrixPosition(node.matrixWorld);
         if (!node.isBoundingSphere && node.geometry && node.geometry.boundingSphere && frustum.intersectsSphere({center: objpos, radius: node.geometry.boundingSphere.radius})) {
           var distsq = objpos.distanceToSquared(campos);
           var rsq = node.geometry.boundingSphere.radius * node.geometry.boundingSphere.radius;
@@ -228,14 +300,16 @@ elation.component.add("engine.systems.render.view", function() {
       if (within.length > 0) {
         var vpos = new THREE.Vector3();
         for (var n = 0; n < within.length; n++) {
-          for (var i = 0; i < within[n].geometry.vertices.length; i++) {
-            vpos.copy(within[n].geometry.vertices[i]);
-            within[n].localToWorld(vpos);
-            if (true) { //frustum.containsPoint(vpos)) {
-              var dsq = vpos.distanceToSquared(campos);
-              if (dsq < near) {
-                near = dsq;
-                nearnode = within[n];
+          if (within[n].geometry instanceof THREE.Geometry) {
+            for (var i = 0; i < within[n].geometry.vertices.length; i++) {
+              vpos.copy(within[n].geometry.vertices[i]);
+              within[n].localToWorld(vpos);
+              if (true) { //frustum.containsPoint(vpos)) {
+                var dsq = vpos.distanceToSquared(campos);
+                if (dsq < near) {
+                  near = dsq;
+                  nearnode = within[n];
+                }
               }
             }
           }
@@ -284,6 +358,12 @@ elation.component.add("engine.systems.render.view", function() {
     if (this.effects['FXAA']) {
       this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / width, 1 / height);
     }
+    if (this.effects['SSAO']) {
+      this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+
+      this.effects['SSAO'].uniforms[ 'size' ].value.set( width, height);
+      this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
+    }
     if (this.camera) {
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
@@ -304,6 +384,7 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.resize = function(ev) {
     this.getsize();
+    this.rendersystem.setdirty();
   }
   this.mouseover = function(ev) {
     if (!this.pickingactive) {
@@ -315,7 +396,7 @@ elation.component.add("engine.systems.render.view", function() {
   this.mousedown = function(ev) {
     if (this.pickingactive && this.pickingobject) {
       this.cancelclick = false;
-      var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
+      var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
       for (var i = 0; i < fired.length; i++) {
         if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
         if (fired[i].returnValue === false) { ev.preventDefault(); }
@@ -337,7 +418,7 @@ elation.component.add("engine.systems.render.view", function() {
       elation.events.remove(this.container, 'mousemove,mouseout', this);
       this.pickingactive = false;
       if (this.pickingobject) {
-        var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY});
+        var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
         this.pickingobject = false;
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble) ev.stopPropagation();
@@ -347,7 +428,7 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.mouseup = function(ev) {
     if (this.pickingactive && this.pickingobject) {
-      var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
+      var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
       for (var i = 0; i < fired.length; i++) {
         if (fired[i].cancelBubble) ev.stopPropagation();
       }
@@ -355,7 +436,7 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.click = function(ev) {
     if (this.pickingactive && this.pickingobject && !this.cancelclick) {
-      var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+      var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY])});
       for (var i = 0; i < fired.length; i++) {
         if (fired[i].cancelBubble) ev.stopPropagation();
       }
@@ -387,6 +468,9 @@ elation.component.add("engine.systems.render.view", function() {
     for (var k in this.keystates) {
       this.keystates[k] = ev[k];
     }
+  }
+  this.change = function(ev) {
+    console.log('change', ev);
   }
   this.getParentThing = function(obj) {
     while (obj) {
@@ -439,6 +523,17 @@ elation.component.add("engine.systems.render.view", function() {
         'controls_picking',
       ]
     });
+
+    this.pickingmaterials = [];
+    this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true});
+    this.pickingtarget.generateMipmaps = false;
+    this.pickingbuffer = new Uint8Array(4);
+    this.picknum = 0;
+    this.picktime = 0;
+
+    this.pickingobjects = [];
+    this.realmaterials = [];
+    this.realvisible = [];
   }
   this.getPickingMaterial = function(id) {
     if (!this.pickingmaterials[id]) {
@@ -447,62 +542,157 @@ elation.component.add("engine.systems.render.view", function() {
     }
     return this.pickingmaterials[id];
   }
-  this.pick = function(x, y) {
+  this.updatePickingTarget = function(force) {
     // ratelimit to once every n frames, for performance reasons
-    if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
+    //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
+    /*
+    var now = new Date().getTime();
+    if (now - this.picktime < 1000/20 && !force) {
+      return;
+    }
+    this.picktime = now;
+    */
 
-    var objects = [];
-    var realmaterials = [];
-    var realvisible = [];
+    this.pickingobjects = [];
+    this.realmaterials = [];
+    this.realvisible = [];
     var objid = 1;
     // replace texture with placeholder
     this.scene.traverse(elation.bind(this, function(node) {
       if (node.material) {
-        realmaterials[objid] = node.material;
-        realvisible[objid] = node.visible;
+        var objid = node.id;
+        this.realvisible[objid] = node.visible;
+        this.realmaterials[objid] = node.material;
         var parent = this.getParentThing(node);
-        if (parent && parent.properties && parent.properties.mouseevents) {
+        if (node.visible && parent && parent.properties && parent.properties.mouseevents) {
           node.material = this.getPickingMaterial(objid);
         } else {
           node.visible = false;
         }
-        objects[objid] = node;
-        objid++;
+        this.pickingobjects[objid] = node;
+        //objid++;
+      } else {
       }
     }));
-    var pickingtarget = null; //(this.pickingdebug ? null : this.pickingtarget)
-    this.rendersystem.renderer.render(this.scene, this.camera, pickingtarget);
-    this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
-    
-    var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
-
-    // revert textures
-    for (var id in objects) {
-      if (realmaterials[id]) {
-        objects[id].material = realmaterials[id];
-      }
-      objects[id].visible = realvisible[id];
+    this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
+    if (this.pickingdebug) {
+      this.rendersystem.renderer.render(this.scene, this.camera);
     }
 
-    //console.log('plip', pickid, objects[pickid], [x, this.container.offsetHeight - y], this.pickingbuffer);
+    // revert textures
+    for (var id in this.pickingobjects) {
+      if (this.realmaterials[id]) {
+        this.pickingobjects[id].material = this.realmaterials[id];
+      }
+      this.pickingobjects[id].visible = this.realvisible[id];
+    }
+
+  }
+  this.updatePickingObject = function() {
+    if (this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1])) {
+      var dims = elation.html.dimensions(this.container);
+      this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
+      this.lastmousepos[0] = this.mousepos[0];
+      this.lastmousepos[1] = this.mousepos[1];
+    }
+  }
+  this.pick = function(x, y) {
+    //var oldframebuffer = this.glcontext.bindFramebuffer();
+
+    this.rendersystem.renderer.setRenderTarget( this.pickingtarget );
+    this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
+    this.rendersystem.renderer.setRenderTarget( null );
+    
+    var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
+    var pickedthing = false, oldpickedthing = false;
+    if (this.pickingobject) {
+      pickedthing = oldpickedthing = this.getParentThing(this.pickingobject);
+    }
+
     if (pickid > 0) {
-      if (this.pickingobject !== objects[pickid]) {
+      //console.log('plip', [x, y], pickid, [x, this.container.offsetHeight - y], this.pickingbuffer);
+      if (this.pickingobject !== this.pickingobjects[pickid]) {
+        pickedthing = this.getParentThing(this.pickingobjects[pickid]);
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
-          elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+          elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
         }
-        this.pickingobject = objects[pickid];
+        this.pickingobject = this.pickingobjects[pickid];
         if (this.pickingobject) {
-          elation.events.fire({type: "mouseover", element: this.getParentThing(this.pickingobject), data: this.pickingobject, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+          elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
         }
       }
-      
+      elation.events.fire({type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
     } else {
       if (this.pickingobject) {
         //console.log('mouseout', this.pickingobject);
-        elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.pickingobject});
+        elation.events.fire({type: "mouseout", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
         this.pickingobject = false;
       }
     }
   }
+  this.getPickingData = function(mesh, mousepos) {
+    return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
+  }
+});
+elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
+  // Represents an intersection between the mouse and an object in the scene as viewed from the specified viewport
+
+  this.init = function() {
+    this.object = mesh;
+    this.thing = this.getParentThing(mesh);
+
+    // Accessor functions let us avoid doing the heavy calculations for every single 
+    // intersection, and instead generates more specific information as it's requested
+    Object.defineProperty(this, 'point', { get: this.getIntersectionPoint });
+    Object.defineProperty(this, 'face', { get: this.getIntersectionFace });
+    Object.defineProperty(this, 'distance', { get: this.getIntersectionDistance });
+  }
+
+  this.getParentThing = function(obj) {
+    // FIXME - duplicated from above, should be a shared utility function
+    while (obj) {
+      if (obj.userData.thing) return obj.userData.thing;
+      obj = obj.parent;
+    }
+    return null;
+  }
+  this.getIntersection = function() {
+    if (!this.intersection) {
+      var mouse3d = new THREE.Vector3((mousepos[0] / viewport.size[0]) * 2 - 1, -(mousepos[1] / viewport.size[1]) * 2 + 1, -1);
+      var projector = new THREE.Projector();
+      projector.unprojectVector(mouse3d, viewport.camera);
+
+      var ray = new THREE.Raycaster(viewport.camera.position, mouse3d.sub(viewport.camera.position).normalize());
+      var intersects = ray.intersectObject(mesh);
+      if (intersects.length > 0) {
+        this.intersection = intersects[0];
+      }
+      //console.log(intersects, mouse3d.toArray(), ray, mesh);
+    }
+
+    return this.intersection;
+  }
+  this.getIntersectionPoint = function() {
+    var intersection = this.getIntersection();
+    if (intersection) {
+      return intersection.point;
+    }
+    return false;
+  }
+  this.getIntersectionFace = function() {
+    var intersection = this.getIntersection();
+    if (intersection) {
+      return intersection.face;
+    }
+    return false;
+  }
+  this.getIntersectionDistance = function() {
+    var intersection = this.getIntersection();
+    if (intersection) {
+      return intersection.distance;
+    }
+    return false;
+  }
+  this.init();
 });
