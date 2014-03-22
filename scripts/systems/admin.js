@@ -2,8 +2,8 @@ elation.require([
   "engine.external.three.FlyControls",
   "engine.external.three.OrbitControls",
   "engine.external.three.TransformControls",
+  //"engine.external.highlight",
   "engine.things.manipulator",
-  "engine.highlight",
   "ui.accordion",
   "ui.button",
   "ui.buttonbar",
@@ -12,7 +12,9 @@ elation.require([
   "ui.tabs",
   "ui.treeview",
   "ui.window",
-  "ui.indicator"
+  "ui.indicator",
+  "ui.contextmenu",
+  "ui.toolbox",
 ]);
 
 elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
@@ -43,6 +45,18 @@ elation.extend("engine.systems.admin", function(args) {
     /* FIXME - silly hack! */
     if ( this.cameraactive && !this.admincontrols) {
       this.createCamera();
+
+			this.engine.systems.controls.addCommands('admin', {
+				'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
+/*
+				'move_left': elation.bind(this, this.moveleft),
+				'move_right': elation.bind(this, this.moveright),
+				'move_forward': elation.bind(this, this.moveforward),
+				'move_back': elation.bind(this, this.moveback),
+*/
+			});
+			this.engine.systems.controls.addBindings('admin', {'keyboard_shift_a': 'add_thing'});
+			this.engine.systems.controls.activateContext('admin');
     } else if (this.cameraactive) {
       this.admincontrols.update(ev.data.delta);
     }
@@ -55,12 +69,17 @@ elation.extend("engine.systems.admin", function(args) {
       this.orbitcontrols.rotateUp(-Math.PI/4);
       this.orbitcontrols.rotateLeft(-Math.PI/4);
       this.orbitcontrols.dollyOut(25);
-      this.orbitcontrols.userPanSpeed = .1;
+      this.orbitcontrols.userPanSpeed = 10;
+      this.orbitcontrols.keyPanSpeed = 100;
+
+			elation.events.add(this.orbitcontrols, 'change', elation.bind(this, this.controls_change));
 
       this.flycontrols = new THREE.FlyControls(view.camera, view.container);
       this.flycontrols.movementSpeed = 10;
       this.flycontrols.rollSpeed = Math.PI/4;
       this.flycontrols.dragToLook = true;
+
+			elation.events.add(this.flycontrols, 'change', elation.bind(this, this.controls_change));
 
       this.toggleControls();
   
@@ -68,6 +87,7 @@ elation.extend("engine.systems.admin", function(args) {
       this.cameraactive = true;
 
       elation.events.add(render.views['main'].container, 'dragenter,dragover,drop', this);
+			elation.events.add(null, 'engine_control_capture,engine_control_release', this);
     }
   }
   this.setCameraActive = function(active) {
@@ -126,6 +146,15 @@ elation.extend("engine.systems.admin", function(args) {
       }
     }
   }
+	this.controls_change = function(ev) {
+		this.engine.systems.render.dirty = true;
+	}
+	this.engine_control_capture = function(ev) {
+		this.admincontrols.enabled = false;
+	}
+	this.engine_control_release = function(ev) {
+		this.admincontrols.enabled = true;
+	}
 });
 elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
@@ -177,7 +206,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     // TODO - object hover/selection should be made available when a specific selection mode is enabled
     /*
     elation.events.add(this, 'mouseover', elation.bind(this, function(ev) {
-      if (ev.data && ev.data.material) {
+      if (ev.data && mouseevents.data.material) {
         var materials = (ev.data.material instanceof THREE.MeshFaceMaterial ? ev.data.material.materials : [ev.data.material]);
         for (var i = 0; i < materials.length; i++) {
           if (materials[i].emissive) {
@@ -285,7 +314,7 @@ elation.component.add("engine.systems.admin.addthing", function() {
     var type = this.form.type.value;
     var name = this.form.name.value;
     if (this.parentthing) {
-      var newthing = this.parentthing.spawn(type, name);
+      var newthing = this.parentthing.spawn(type, name, {persist: true});
       this.window.close();
       // FIXME - should set the newly spawned item as active, since the next logical step is to start manipulating it...
       //elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
@@ -438,6 +467,8 @@ sel.addRange(range);
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
+	this.defaultcontainer = { tag: 'div' };
+
   this.init = function() {
     this.engine = this.args.engine;
 
@@ -448,9 +479,9 @@ elation.component.add("engine.systems.admin.inspector", function() {
     elation.events.add(this.container, "mousewheel", function(ev) { ev.stopPropagation(); }); // FIXME - hack for mousewheel
     //this.label = elation.html.create({tag: 'h2', append: this.container});
     this.tabcontents = {
-      properties: elation.engine.systems.admin.inspector.properties(null, elation.html.create()),
-      objects: elation.engine.systems.admin.inspector.objects(null, elation.html.create()),
-      functions: elation.engine.systems.admin.inspector.functions(null, elation.html.create())
+      properties: elation.engine.systems.admin.inspector.properties({}),
+      objects: elation.engine.systems.admin.inspector.objects({}),
+      functions: elation.engine.systems.admin.inspector.functions({})
     };
     this.manipulator = elation.engine.things.manipulator('manipulator', elation.html.create(), {properties: {persist: false, pickable: false, physical: false}, name: 'manipulator', type: 'manipulator', engine: this.engine}); 
   }
@@ -506,6 +537,8 @@ elation.component.add("engine.systems.admin.inspector", function() {
   }
 });
 elation.component.add("engine.systems.admin.inspector.properties", function() {
+	this.defaultcontainer = { tag: 'div' };
+
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_properties ui_treeview');
     this.propdiv = elation.html.create({tag: 'div', append: this.container});
@@ -515,6 +548,7 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
     var thing = thingwrapper.value;
     this.propdiv.innerHTML = '';
     var proptree = this.buildPropertyTree(thing.properties);
+console.log(proptree, thing.properties);
       
     // FIXME - should reuse the same treeview rather than creating a new one each time
     this.treeview = elation.ui.treeview(null, this.propdiv, {
@@ -546,6 +580,8 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
         root[k]['value'] = '[mesh]';
       } else if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
         root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + "_");
+      } else if (elation.utils.isArray(properties[k]) || elation.utils.isObject(properties[k])) {
+				root[k]['value'] = JSON.stringify(properties[k]);
       } else {
         root[k]['value'] = properties[k];
       }
@@ -559,7 +595,9 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
   }
 });
 elation.component.add("engine.systems.admin.inspector.objects", function() {
-  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'CubeGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshFaceMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
+	this.defaultcontainer = { tag: 'div' };
+
+  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'BoxGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshFaceMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_objects ui_treeview');
   }
@@ -641,6 +679,8 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
   }
 });
 elation.component.add("engine.systems.admin.inspector.functions", function() {
+	this.defaultcontainer = { tag: 'div' };
+
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_functions');
   }
