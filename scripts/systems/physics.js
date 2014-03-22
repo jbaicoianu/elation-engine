@@ -26,7 +26,7 @@ elation.extend("engine.systems.physics", function(args) {
         this.system.step(this.timescale * (now - this.lasttime) / 1000);
         if (this.stats) this.stats.update();
       this.lasttime = now;
-    }), 1000/40);
+    }), 1000/1000);
 */
   }
   this.engine_frame = function(ev) {
@@ -250,14 +250,14 @@ elation.component.add("engine.things.physics_collider", function(args) {
       linegeo.vertices.push(new THREE.Vector3(edge[0][0], edge[0][1], edge[0][2]));
       linegeo.vertices.push(new THREE.Vector3(edge[1][0], edge[1][1], edge[1][2]));
     }
-    //var boxgeo = new THREE.CubeGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z);
+    //var boxgeo = new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z);
     var boxmat = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: false, opacity: .5, blending: THREE.AdditiveBlending});
     var outline = new THREE.Line(linegeo, boxmat, THREE.LinePieces);
 
-    var volume = new THREE.Mesh(new THREE.CubeGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10), new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
+    var volume = new THREE.Mesh(new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10), new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
     volume.position.addVectors(bbox.max, bbox.min).multiplyScalar(.5);
 console.log(this.properties.body);
-    outline.add(volume);
+    //outline.add(volume);
     //outline.add(new THREE.AxisHelper(.5));
 
     // temporary helpers for debugging coordinate space transforms
@@ -287,7 +287,7 @@ console.log(this.properties.body);
   }
   this.createBoundingPlane = function(collider) {
     var plane = new THREE.PlaneGeometry(1000, 1000);
-    var planemat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .04, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending });
+    var planemat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .04, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending });
 // FIXME - this only really works for horizontal planes
 var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
 plane.applyMatrix(mat);
@@ -540,7 +540,7 @@ elation.component.add("engine.things.physics_forces_buoyancy", function(args) {
     var obj = new THREE.Object3D();
     var bbox = this.properties.boundingbox;
     var size = [bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z];
-    var insidegeo = new THREE.CubeGeometry(size[0], size[1], size[2]);
+    var insidegeo = new THREE.BoxGeometry(size[0], size[1], size[2]);
     insidegeo.applyMatrix(new THREE.Matrix4().makeTranslation(0, size[1]/2, 0));
     var insidemat_side = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.2, transparent: true, depthWrite: false, depthTest: false});
     var insidemat_top = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.5, transparent: true, depthWrite: false, depthTest: false});
