@@ -65,7 +65,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	// Set to true to disable use of the keys
 	this.noKeys = false;
 	// The four arrow keys
-	this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+	this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40, W: 87, A: 65, S: 83, D: 68, Q: 81, E: 69 };
 
 	////////////
 	// internals
@@ -257,8 +257,9 @@ THREE.OrbitControls = function ( object, domElement ) {
 		scale = 1;
 		pan.set(0,0,0);
 
-		if ( lastPosition.distanceTo( this.object.position ) > 0 ) {
+		if ( lastPosition.distanceTo( this.object.position ) > EPS ) {
 
+      changeEvent.data = { lastPosition: lastPosition.toArray(), position: this.object.position.toArray(), distance: lastPosition.distanceTo( this.object.position ) };
 			this.dispatchEvent( changeEvent );
 
 			lastPosition.copy( this.object.position );
@@ -426,18 +427,22 @@ THREE.OrbitControls = function ( object, domElement ) {
 		switch ( event.keyCode ) {
 
 			case scope.keys.UP:
+			case scope.keys.W:
 				scope.pan( new THREE.Vector2( 0, scope.keyPanSpeed ) );
 				needUpdate = true;
 				break;
 			case scope.keys.BOTTOM:
+			case scope.keys.S:
 				scope.pan( new THREE.Vector2( 0, -scope.keyPanSpeed ) );
 				needUpdate = true;
 				break;
 			case scope.keys.LEFT:
+			case scope.keys.A:
 				scope.pan( new THREE.Vector2( scope.keyPanSpeed, 0 ) );
 				needUpdate = true;
 				break;
 			case scope.keys.RIGHT:
+			case scope.keys.D:
 				scope.pan( new THREE.Vector2( -scope.keyPanSpeed, 0 ) );
 				needUpdate = true;
 				break;
@@ -572,7 +577,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
 	this.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
 
-	this.domElement.addEventListener( 'keydown', onKeyDown, false );
+	window.addEventListener( 'keydown', onKeyDown, false );
 
 	this.domElement.addEventListener( 'touchstart', touchstart, false );
 	this.domElement.addEventListener( 'touchend', touchend, false );

@@ -694,11 +694,11 @@ THREE.TransformControls = function ( camera, domElement ) {
 		if ( !scope.object ) return;
 
 		scope.object.updateMatrixWorld();
-		worldPosition.getPositionFromMatrix( scope.object.matrixWorld );
+		worldPosition.setFromMatrixPosition( scope.object.matrixWorld );
 		worldRotation.setFromRotationMatrix( tempMatrix.extractRotation( scope.object.matrixWorld ) );
 
 		camera.updateMatrixWorld();
-		camPosition.getPositionFromMatrix( camera.matrixWorld );
+		camPosition.setFromMatrixPosition( camera.matrixWorld );
 		camRotation.setFromRotationMatrix( tempMatrix.extractRotation( camera.matrixWorld ) );
 
 		scale = worldPosition.distanceTo( camPosition ) / 6 * scope.size;

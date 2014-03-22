@@ -46,6 +46,7 @@ THREE.RenderPass.prototype = {
 
 		this.scene.overrideMaterial = null;
 
+		elation.events.fire({element: this, type: 'render'});
 	}
 
 };
