@@ -3,7 +3,7 @@ elation.require([
   "engine.external.three.OrbitControls",
   "engine.external.three.TransformControls",
   "engine.things.manipulator",
-  "engine.highlight",
+  //"engine.highlight",
   "ui.accordion",
   "ui.button",
   "ui.buttonbar",
