@@ -4,6 +4,8 @@ elation.require([
   "engine.external.three.render.CSS3DRenderer",
   "engine.external.three.render.EffectComposer",
   "engine.external.three.render.RenderPass",
+  "engine.external.three.render.OculusRiftEffect",
+  "engine.external.three.render.OculusRenderPass",
   "engine.external.three.render.ShaderPass",
   "engine.external.three.render.MaskPass",
   "engine.external.three.render.CopyShader",
@@ -11,6 +13,8 @@ elation.require([
   "engine.external.three.render.BleachBypassShader",
   "engine.external.three.render.FilmShader",
   "engine.external.three.render.FilmPass",
+  "engine.external.three.render.ConvolutionShader",
+  "engine.external.three.render.BloomPass",
   "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
@@ -33,10 +37,10 @@ elation.extend("engine.systems.render", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: render');
-    this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false});
+    this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true});
     this.cssrenderer = new THREE.CSS3DRenderer();
     this.renderer.autoClear = false;
-    this.renderer.setClearColor(0x000000, true);
+    this.renderer.setClearColor(0xffffff, 0);
     this.renderer.shadowMapEnabled = true;
     this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
     this.lastframetime = 0;
@@ -80,18 +84,24 @@ elation.extend("engine.systems.render", function(args) {
 elation.component.add("engine.systems.render.view", function() {
   //elation.implement(this, elation.engine.systems.system);
   this.effects = {};
+  this.defaultcontainer = { tag: 'div' };
 
   this.init = function() {
     elation.html.addclass(this.container, "engine_view");
     this.picking = this.args.picking || false;
     this.size = [0, 0];
     this.size_old = [0, 0];
+
+    // Used by various render pass shaders
+    this.sizevec = new THREE.Vector2();
+    this.sizevecinverse = new THREE.Vector2();
+
     if (this.args.fullsize == 1) {
       elation.html.addclass(this.container, "engine_view_fullsize");
     }
     this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
     elation.events.add(window, "resize,keydown,keyup", this);
-    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,dragover,click,touchstart,touchmove,touchend", this);
+    elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
     if (!this.args.engine) {
       console.log("ERROR: couldn't create view, missing engine parameter");
     } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
@@ -105,6 +115,7 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.create = function() {
     this.rendersystem = this.engine.systems.render;
+
     if (!this.rendersystem.renderer.domElement.parentNode) {
       this.container.appendChild(this.rendersystem.renderer.domElement);
     }
@@ -137,68 +148,117 @@ elation.component.add("engine.systems.render.view", function() {
     this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
 
-    this.composer = new THREE.EffectComposer(this.rendersystem.renderer);
-    var mainpass = new THREE.RenderPass(this.scene, this.camera, null, null, 0)
-    if (this.skyscene) {
-      mainpass.clear = false;
-      var skypass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
-      this.composer.addPass(skypass);
-    }
-    this.composer.addPass(mainpass);
-
-    this.effects['film']= new THREE.FilmPass( 0.35, .75, 2048, false );
-    this.effects['sepia'] = new THREE.ShaderPass( THREE.SepiaShader );
-    this.effects['bleach'] = new THREE.ShaderPass( THREE.BleachBypassShader );
-    this.effects['copy'] = new THREE.ShaderPass( THREE.CopyShader );
-    this.effects['copy'].renderToScreen = true;
-
-    this.effects['FXAA'] = new THREE.ShaderPass( THREE.FXAAShader );
-    this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / this.container.offsetWidth, 1 / this.container.offsetHeight);
-    this.effects['FXAA'].renderToScreen = true;
-
-    this.effects['SSAO'] = new THREE.ShaderPass( THREE.SSAOShader );
-    this.effects['SSAO'].uniforms[ 'size' ].value.set( this.container.offsetWidth, this.container.offsetHeight);
-    this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
-    this.effects['SSAO'].uniforms[ 'cameraNear' ].value = cam.near;
-    this.effects['SSAO'].uniforms[ 'cameraFar' ].value = cam.far;
-    //this.effects['SSAO'].clear = true;
-    //this.effects['SSAO'].renderToScreen = true;
-
-    //this.composer.addPass(this.effects['bleach']);
-    //this.composer.addPass(this.effects['sepia']);
-    //this.composer.addPass(this.effects['film']);
-    //this.composer.addPass(this.effects['SSAO']);
-    this.composer.addPass( this.effects['FXAA'] );
-    //this.composer.addPass( this.effects['copy'] );
-
-    this.stats = new Stats();
-    this.stats.domElement.style.position = 'absolute';
-    this.stats.domElement.style.top = '0px';
-    this.container.appendChild(this.stats.domElement);
-
-    this.renderstats = new THREEx.RendererStats()
-    this.renderstats.domElement.style.position = 'absolute'
-    this.renderstats.domElement.style.right = '0px'
-    this.renderstats.domElement.style.bottom = '0px'
-    this.container.appendChild( this.renderstats.domElement )
-
-    elation.events.add(mainpass, 'render', elation.bind(this, this.updateRenderStats));
-
+    this.composer = this.createRenderPath(['main', 'bloom']);
     this.getsize();
+
+    this.showstats = false;
+
+    if (this.showstats) {
+      this.stats = new Stats();
+      this.stats.domElement.style.position = 'absolute';
+      this.stats.domElement.style.top = '0px';
+      this.container.appendChild(this.stats.domElement);
+
+      this.renderstats = new THREEx.RendererStats()
+      this.renderstats.domElement.style.position = 'absolute'
+      this.renderstats.domElement.style.right = '0px'
+      this.renderstats.domElement.style.bottom = '0px'
+      this.container.appendChild( this.renderstats.domElement )
+
+      elation.events.add(mainpass, 'render', elation.bind(this, this.updateRenderStats));
+    }
 
     this.glcontext = this.rendersystem.renderer.getContext();
 
     if (this.picking) {
-      this.mousepos = [0, 0];
-      this.lastmousepos = [-1, -1];
+      this.mousepos = [0, 0, document.body.scrollTop];
+      this.lastmousepos = [-1, -1, -1];
       this.initPickingMaterial();
 
       this.pickingdebug = false;
 
       this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
-      //this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
+      this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
       this.engine.systems.controls.activateContext('view');
     }
+  }
+  this.createRenderPath = function(passes, target) {
+    // this.createRenderPath(['picking', 'oculus_deform'], depthTarget)
+    // this.createRenderPath(['depth', 'oculus_deform'], pickingTarget)
+    // this.createRenderPath(['sky', 'main', 'FXAA', 'oculus_deform', 'oculus_colorshift'])
+    var composer = new THREE.EffectComposer(this.rendersystem.renderer, target);
+
+    var renderToScreen = false;
+    for (var i = 0; i < passes.length; i++) {
+      var pass = this.createRenderPass(passes[i]);
+      if (pass) {
+        //if (i == 0) pass.clear = true;
+        composer.addPass(pass);
+        renderToScreen = renderToScreen || pass.renderToScreen;
+      }
+    }
+    if (!target && !renderToScreen) {
+      var pass = this.createRenderPass('screenout');
+      composer.addPass(pass);
+    }
+
+    return composer;
+  }
+  this.createRenderPass = function(name, args) {
+    var pass = false;
+    switch (name) {
+      case 'main':
+        pass = new THREE.RenderPass(this.scene, this.camera, null, null, 0);
+        break;
+      case 'oculus':
+        pass = new THREE.OculusRenderPass(this.scene, this.camera, null, null, 0);
+        break;
+      case 'sky':
+        pass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
+        break;
+      case 'film':
+        pass = new THREE.FilmPass( 0.35, .75, 2048, false );
+        break;
+      case 'sepia':
+        pass = new THREE.ShaderPass( THREE.SepiaShader );
+        break;
+      case 'bleach':
+        pass = new THREE.ShaderPass( THREE.BleachBypassShader );
+        break;
+      case 'copy':
+        pass = new THREE.ShaderPass( THREE.CopyShader );
+        break;
+      case 'screenout':
+        pass = new THREE.ShaderPass( THREE.CopyShader );
+        pass.renderToScreen = true;
+        break;
+      case 'bloom':
+        pass = new THREE.BloomPass(.25);
+        break;
+      case 'fxaa':
+        pass = new THREE.ShaderPass( THREE.FXAAShader );
+        //pass.uniforms[ 'resolution' ].value.set( 1 / this.container.offsetWidth, 1 / this.container.offsetHeight);
+        pass.uniforms[ 'resolution' ].value = this.sizevecinverse;
+        break;
+      case 'ssao':
+        pass = new THREE.ShaderPass( THREE.SSAOShader );
+        //pass.uniforms[ 'size' ].value.set( this.container.offsetWidth, this.container.offsetHeight);
+        pass.uniforms[ 'size' ].value = this.sizevec;
+        pass.uniforms[ 'tDepth' ].value = this.depthTarget;
+        pass.uniforms[ 'cameraNear' ].value = this.camera.near;
+        pass.uniforms[ 'cameraFar' ].value = this.camera.far;
+        //pass.clear = true;
+    }
+    return pass;
+  }
+  this.setRenderMode = function(mode) {
+    // Supported values: 'main', 'oculus'
+
+    var pass = this.createRenderPass(mode);
+    this.composer.passes[0] = pass;
+    this.pickingcomposer.passes[0] = pass;
+
+    this.rendersystem.setdirty();
   }
   this.render = function(delta) {
     if (this.scene && this.camera) {
@@ -223,26 +283,36 @@ elation.component.add("engine.systems.render.view", function() {
         if (!this.pickingdebugscene) {
           // If this is our first time showing the picking debug screen, create the scene, 
           // camera, and quad to display it
+          // FIXME - this should just use the pickingdebugcomposer which does exactly this internally
           this.pickingdebugscene = new THREE.Scene();
           this.pickingdebugcam = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
-          this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({map: this.pickingtarget})));
+          //this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: this.pickingtarget})));
+          this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: this.pickingcomposer.output})));
           //plane.position.set(0,0,-1);
           this.pickingdebugscene.add(this.pickingdebugcam);
+/*
+          this.pickingdebugscene = true;
+          this.pickingdebugcomposer = this.createRenderPath(['copy', 'copy', 'screenout'], this.pickingtarget);
+*/
         }
-        this.rendersystem.renderer.clear();
+        //this.rendersystem.renderer.clear();
         this.rendersystem.renderer.render(this.pickingdebugscene, this.pickingdebugcam);
+        //this.pickingdebugcomposer.render();
       } else {
         this.scene.overrideMaterial = this.depthMaterial;
-        this.rendersystem.renderer.render(this.scene, this.camera, this.depthTarget, true);
+        //this.rendersystem.renderer.render(this.scene, this.camera, this.depthTarget, true);
 
         this.scene.overrideMaterial = null;
         this.composer.render(delta);
+        //this.rendersystem.renderer.render(this.scene, this.camera);
       }
       if (this.rendersystem.cssrenderer) {
-        this.rendersystem.cssrenderer.render(this.scene, this.camera);
+        //this.rendersystem.cssrenderer.render(this.scene, this.camera);
       }
     }
-    this.stats.update();
+    if (this.stats) {
+      this.stats.update();
+    }
     this.size_old[0] = this.size[0];
     this.size_old[1] = this.size[1];
 //this.camera.rotation.y += Math.PI/32 * delta;
@@ -254,6 +324,12 @@ elation.component.add("engine.systems.render.view", function() {
   this.setcamera = function(camera) {
     this.camera = camera;
     this.setscene(this.getscene(camera));
+    if (this.composer) {
+      this.composer.passes[0].camera = camera;
+    }
+    if (this.pickingcomposer) {
+      this.pickingcomposer.passes[0].camera = camera;
+    }
   }
   this.setscene = function(scene) {
     this.scene = scene;
@@ -352,9 +428,14 @@ elation.component.add("engine.systems.render.view", function() {
     return this.size;
   }
   this.setrendersize = function(width, height) {
+    this.sizevec.set(width, height);
+    this.sizevecinverse.set(1/width, 1/height);
     this.rendersystem.renderer.setSize(width, height);  
     this.rendersystem.cssrenderer.setSize(width, height);  
     this.composer.setSize(width, height);
+    if (this.pickingcomposer) {
+      this.pickingcomposer.setSize(width, height);
+    }
     if (this.effects['FXAA']) {
       this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / width, 1 / height);
     }
@@ -388,10 +469,10 @@ elation.component.add("engine.systems.render.view", function() {
   }
   this.mouseover = function(ev) {
     if (!this.pickingactive) {
-      elation.events.add(this.container, 'mousemove,mouseout', this);
+      //elation.events.add(this.container, 'mousemove,mouseout', this);
       this.pickingactive = true;
     }
-    this.mousepos = [ev.clientX, ev.clientY];
+    this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
   }
   this.mousedown = function(ev) {
     if (this.pickingactive && this.pickingobject) {
@@ -403,8 +484,11 @@ elation.component.add("engine.systems.render.view", function() {
       }
     }
   }
+  this.mousewheel = function(ev) {
+    this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
+  }
   this.mousemove = function(ev) {
-    this.mousepos = [ev.clientX, ev.clientY];
+    this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
     this.cancelclick = true;
   }
   this.dragover = function(ev) {
@@ -444,15 +528,15 @@ elation.component.add("engine.systems.render.view", function() {
     ev.preventDefault();
   }
   this.touchstart = function(ev) {
-    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
     this.mousedown();
   }
   this.touchmove = function(ev) {
-    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
     this.mousemove();
   }
   this.touchmove = function(ev) {
-    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY];
+    this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
     this.mousemove();
   }
   this.touchend = function(ev) {
@@ -525,8 +609,10 @@ elation.component.add("engine.systems.render.view", function() {
     });
 
     this.pickingmaterials = [];
-    this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true});
+    this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true, generateMipmaps: false});
     this.pickingtarget.generateMipmaps = false;
+
+    this.pickingcomposer = this.createRenderPath(['main'], this.pickingtarget);
     this.pickingbuffer = new Uint8Array(4);
     this.picknum = 0;
     this.picktime = 0;
@@ -574,9 +660,11 @@ elation.component.add("engine.systems.render.view", function() {
       } else {
       }
     }));
-    this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
+    //this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
+    this.pickingcomposer.render();
+//this.pickingtarget.needsUpdate = true;
     if (this.pickingdebug) {
-      this.rendersystem.renderer.render(this.scene, this.camera);
+      //this.rendersystem.renderer.render(this.scene, this.camera);
     }
 
     // revert textures
@@ -587,19 +675,21 @@ elation.component.add("engine.systems.render.view", function() {
       this.pickingobjects[id].visible = this.realvisible[id];
     }
 
+
   }
   this.updatePickingObject = function() {
-    if (this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1])) {
+    if (this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2])) {
       var dims = elation.html.dimensions(this.container);
       this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
       this.lastmousepos[0] = this.mousepos[0];
       this.lastmousepos[1] = this.mousepos[1];
+      this.lastmousepos[2] = this.mousepos[2];
     }
   }
   this.pick = function(x, y) {
     //var oldframebuffer = this.glcontext.bindFramebuffer();
 
-    this.rendersystem.renderer.setRenderTarget( this.pickingtarget );
+    this.rendersystem.renderer.setRenderTarget( this.pickingcomposer.output );
     this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
     this.rendersystem.renderer.setRenderTarget( null );
     
