@@ -19,8 +19,12 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 	this.renderTarget1 = renderTarget;
 	this.renderTarget2 = renderTarget.clone();
 
+	// Keep track if which one is "active" and store it as our primary
+	this.output = this.renderTarget1;
+
 	this.writeBuffer = this.renderTarget1;
 	this.readBuffer = this.renderTarget2;
+	this.output = this.readBuffer;
 
 	this.passes = [];
 
@@ -57,6 +61,8 @@ THREE.EffectComposer.prototype = {
 
 		this.writeBuffer = this.renderTarget1;
 		this.readBuffer = this.renderTarget2;
+
+		this.output = this.readBuffer;
 
 		var maskActive = false;
 
