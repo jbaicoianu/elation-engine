@@ -29,10 +29,12 @@ elation.component.add("engine.things.generic", function() {
       'velocity':       { type: 'vector3', default: [0, 0, 0], comment: 'Object velocity (m/s)' },
       'acceleration':   { type: 'vector3', default: [0, 0, 0], comment: 'Object acceleration (m/s^2)' },
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
+      'angularacceleration': { type: 'vector3', default: [0, 0, 0], comment: 'Object angular acceleration (radians/sec^2)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
-      'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
+      'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
+      'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
       'persist':        { type: 'bool', default: false, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
@@ -405,12 +407,13 @@ elation.component.add("engine.things.generic", function() {
         velocity: this.properties.velocity,
         acceleration: this.properties.acceleration,
         angular: this.properties.angular,
+        angularacceleration: this.properties.angularacceleration,
         object: this
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
 
       // Create appropriate collider for the geometry associated with this thing
-      if (this.objects['3d'] && this.objects['3d'].geometry) {
+      if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
         var geom = this.objects['3d'].geometry;
         if (geom instanceof THREE.SphereGeometry) {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
