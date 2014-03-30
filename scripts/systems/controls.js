@@ -418,10 +418,11 @@ this.fuh = [ev.clientX, ev.clientY];
       var keyname = this.getBindingName("keyboard", ev.keyCode, keymod);
       this.state[keyname] = 0;
       this.changes.push(keyname);
+    } else {
+      var keyname = this.getBindingName("keyboard", ev.keyCode);
+      this.state[keyname] = 0;
+      this.changes.push(keyname);
     }
-    var keyname = this.getBindingName("keyboard", ev.keyCode);
-    this.state[keyname] = 0;
-    this.changes.push(keyname);
   }
   this.webkitGamepadconnected = function(ev) {
     this.gamepadconnected(ev);
