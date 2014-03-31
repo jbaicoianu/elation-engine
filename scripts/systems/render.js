@@ -37,7 +37,7 @@ elation.extend("engine.systems.render", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: render');
-    this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true});
+    this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true});
     this.cssrenderer = new THREE.CSS3DRenderer();
     this.renderer.autoClear = false;
     this.renderer.setClearColor(0xffffff, 0);
@@ -96,6 +96,8 @@ elation.component.add("engine.systems.render.view", function() {
     this.sizevec = new THREE.Vector2();
     this.sizevecinverse = new THREE.Vector2();
 
+    this.rendermode = this.args.rendermode || '3dtvsbs';
+
     if (this.args.fullsize == 1) {
       elation.html.addclass(this.container, "engine_view_fullsize");
     }
@@ -148,7 +150,7 @@ elation.component.add("engine.systems.render.view", function() {
     this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
 
-    this.composer = this.createRenderPath(['main', 'bloom']);
+    this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
     this.getsize();
 
     this.showstats = false;
@@ -178,7 +180,7 @@ elation.component.add("engine.systems.render.view", function() {
       this.pickingdebug = false;
 
       this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
-      this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
+      //this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
       this.engine.systems.controls.activateContext('view');
     }
   }
@@ -212,6 +214,22 @@ elation.component.add("engine.systems.render.view", function() {
         break;
       case 'oculus':
         pass = new THREE.OculusRenderPass(this.scene, this.camera, null, null, 0);
+        break;
+      case '3dtvsbs':
+        pass = new THREE.OculusRenderPass(this.scene, this.camera, null, null, 0);
+        pass.setOculusParameters({
+          HMD: {
+            hResolution: window.innerWidth,
+            vResolution: window.innerHeight,
+            hScreenSize: 0.14976,
+            vScreenSize: 0.0936,
+            interpupillaryDistance: 0.064,
+            lensSeparationDistance: 0.064,
+            eyeToScreenDistance: 0.041,
+            distortionK : [1.0, 0.0, 0.0, 0.0],
+            chromaAbParameter: [ 1, 0, 1, 0.0]
+          }
+        });
         break;
       case 'sky':
         pass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
@@ -612,7 +630,7 @@ elation.component.add("engine.systems.render.view", function() {
     this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true, generateMipmaps: false});
     this.pickingtarget.generateMipmaps = false;
 
-    this.pickingcomposer = this.createRenderPath(['main'], this.pickingtarget);
+    this.pickingcomposer = this.createRenderPath([this.rendermode], this.pickingtarget);
     this.pickingbuffer = new Uint8Array(4);
     this.picknum = 0;
     this.picktime = 0;
