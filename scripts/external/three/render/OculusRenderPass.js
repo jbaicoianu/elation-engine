@@ -28,12 +28,30 @@ THREE.OculusRenderPass = function ( scene, camera, overrideMaterial, clearColor,
 THREE.OculusRenderPass.prototype = {
 
   initOculus: function() {
+    this.oculusparams = {};
+    document.body.addEventListener('click', this.fullscreen.bind(this));
+  },
+  fullscreen: function() {
+    if (!this.isfullscreen) {
+      if (document.body.webkitRequestFullScreen) {
+        document.body.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+      } else if (document.body.mozRequestFullScreen) {
+        document.body.mozRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+      } else if (document.body.requestFullScreen) {
+        document.body.requestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+      }
+    }
+  },
+
+  setOculusParameters: function(params) {
+    this.oculusparams = params;
   },
 
 	render: function ( renderer, writeBuffer, readBuffer, delta ) {
 
+    this.oculusparams.renderTarget = readBuffer;
     if (!this.oculuseffect) {
-      this.oculuseffect = new THREE.OculusRiftEffect(renderer, {renderTarget: writeBuffer});
+      this.oculuseffect = new THREE.OculusRiftEffect(renderer, this.oculusparams);
     } else {
       this.oculuseffect.setOutputTarget(readBuffer);
     }
