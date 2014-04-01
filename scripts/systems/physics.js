@@ -11,7 +11,7 @@ elation.extend("engine.systems.physics", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: physics');
     this.system = new elation.physics.system({autostart: false});
-    this.initstats();
+    //this.initstats();
   }
   this.engine_start = function(ev) {
     //console.log("PHYSICS: starting");
