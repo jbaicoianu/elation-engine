@@ -21,7 +21,7 @@ var AudioStage = function() {
 }
 
 AudioStage.prototype.getNewMasterFader = function() {
-	var fader = this.context.createGainNode(),
+	var fader = (this.context.createGain ? this.context.createGain() : this.context.createGainNode()),
 		compressor = this.context.createDynamicsCompressor();
 
 	fader.connect(compressor);
