@@ -5,16 +5,20 @@ elation.require([
   //"engine.external.highlight",
   "engine.things.manipulator",
   "ui.accordion",
-  "ui.button",
   "ui.buttonbar",
   "ui.slider",
+  "ui.combobox",
   "ui.select",
   "ui.tabs",
+  //"ui.list",
+  "ui.grid",
+  "ui.panel",
   "ui.treeview",
   "ui.window",
   "ui.indicator",
   "ui.contextmenu",
   "ui.toolbox",
+  "ui.label",
 ]);
 
 elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
@@ -24,6 +28,8 @@ elation.template.add('engine.systems.admin.inspector.function', '<span class="en
 
 elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" data-elation-component="ui.select" data-elation-args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
 elation.template.add('engine.systems.admin.definething', '<input name="thingtype" placeholder="type name"> <textarea name="thingdef">function() {}</textarea> <input type="submit">');
+elation.template.add('engine.systems.admin.assets.material', '<div data-elation-component="engine.systems.admin.assets.material" data-elation-args.materialname="{name}"><data class="elation-args"></data>{name}</div>');
+elation.template.add('engine.systems.admin.assets.geometry', '<div data-elation-component="engine.systems.admin.assets.geometry" data-elation-args.geometryname="{name}"><data class="elation-args"></data>{name}</div>');
 
 elation.extend("engine.systems.admin", function(args) {
   elation.implement(this, elation.engine.systems.system);
@@ -36,8 +42,9 @@ elation.extend("engine.systems.admin", function(args) {
     elation.html.addclass(this.container, "engine_admin");
     this.world = this.engine.systems.world;
 
-    this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {engine: this.engine});
+    //this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {engine: this.engine});
     this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
+    this.assets = elation.engine.systems.admin.assets(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
     this.worldcontrol = elation.engine.systems.admin.worldcontrol(null, elation.html.create({append: document.body}), {engine: this.engine});
 
   }
@@ -55,7 +62,7 @@ elation.extend("engine.systems.admin", function(args) {
 				'move_back': elation.bind(this, this.moveback),
 */
 			});
-			this.engine.systems.controls.addBindings('admin', {'keyboard_shift_a': 'add_thing'});
+			this.engine.systems.controls.addBindings('admin', {'keyboard_ctrl_a': 'add_thing'});
 			this.engine.systems.controls.activateContext('admin');
     } else if (this.cameraactive) {
       this.admincontrols.update(ev.data.delta);
@@ -71,6 +78,7 @@ elation.extend("engine.systems.admin", function(args) {
       this.orbitcontrols.dollyOut(25);
       this.orbitcontrols.userPanSpeed = 10;
       this.orbitcontrols.keyPanSpeed = 100;
+      this.orbitcontrols.noKeys = true;
 
 			elation.events.add(this.orbitcontrols, 'change', elation.bind(this, this.controls_change));
 
@@ -132,7 +140,7 @@ elation.extend("engine.systems.admin", function(args) {
       if (f.type.indexOf('image') == 0) {
         var reader = new FileReader();
         reader.onload = elation.bind(this, function(ev) {
-          var tex = elation.engine.utils.materials.getTexture(ev.target.result);
+          var tex = elation.engine.materials.getTexture(ev.target.result);
 
           if (this.scenetree.hoverthing) {
             if (this.dragkeystate.ctrlKey) {
@@ -143,6 +151,14 @@ elation.extend("engine.systems.admin", function(args) {
           }
         });
         reader.readAsDataURL(f);
+      }
+    } else {
+      var materialname = ev.dataTransfer.getData('-elation-material');
+      if (materialname) {
+        var material = elation.engine.materials.get(materialname);
+        if (material) {
+          //this.scenetree.hoverthing.value.set('textures.map', tex, true);
+        }
       }
     }
   }
@@ -160,6 +176,7 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   this.init = function() {
     this.world = this.args.world;
     this.admin = this.args.admin;
+    this.engine = this.world.engine;
 
     elation.events.add(this.world, 'engine_thing_create,world_thing_add,world_thing_remove', this);
     this.create();
@@ -170,9 +187,31 @@ elation.component.add("engine.systems.admin.scenetree", function() {
   }
   this.create = function() {
     var title = elation.html.create({tag: 'h2'});
-    title.innerHTML = "Scene: ";
+    var panel = elation.ui.panel({append: title, orientation: 'horizontal'});
     var overrides = this.world.listLocalOverrides();
+/*
+    title.innerHTML = "Scene: ";
     var select = elation.ui.select(null, elation.html.create({tag: 'span', append: title}), {items: overrides, selected: this.world.rootname}, {ui_select_change: elation.bind(this, this.changeScene)});
+*/
+
+    var label = elation.ui.label({label: 'Scene:', append: panel});
+    this.sceneselect = elation.ui.select({
+        append: panel,
+        items: overrides,
+        selected: this.world.rootname,
+        events: {
+          ui_select_change: elation.bind(this, this.changeScene)
+        }
+      });
+    var createbutton = elation.ui.button({
+        append: panel,
+        label: 'New',
+        events: {
+          click: elation.bind(this, this.createScene)
+        }
+      });
+    
+
     this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: title, controls: false});
     this.window.setcontent(this.container);
     //elation.html.addclass(this.container, 'engine_admin_scenetree style_box');
@@ -226,6 +265,9 @@ elation.component.add("engine.systems.admin.scenetree", function() {
       }
     }));
     */
+
+    this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: this.container, window: false}), {engine: this.engine});
+
   }
   this.updateTreeview = function() {
     this.treeview.setItems(this.world.children);
@@ -280,6 +322,13 @@ elation.component.add("engine.systems.admin.scenetree", function() {
     }
     ev.target.select.blur();
   }
+  this.createScene = function() {
+    //var createscene = elation.engine.systems.admin.createscene(null, elation.html.create(), {title: 'fuh'});
+    var scenename = prompt('Enter scene name');
+    //this.world.createNew();
+    this.world.loadLocal(scenename);
+    this.sceneselect.setSelected(scenename);
+  }
 });
 elation.component.add("engine.systems.admin.addthing", function() {
   this.init = function() {
@@ -294,15 +343,46 @@ elation.component.add("engine.systems.admin.addthing", function() {
       thingtypes.push(k);
     }
     thingtypes.sort();
-    thingtypes.push('_other_');
+    //thingtypes.push('_other_');
     tplvars.thingtypes = thingtypes.join(';');
-    var newhtml = elation.template.get('engine.systems.admin.addthing', tplvars);
+    //var newhtml = elation.template.get('engine.systems.admin.addthing', tplvars);
     this.form = elation.html.create('form');
     elation.events.add(this.form, 'submit', this);
-    this.form.innerHTML = newhtml;
+    //this.form.innerHTML = newhtml;
     this.container.appendChild(this.form);
+
+    var panel = elation.ui.panel({
+      append: this.form,
+      orientation: 'horizontal'
+    });
+    var thingcollection = elation.collection.custom({
+      items: function() { return Object.keys(elation.engine.things).sort(); }
+    });
+    var thingtype = elation.ui.combobox({
+      append: panel,
+      label: 'Add new',
+      inputname: 'type',
+      collection: thingcollection,
+      events: {
+        'ui_input_accept': elation.bind(this, this.submit)
+      }
+    });
+    var thingname = elation.ui.input({
+      append: panel,
+      label: 'named',
+      inputname: 'name',
+      events: {
+        'ui_input_accept': elation.bind(this, this.submit)
+      }
+    });
+    var submit = elation.ui.button({
+      append: panel,
+      label: 'add',
+      inputname: 'submit',
+    });
+
     elation.component.init(this.container);
-    this.form.name.focus();
+    this.form.type.focus();
     this.window.center();
     elation.events.add(this.form.type, 'change', this);
   }
@@ -313,7 +393,7 @@ elation.component.add("engine.systems.admin.addthing", function() {
     ev.preventDefault();
     var type = this.form.type.value;
     var name = this.form.name.value;
-    if (this.parentthing) {
+    if (type != '' && name != '' && this.parentthing) {
       var newthing = this.parentthing.spawn(type, name, {persist: true});
       this.window.close();
       // FIXME - should set the newly spawned item as active, since the next logical step is to start manipulating it...
@@ -467,13 +547,17 @@ sel.addRange(range);
   }
 });
 elation.component.add("engine.systems.admin.inspector", function() {
-	this.defaultcontainer = { tag: 'div' };
+	this.defaultcontainer = { tag: 'div', classname: 'engine_admin_inspector' };
 
   this.init = function() {
     this.engine = this.args.engine;
 
-    this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_inspector', append: document.body}), {title: 'Thing', controls: false});
-    this.window.setcontent(this.container);
+    if (this.args.window) {
+      this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_inspector', append: document.body}), {title: 'Thing', controls: false});
+      this.window.setcontent(this.container);
+    } else {
+      this.label = elation.ui.label({append: this.container});
+    }
 
     //elation.html.addclass(this.container, 'engine_admin_inspector style_box');
     elation.events.add(this.container, "mousewheel", function(ev) { ev.stopPropagation(); }); // FIXME - hack for mousewheel
@@ -491,10 +575,14 @@ elation.component.add("engine.systems.admin.inspector", function() {
     if (!this.tabs) {
       this.createTabs();
     }
-    this.window.settitle(thing.id + ' (' + thing.type + ')');
+    if (this.window) {
+      this.window.settitle(thing.id + ' (' + thing.type + ')');
+    } else {
+      this.label.setlabel(thing.id + ' (' + thing.type + ')');
+    }
     this.tabs.setActiveTab(this.activetab || "properties");
 
-    this.engine.systems.physics.debug(thing);
+    //this.engine.systems.physics.debug(thing);
     //this.selectedthing.value.spawn('manipulator', null, {persist: false});
     this.manipulator.reparent(thing);
 /*
@@ -548,7 +636,6 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
     var thing = thingwrapper.value;
     this.propdiv.innerHTML = '';
     var proptree = this.buildPropertyTree(thing.properties);
-console.log(proptree, thing.properties);
       
     // FIXME - should reuse the same treeview rather than creating a new one each time
     this.treeview = elation.ui.treeview(null, this.propdiv, {
@@ -669,11 +756,10 @@ elation.component.add("engine.systems.admin.inspector.objects", function() {
   }
 
   this.ui_treeview_select = function(ev) {
-    console.log('selected!', ev);
     var selected = ev.data.value;
     switch (selected.type) {
       case 'ShaderMaterial':
-        elation.engine.utils.materials.displayall(null, selected.object);
+        elation.engine.materials.displayall(null, selected.object);
         break;
     }
   }
@@ -690,7 +776,7 @@ elation.component.add("engine.systems.admin.inspector.functions", function() {
 
     //var objtree = this.buildObjectTree(this.thing.objects);
     //var generic = elation.engine.things.generic(null, elation.html.create());
-    var parent = new elation.engine.things[this.thing.type].extendclass();
+    var parent = elation.engine.things[this.thing.type].extendclass;
     var objtree = {};
     for (var k in this.thing) {
       if (typeof this.thing[k] == 'function') {
@@ -794,5 +880,138 @@ elation.component.add("engine.systems.admin.worldcontrol", function() {
       //if (!this.playing) this.play();
       this.setTimescale(ev.data / 100);
     }
+  }
+});
+elation.component.add("engine.systems.admin.assets", function() {
+  this.init = function() {
+    this.world = this.args.world;
+    this.admin = this.args.admin;
+    this.engine = this.world.engine;
+    this.tabcontents = {};
+
+    this.create();
+  }
+  this.create = function() {
+    this.tabs = elation.ui.tabs({
+      append: this.container,
+      items: [
+        {
+          label: "Materials",
+          name: "materials",
+        },
+        {
+          label: "Geometries",
+          name: "geometries",
+        },
+        {
+          label: "Behaviors",
+          name: "behaviors",
+        },
+      ]});
+    this.contentarea = elation.html.create({tag: 'div', classname: 'engine_admin_assets_contents', append: this.container});
+    elation.events.add(this.tabs, 'ui_tabs_change', this);
+    this.tabs.setActiveTab("materials");
+
+    this.createMaterialList();
+    this.createGeometryList();
+    this.createBehaviorList();
+
+    this.setTabContent("materials");
+
+    this.window = elation.ui.window({
+      classname: 'style_box engine_admin_worldcontrol',
+      append: document.body,
+      title: 'Assets', 
+      controls: false, 
+      right: true, 
+      top: true, 
+      content: this.container
+    });
+  }
+  this.createMaterialList = function() {
+    this.tabcontents['materials'] = elation.ui.grid({
+      classname: 'engine_admin_assets_materials',
+      sortbydefault: 'name',
+      attrs: {
+        itemtemplate: 'engine.systems.admin.assets.material'
+      }
+    });
+    this.updateMaterialList();
+    elation.events.add(elation.engine.materials, 'engine_material_add', elation.bind(this, this.updateMaterialList));
+  }
+  this.updateMaterialList = function() {
+    var materials = [];
+    var matlib = elation.engine.materials.materiallibrary;
+    for (var k in matlib) {
+      materials.push({name: k, material: matlib[k]})
+    }
+    materials.sort(function(a, b) { return (a.name < b.name ? -1 : 1); });
+    this.tabcontents['materials'].clear();
+    this.tabcontents['materials'].setItems(materials);
+    //this.tabcontents['materials'].sort('name');
+  }
+  this.createGeometryList = function() {
+    this.tabcontents['geometries'] = elation.ui.list({
+      classname: 'engine_admin_assets_geometries',
+      sortbydefault: 'name',
+      attrs: {
+        itemtemplate: 'engine.systems.admin.assets.geometry'
+      }
+    });
+    this.updateGeometryList();
+    elation.events.add(elation.engine.geometries, 'engine_geometry_add', elation.bind(this, this.updateGeometryList));
+  }
+  this.updateGeometryList = function() {
+    var geometries = [];
+    var geomlib = elation.engine.geometries.generators;
+    for (var k in geomlib) {
+      geometries.push({name: k, geometry: geomlib[k]})
+    }
+    this.tabcontents['geometries'].clear();
+    this.tabcontents['geometries'].setItems(geometries);
+    this.tabcontents['geometries'].sort('name');
+  }
+  this.createBehaviorList = function() {
+    this.tabcontents['behaviors'] = elation.ui.label({label: 'TODO - fill in behaviors'});
+  }
+  this.setTabContent = function(name) {
+    if (this.tabcontents[name]) {
+      this.activetab = name;
+      this.contentarea.innerHTML = '';
+      this.tabcontents[name].reparent(this.contentarea);
+    }
+  }
+  this.ui_tabs_change = function(ev) {
+    var newtab = ev.data;
+    this.setTabContent(newtab.name);
+  }
+});
+
+elation.component.add("engine.systems.admin.assets.material", function() {
+  this.init = function() {
+    this.materialname = this.args.materialname;
+    this.material = elation.engine.materials.get(this.materialname);
+    if (this.material.map) {
+      this.preview = this.material.map.image;
+    } else if (this.material.color) {
+      this.preview = elation.html.create();
+      this.preview.style.background = "#" + this.material.color.getHexString();
+    }
+    if (this.preview) {
+      if (this.material.opacity) {
+        this.preview.style.opacity = this.material.opacity;
+      }
+      elation.html.addclass(this.preview, 'engine_admin_assets_material_preview');
+      this.container.appendChild(this.preview);
+    }
+    this.container.draggable = true;
+    elation.events.add(this.container, 'mousedown,dragstart', this);
+  }
+  this.mousedown = function(ev) {
+    console.log('dn', this.materialname);
+  }
+  this.dragstart = function(ev) {
+    ev.dataTransfer.setData("-elation-material", this.materialname);
+    return true;
   }
 });

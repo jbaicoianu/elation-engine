@@ -1,20 +1,33 @@
 elation.template.add('engine.materials.chunk', '<div class="engine_materials_chunk style_box"><h1>{chunkname}</h1><div class="engine_materials_chunk_uniforms style_box"><h2>uniforms</h2> <ul> {#uniforms} <li><h4>{name}</h4> ({type})</li> {/uniforms} </ul></div> <div class="engine_materials_chunk_vertex style_box"><h2>vertex</h2><p>{chunk.vertex_pars}</p><p>{chunk.vertex}</p></div>  <div class="engine_materials_chunk_fragment style_box"><h2>fragment</h2><p>{chunk.fragment_pars}</p><p>{chunk.fragment}</p></div></div>');
 elation.template.add('engine.materials.chunk.uniforms', '<h3>{chunkname}</h3><ul class="engine_materials_chunk_uniform"> {#uniforms} <li><h4>{name}</h4> <input value="{value}"> ({type})</li> {/uniforms} </ul>');
-elation.template.add('engine.materials.chunk.vertex', '<h3>{chunkname}</h3><p elation:component="engine.utils.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="vertex" {?params}elation:args.params=1{/params} class="engine_materials_chunk_vertex">{content}</p>');
-elation.template.add('engine.materials.chunk.fragment', '<h3>{chunkname}</h3><p elation:component="engine.utils.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="fragment" {?params}elation:args.params=1{/params} class="engine_materials_chunk_fragment">{content}</p>');
+elation.template.add('engine.materials.chunk.vertex', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="vertex" {?params}elation:args.params=1{/params} class="engine_materials_chunk_vertex">{content}</p>');
+elation.template.add('engine.materials.chunk.fragment', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="fragment" {?params}elation:args.params=1{/params} class="engine_materials_chunk_fragment">{content}</p>');
 
-elation.extend("engine.utils.materials", new function() {
+elation.extend("engine.materials", new function() {
 
   this.shaders = {};
   this.shaderdefs = {};
   this.shaderchunks = {};
   this.texturecache = {};
   this.materialinstances = {};
+	this.materiallibrary = {};
 
   this.get = function(args) {
-    var materialtype = (Detector.webgl ? THREE.MeshPhongMaterial : THREE.MeshBasicMaterial);
-    return new materialtype(args);
+		if (elation.utils.isString(args) && this.materiallibrary[args]) {
+			return this.materiallibrary[args].clone();
+		} else {
+			var materialtype = THREE.MeshPhongMaterial; //(Detector.webgl ? THREE.MeshPhongMaterial : THREE.MeshBasicMaterial);
+			return new materialtype(args);
+		}
   }
+	this.add = function(materialname, materialargs) {
+		if (materialargs instanceof THREE.Material) {
+			this.materiallibrary[materialname] = materialargs;
+		} else {
+			this.materiallibrary[materialname] = this.get(materialargs);
+		}
+    elation.events.fire({element: this, type: 'engine_material_add', data: { name: materialname, material: this.materiallibrary[materialname] } });
+	}
   this.getTexture = function(url, repeat, mirrored) {
     if (!this.texturecache[url]) {
       if (url.match(/^data:/)) {
@@ -27,6 +40,7 @@ elation.extend("engine.utils.materials", new function() {
         this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
       }
       this.texturecache[url].anisotropy = 16;
+			elation.events.add(this.texturecache[url], 'update', function(ev) { elation.events.fire({type: 'engine_texture_load', element: ev.target}); });
     }
     if (repeat) {
       this.setTextureRepeat(this.texturecache[url], repeat, mirrored);
@@ -355,7 +369,7 @@ c.style.zIndex = 4500;
   }
 });
 
-elation.component.add("engine.utils.materials.editor", function() {
+elation.component.add("engine.materials.editor", function() {
   this.changetimeout = 500;
 
   this.init = function() {
@@ -395,3 +409,6 @@ elation.component.add("engine.utils.materials.editor", function() {
     this.changetimer = setTimeout(elation.bind(this, this.change), this.changetimeout);
   }
 });
+
+elation.engine.materials.add('uvtest', new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1])}));
+elation.engine.materials.add('normal', new THREE.MeshNormalMaterial());
