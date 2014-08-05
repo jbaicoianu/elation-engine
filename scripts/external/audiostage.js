@@ -9,8 +9,9 @@
 var AudioStage = function() {
   if (typeof webkitAudioContext !== 'undefined') {
     this.context = new webkitAudioContext();
+  }
+  if (this.context) {
     this.masterFader = this.getNewMasterFader();
-
   }
   //Create object to hold all sounds and their associated events
   this.cues = {};
