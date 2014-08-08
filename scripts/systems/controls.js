@@ -124,7 +124,10 @@ elation.extend("engine.systems.controls", function(args) {
     var commands = {};
     var bindings = {};
     for (var k in contextargs) {
-      bindings[contextargs[k][0]] = k;
+      var newbindings = contextargs[k][0].split(',');
+      for (var i = 0; i < newbindings.length; i++) {
+        bindings[newbindings[i]] = k;
+      }
       commands[k] = contextargs[k][1];
     }
     this.addCommands(context, commands);
@@ -267,6 +270,7 @@ elation.extend("engine.systems.controls", function(args) {
     return bindname;
   }
   this.pollGamepads = function() {
+    this.updateConnectedGamepads();
     if (this.gamepads.length > 0) {
       for (var i = 0; i < this.gamepads.length; i++) {
         if (this.gamepads[i] != null) {
@@ -288,6 +292,13 @@ elation.extend("engine.systems.controls", function(args) {
           }
         }
       }
+    }
+  }
+  this.updateConnectedGamepads = function() {
+    var func = navigator.getGamepads || navigator.webkitGetGamepads;
+    if (typeof func == 'function') {
+      this.gamepads = func.call(navigator);
+      //console.log(this.gamepads);
     }
   }
   this.getMousePosition = function(ev) {
