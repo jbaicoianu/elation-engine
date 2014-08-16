@@ -14,19 +14,22 @@ elation.extend("engine.systems.world", function(args) {
   this.lastpersist = 0;
 
   //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
+  this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
 
   this.system_attach = function(ev) {
     console.log('INIT: world');
+    this.rootname = (args ? args.parentname + '/' + args.name : '/');
     this.loaded = false;
     this.loading = false;
 
-    this.rootname = (args ? args.parentname + '/' + args.name : '/');
 
     if (document.location.hash) {
       this.parseDocumentHash();
     }
     elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
+  }
 
+  this.engine_start = function(ev) {
     // If no local world override, load from args
     if (!this.loaded && !this.loading) {
       if (!elation.utils.isEmpty(args)) {
@@ -97,7 +100,7 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.reset = function() {
     for (var k in this.children) {
-      this.remove(this.children[k]);
+      this.children[k].die();
     }
   }
   this.createNew = function() {
@@ -120,6 +123,7 @@ elation.extend("engine.systems.world", function(args) {
       this.load(world);
     } else {
       //this.spawn("sector", "default");
+      this.createDefaultScene();
     }
     var dochash = "world.load=" + name;
     if (this.engine.systems.physics.timescale == 0) {
@@ -169,7 +173,6 @@ elation.extend("engine.systems.world", function(args) {
   }
   this.reload = function() {
     if (this.rootname) {
-console.log('reload');
       this.loadLocal(this.rootname);
     }
   }
@@ -214,7 +217,7 @@ console.log('reload');
   this.spawn = function(type, name, spawnargs, parent, autoload) {
     if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
     if (!spawnargs) spawnargs = {};
-    if (!parent) parent = this;
+    if (!parent) parent = this.children['default'] || this;
     if (typeof autoload == 'undefined') autoload = true;
 
     var logprefix = "";
@@ -241,7 +244,7 @@ console.log('reload');
         parent.add(currentobj);
         //currentobj.reparent(parent);
 
-        console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+        //console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
       }
     } catch (e) {
       console.error(e.stack);
@@ -256,9 +259,10 @@ console.log('reload');
     return ret[k]; // FIXME - dumb
   }
   this.setSky = function(texture) {
+console.log('new sky is', texture);
     if (texture !== false) {
       if (!this.scene['sky']) {
-        this.scene['sky'] = new THREE.Scene();
+        this.scene['sky'] = (this.engine.systems.render && this.engine.systems.render.views[0] ? this.engine.systems.render.views[0].skyscene : new THREE.Scene());
         var skygeom = new THREE.BoxGeometry(1,1,1, 10, 10, 10);
         var skymat = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide, wireframe: true, depthWrite: false});
 
@@ -276,6 +280,9 @@ console.log('reload');
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
         console.log('create sky mesh', this.scene['sky']);
+        if (this.engine.systems.render && this.engine.systems.render.views[0]) {
+          this.engine.systems.render.views[0].setskyscene(this.scene['sky']);
+        }
 
       }
       this.skyenabled = true;
