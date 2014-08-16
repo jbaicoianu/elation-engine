@@ -38,6 +38,7 @@ elation.component.add('engine.things.player', function() {
       camdir.multiplyScalar(velocity);
 //console.log('pew!', velocity);
       var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity }, true);
+      foo.addTag('enemy');
       this.charging = false;
     }
   }
