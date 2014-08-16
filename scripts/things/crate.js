@@ -5,8 +5,8 @@ elation.component.add('engine.things.crate', function() {
       lifetime: { type: 'float', default: 0 },
       gravity: { type: 'bool', default: true },
     });
-    var cubemat = new THREE.MeshPhongMaterial({map: elation.engine.utils.materials.getTexture('/media/space/textures/crate.gif')});
-    var cubegeo = new THREE.CubeGeometry(this.properties.size, this.properties.size, this.properties.size);
+    var cubemat = new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/crate.gif')});
+    var cubegeo = new THREE.BoxGeometry(this.properties.size, this.properties.size, this.properties.size);
     //cubegeo.applyMatrix(new THREE.Matrix4().makeTranslation(0, 0, 0));
     setTimeout(elation.bind(this, this.initForces), 0);
     var mesh = new THREE.Mesh(cubegeo, cubemat);
