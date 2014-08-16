@@ -11,7 +11,7 @@ elation.component.add("engine.things.gridhelper", function() {
     var extent = this.properties.range * 2;
     var numverts = Math.pow(extent+1, 3);
 
-    var planemat = elation.engine.utils.materials.getShaderMaterial("gridhelper_line", {range: this.properties.range});
+    var planemat = elation.engine.materials.getShaderMaterial("gridhelper_line", {range: this.properties.range});
     planemat.blending = THREE.NormalBlending;
     planemat.transparent = true;
     planemat.depthWrite = false;
@@ -39,7 +39,7 @@ elation.component.add("engine.things.gridhelper", function() {
   }
 }, elation.engine.things.generic);
 
-elation.engine.utils.materials.addChunk("gridhelper_line", {
+elation.engine.materials.addChunk("gridhelper_line", {
   uniforms: {
     "range": { type: "f", value: 10 },
     "color": { type: "c", value: new THREE.Color(0xcccccc) },
@@ -75,7 +75,7 @@ elation.engine.utils.materials.addChunk("gridhelper_line", {
     "gl_FragColor = vec4( vColor, d * opacity);",
   ].join('\n'),
 });
-elation.engine.utils.materials.buildShader("gridhelper_line", {
+elation.engine.materials.buildShader("gridhelper_line", {
   uniforms: [
     'common',
     'gridhelper_line'
