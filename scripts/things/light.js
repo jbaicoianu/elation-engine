@@ -6,14 +6,15 @@ elation.component.add('engine.things.light', function() {
       'intensity':         { type: 'float', default: 1.0 },
       'radius':            { type: 'float', default: 10000.0 },
     });
+
   }
   this.createObject3D = function() {
     var light;
     switch (this.properties.type) {
       case 'point':
         this.lightobj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
-        //var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
-        //this.lightobj.add(helper);
+        var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
+        this.lightobj.add(helper);
         this.lightobj.castShadow = false;
         break;
       case 'spot':
@@ -47,11 +48,32 @@ elation.component.add('engine.things.light', function() {
   }
   this.initShadowmap = function(light) {
     light.castShadow = true;
-    light.shadowCameraNear = 200;
-    light.shadowCameraFar = 750;
+    light.shadowCameraNear = 40;
+    light.shadowCameraFar = 120;
     light.shadowCameraFov = 50;
     light.shadowCameraVisible = false;
-    light.shadowMapWidth = 4096;
-    light.shadowMapHeight = 4096;
+
+		var d = 60;
+		light.shadowCameraLeft = -d;
+		light.shadowCameraRight = d;
+		light.shadowCameraTop = d;
+		light.shadowCameraBottom = -d;
+
+		light.shadowDarkness = 0.6;
+		light.shadowBias = .0015;
+
+    light.shadowCascade = false;
+    light.shadowCascadeCount = 3;
+
+    light.shadowCascadeNearZ = [  0.1, 10.0, 100.0];
+    light.shadowCascadeFarZ  = [ 10.0, 100.0, 1000.0 ];
+    light.shadowCascadeWidth = [ 2048, 2048, 2048 ];
+    light.shadowCascadeHeight = [ 2048, 2048, 2048 ];
+    light.shadowCascadeBias = [ 0.00005, 0.000065, 0.000065 ];
+
+    //light.shadowCascadeOffset.set( 0, 0, -10 );
+
+    light.shadowMapWidth = 2048;
+    light.shadowMapHeight = 2048;
   }
 }, elation.engine.things.generic);
