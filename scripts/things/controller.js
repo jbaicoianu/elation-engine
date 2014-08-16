@@ -23,7 +23,9 @@ elation.component.add('engine.things.aicontroller', function() {
     }
     this.activebehavior = [behavior, args];
     this.thinktime = this.behaviors[behavior].thinktime;
-    this.callBehavior(behavior);
+    if (this.parent) {
+      this.callBehavior(behavior);
+    }
   }
   this.callBehavior = function(behavior) {
     if (this.behaviors[behavior]) {
