@@ -1,6 +1,7 @@
 elation.require([
   //"engine.external.three.ColladaLoader",
   //"engine.external.three.JSONLoader"
+  //"engine.external.three.glTFLoader-combined"
 ]);
 
 elation.component.add("engine.things.generic", function() {
@@ -16,7 +17,10 @@ elation.component.add("engine.things.generic", function() {
     this.engine = this.args.engine;
     this.properties = {};
     this.objects = {};
+    this.parts = {};
+    this.parttypes = {};
     this.children = {};
+    this.tags = [];
 
     this.defineActions({
       'spawn': this.spawn,
@@ -40,7 +44,9 @@ elation.component.add("engine.things.generic", function() {
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
       'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
-      'render.materialname': { type: 'string', comment: 'Material library name' }
+      'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
+      'render.materialname': { type: 'string', comment: 'Material library name' },
+      'render.texturepath': { type: 'string', comment: 'Texture location' }
     });
     this.defineEvents({
       'thing_create': [],
@@ -154,12 +160,20 @@ elation.component.add("engine.things.generic", function() {
         break;
       case 'texture':
         if (value !== false) {
-          value = (value instanceof THREE.Texture ? value : elation.engine.utils.materials.getTexture(value));
+          value = (value instanceof THREE.Texture ? value : elation.engine.materials.getTexture(value));
         }
         break;
       case 'json':
         if (value !== false) {
           value = (elation.utils.isString(value) ? JSON.parse(value) : value);
+        }
+        break;
+      case 'component':
+        if (value) {
+          var component = elation.component.fetch(value[0], value[1]);
+          if (component) {
+            value = component;
+          }
         }
         break;
     }
@@ -231,23 +245,18 @@ elation.component.add("engine.things.generic", function() {
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
 
-      // Bounding sphere helper
-      if (false && this.objects['3d'].geometry) {
-        var obj = this.objects['3d'];
-        var spherehelper = new THREE.Mesh(new THREE.SphereGeometry(obj.geometry.boundingSphere.radius, 16, 32), new THREE.MeshBasicMaterial({color: 0x00cccc, opacity: .1, transparent: true, depthWrite: false}));
-        spherehelper.isBoundingSphere = true;
-        obj.add(spherehelper);
-      }
     }
-    if (this.children.length > 0) {
+    var childkeys = Object.keys(this.children);
+    if (childkeys.length > 0) {
       // Things were added during initialization, so make sure they're added to the scene
-      for (var i = 0; i < this.children.length; i++) {
-        if (this.children[i].objects['3d'] && !this.children[i].objects['3d'].parent) {
-          this.objects['3d'].add(this.children[i].objects['3d']);
+      for (var i = 0; i < childkeys.length; i++) {
+        var k = childkeys[i];
+        if (this.children[k].objects['3d']) {
+          this.objects['3d'].add(this.children[k].objects['3d']);
         }
       }
     }
-    elation.events.fire({type: 'thing_change', element: this});
+    this.refresh();
   }
   this.initDOM = function() {
     this.objects['dom'] = this.createObjectDOM();
@@ -273,6 +282,9 @@ elation.component.add("engine.things.generic", function() {
       }
       if (this.properties.render.collada) {
         this.loadCollada(this.properties.render.collada);
+      }
+      if (this.properties.render.gltf) {
+        this.loadglTF(this.properties.render.gltf);
       }
     }
 
@@ -452,7 +464,7 @@ elation.component.add("engine.things.generic", function() {
   }
   this.loadJSON = function(url, texturepath) {
     if (typeof texturepath == 'undefined') {
-      texturepath = '/media/space/textures';
+      texturepath = '/media/space/textures/';
     }
     var loader = new THREE.JSONLoader();
     loader.load(url, elation.bind(this, this.processJSON), texturepath);
@@ -467,7 +479,7 @@ elation.component.add("engine.things.generic", function() {
     //this.objects['3d'].updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: mesh});
     this.objects['3d'].add(mesh);
-    elation.events.fire({type: 'thing_change', element: this});
+    this.refresh();
   }
   this.loadJSONScene = function(url, texturepath) {
     if (typeof texturepath == 'undefined') {
@@ -488,12 +500,15 @@ elation.component.add("engine.things.generic", function() {
     this.objects['3d'].quaternion = this.properties.orientation;
     this.objects['3d'].scale = this.properties.scale;
     this.objects['3d'].userData.thing = this;
-    for (var i = 0; i < scenedata.scene.children.length; i++) {
-      var obj = scenedata.scene.children[i];
+
+    while (scenedata.scene.children.length > 0) {
+      var obj = scenedata.scene.children[0];
       scenedata.scene.remove(obj);
       this.objects['3d'].add(obj);
     }
-    this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
+
+    //this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
+
     for (var k in this.parts) {
       var part = this.parts[k];
       if (part instanceof THREE.Mesh) {
@@ -501,8 +516,9 @@ elation.component.add("engine.things.generic", function() {
         part.receiveShadow = true;
       }
     }
+
     parent.add(this.objects['3d']);
-    elation.events.fire({type: 'thing_change', element: this});
+    this.refresh();
   }
   this.loadCollada = function(url) {
     var loader = new THREE.ColladaLoader();
@@ -521,27 +537,80 @@ elation.component.add("engine.things.generic", function() {
     //this.updateCollisionSize();
     elation.events.fire({type: "thing_load", element: this, data: collada.scene});
     this.objects['3d'].add(collada.scene);
-    elation.events.fire({type: 'thing_change', element: this});
+    this.refresh();
+  }
+  this.loadglTF = function(url) {
+    if (!THREE.glTFLoader) {
+      // If the loader hasn't been initialized yet, fetch it!
+      // FIXME - this might be abit hackish and is mostly to get around the fact that sometimes glTFLoader loads before three.js does
+      elation.require('engine.external.three.glTFLoader-combined', elation.bind(this, function() { this.loadglTF(url); }));
+    } else {
+      var loader = new THREE.glTFLoader();
+      loader.useBufferGeometry = true;
+      loader.load(url, elation.bind(this, this.processglTF));
+    }
+  }
+  this.processglTF = function(scenedata) {
+    this.extractEntities(scenedata.scene);
+    //this.updateCollisionSize();
+    elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
+    //this.objects['3d'].add(scenedata.scene);
+    var parent = this.objects['3d'].parent;
+    parent.remove(this.objects['3d']);
+    this.objects['3d'] = new THREE.Object3D();
+    this.objects['3d'].position = this.properties.position;
+    this.objects['3d'].quaternion = this.properties.orientation;
+    this.objects['3d'].scale = this.properties.scale;
+    this.objects['3d'].userData.thing = this;
+
+    while (scenedata.scene.children.length > 0) {
+      var obj = scenedata.scene.children[0];
+      scenedata.scene.remove(obj);
+      this.objects['3d'].add(obj);
+    }
+
+    //this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
+
+    var textures = this.extractTextures();
+    for (var i = 0; i < textures.length; i++) {
+      elation.events.add(textures[i].image, 'load', elation.bind(this, this.refresh));
+    }
+
+    parent.add(this.objects['3d']);
+    this.refresh();
   }
   this.extractEntities = function(scene) {
     this.cameras = [];
     this.parts = {};
-    (function(self, scene) {
-      scene.traverse(function ( node ) { 
-        if ( node instanceof THREE.Camera ) {
-          self.cameras.push(node);
-        } else if (node instanceof THREE.Mesh) {
-          self.parts[node.name || node.id] = node;
-          node.castShadow = true;
-          node.receiveShadow = true;
-        }
-      });
-    })(this, scene);
+    scene.traverse(elation.bind(this, function ( node ) { 
+      if ( node instanceof THREE.Camera ) {
+        this.cameras.push(node);
+      //} else if (node instanceof THREE.Mesh) {
+      } else if (node.name !== '') {
+        this.parts[node.name] = node;
+        node.castShadow = true;
+        node.receiveShadow = true;
+      }
+    }));
     //console.log('Collada loaded: ', this.parts, this.cameras, this); 
     if (this.cameras.length > 0) {
       this.camera = this.cameras[0];
     }
     //this.updateCollisionSize();
+  }
+  this.extractTextures = function(object) {
+    if (!object) object = this.objects['3d'];
+    var ret = [];
+    var mapnames = ['map', 'lightMap', 'normalMap', 'specularMap', 'envMap'];
+    object.traverse(function(n) {
+      if (n instanceof THREE.Mesh) {
+        var m = n.material;
+        for (var mapidx = 0; mapidx < mapnames.length; mapidx++) {
+          if (m[mapnames[mapidx]]) ret.push(m[mapnames[mapidx]]);
+        }
+      }
+    });
+    return ret;
   }
   this.spawn = function(type, name, spawnargs, orphan) {
     var newspawn = this.engine.systems.world.spawn(type, name, spawnargs, (orphan ? null : this));
@@ -552,6 +621,16 @@ elation.component.add("engine.things.generic", function() {
     if (this.parent) {
       this.parent.remove(this);
     }
+    if (this.children) {
+      var keys = Object.keys(this.children);
+      for (var i = 0; i < keys.length; i++) {
+        this.children[keys[i]].die();
+      }
+    }
+    this.destroy();
+  }
+  this.refresh = function() {
+    elation.events.fire({type: 'thing_change', element: this});
   }
   this.worldToLocal = function(worldpos) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
@@ -597,11 +676,15 @@ elation.component.add("engine.things.generic", function() {
           case 'texture':
             propval = propval.sourceFile;
             break;
-          /*
+/*
           case 'color':
-            propval = propval.getHex();
+            propval = propval.getHexString();
             break;
-          */
+*/
+          case 'component':
+            var ref = propval;
+            propval = [ ref.type, ref.id ];
+            break;
         }
         if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
           //elation.utils.arrayset(ret.properties, k, propval);
@@ -629,7 +712,6 @@ elation.component.add("engine.things.generic", function() {
   this.thing_add = function(ev) {
     elation.events.fire({type: 'thing_add', element: this, data: ev.data});
   }
-});
 
 /*
   this.createCamera = function(offset, rotation) {
@@ -646,6 +728,7 @@ elation.component.add("engine.things.generic", function() {
     }
     this.objects['3d'].add(this.camera);
   }
+*/
 
   // Sound functions
   this.playSound = function(sound, volume, position, velocity) {
@@ -668,4 +751,46 @@ elation.component.add("engine.things.generic", function() {
       }
     }
   }
-*/
+  this.addTag = function(tag) {
+    if (!this.hasTag(tag)) {
+      this.tags.push(tag);
+      return true;
+    }
+    return false;
+  }
+  this.hasTag = function(tag) {
+    return (this.tags.indexOf(tag) !== -1);
+  }
+  this.removeTag = function(tag) {
+    var idx = this.tags.indexOf(tag);
+    if (idx !== -1) {
+      this.tags.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+  this.addPart = function(name, part) {
+    if (this.parts[name] === undefined) {
+      this.parts[name] = part;
+      var type = part.componentname;
+      if (this.parttypes[type] === undefined) {
+        this.parttypes[type] = [];
+      }
+      this.parttypes[type].push(part);
+      return true;
+    }
+    return false;
+  }
+  this.hasPart = function(name) {
+    return (this.parts[name] !== undefined);
+  }
+  this.hasPartOfType = function(type) {
+    return (this.parttypes[type] !== undefined && this.parttypes[type].length > 0);
+  }
+  this.getPart = function(name) {
+    return this.parts[name];
+  }
+  this.getPartsByType = function(type) {
+    return this.parttypes[type] || [];
+  }
+});
