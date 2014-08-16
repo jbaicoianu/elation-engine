@@ -15,8 +15,8 @@ elation.component.add('engine.things.ball', function() {
     var mat = new THREE.MeshPhongMaterial({
       color: 0xd74e2e, 
       emissive: 0x330000, 
-      map: elation.engine.utils.materials.getTexture('/media/space/textures/bball.jpg'), 
-      bumpMap: elation.engine.utils.materials.getTexture('/media/space/textures/bball-bump.png'), 
+      map: elation.engine.materials.getTexture('/media/space/textures/bball.jpg'), 
+      bumpMap: elation.engine.materials.getTexture('/media/space/textures/bball-bump.png'), 
       bumpScale: .05
     });
     var obj = new THREE.Mesh(geo, mat);
