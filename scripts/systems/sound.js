@@ -21,7 +21,7 @@ elation.extend("engine.systems.sound", function(args) {
   }
   this.engine_frame = function(ev) {
     var render = this.engine.systems.render;
-    if (render.views['main'] && this.stage.context) {
+    if (render.views['main'] && this.stage && this.stage.context) {
       var camera = render.views['main'].camera;
 
       var m = camera.matrixWorld;
