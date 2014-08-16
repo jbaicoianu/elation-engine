@@ -23,7 +23,7 @@ elation.require([
 
 elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
 elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{/children}');
-elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.id} ({type})</span>');
+elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.name} ({type})</span>');
 elation.template.add('engine.systems.admin.inspector.function', '<span class="engine_thing_function{?function.own} engine_thing_function_own{/function.own}" title="this.{function.name} = {function.content}">{function.name}</span>');
 
 elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" data-elation-component="ui.select" data-elation-args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
@@ -684,7 +684,7 @@ elation.component.add("engine.systems.admin.inspector.properties", function() {
 elation.component.add("engine.systems.admin.inspector.objects", function() {
 	this.defaultcontainer = { tag: 'div' };
 
-  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'BoxGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshFaceMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
+  this.types = ['Mesh', 'PointLight', 'DirectionalLight', 'Light', 'ParticleSystem', 'PerspectiveCamera', 'OrthographicCamera', 'Camera', 'TextGeometry', 'BoxGeometry', 'SphereGeometry', 'PlaneGeometry', 'TorusGeometry', 'Geometry', 'BufferGeometry', 'MeshPhongMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial', 'MeshFaceMaterial', 'ShaderMaterial', 'Material', 'Object3D'];
   this.init = function() {
     elation.html.addclass(this.container, 'engine_admin_inspector_objects ui_treeview');
   }
