@@ -9,16 +9,16 @@ elation.require([
   "engine.external.three.render.ShaderPass",
   "engine.external.three.render.MaskPass",
   "engine.external.three.render.CopyShader",
-  "engine.external.three.render.SepiaShader",
-  "engine.external.three.render.BleachBypassShader",
-  "engine.external.three.render.FilmShader",
-  "engine.external.three.render.FilmPass",
-  "engine.external.three.render.ConvolutionShader",
+  //"engine.external.three.render.SepiaShader",
+  //"engine.external.three.render.BleachBypassShader",
+  //"engine.external.three.render.FilmShader",
+  //"engine.external.three.render.FilmPass",
+  //"engine.external.three.render.ConvolutionShader",
   "engine.external.three.render.BloomPass",
-  "engine.external.three.render.SSAOShader",
+  //"engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
-  "engine.utils.materials",
+  "engine.materials",
   "engine.geometries",
 ]);
 
@@ -27,11 +27,12 @@ elation.extend("engine.systems.render", function(args) {
   this.views = {};
 
   this.view_init = function(viewname, viewargs) {
-    this.views[viewname] = new elation.engine.systems.render.view(viewargs);
-    return this.views[viewname];
+    var newview = new elation.engine.systems.render.view(viewargs);
+    return this.view_add(viewname, newview);
   }
   this.view_add = function(viewname, view) {
     this.views[viewname] = view;
+    elation.events.fire({type: 'render_view_add', element: this, data: this.views[viewname]});
     return this.views[viewname];
   }
 
@@ -91,12 +92,14 @@ elation.component.add("engine.systems.render.view", function() {
     this.picking = this.args.picking || false;
     this.size = [0, 0];
     this.size_old = [0, 0];
+    this.showstats = this.args.showstats || false;
+
 
     // Used by various render pass shaders
     this.sizevec = new THREE.Vector2();
     this.sizevecinverse = new THREE.Vector2();
 
-    this.rendermode = this.args.rendermode || '3dtvsbs';
+    this.rendermode = this.args.rendermode || 'default';
 
     if (this.args.fullsize == 1) {
       elation.html.addclass(this.container, "engine_view_fullsize");
@@ -109,9 +112,7 @@ elation.component.add("engine.systems.render.view", function() {
     } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
       console.log("ERROR: couldn't create view, engine '" + this.args.engine + "' doesn't exist");
     } else {
-      //this.attach(elation.engine.instances[this.args.engine]);
       this.engine = elation.engine.instances[this.args.engine];
-
       this.create();
     }
   }
@@ -121,7 +122,7 @@ elation.component.add("engine.systems.render.view", function() {
     if (!this.rendersystem.renderer.domElement.parentNode) {
       this.container.appendChild(this.rendersystem.renderer.domElement);
     }
-    if (!this.rendersystem.cssrenderer.domElement.parentNode) {
+    if (this.rendersystem.cssrenderer && !this.rendersystem.cssrenderer.domElement.parentNode) {
       this.container.appendChild(this.rendersystem.cssrenderer.domElement);
       elation.html.addclass(this.rendersystem.cssrenderer.domElement, 'engine_systems_render_css3d');
     }
@@ -138,7 +139,9 @@ elation.component.add("engine.systems.render.view", function() {
     this.setcamera(cam);
 
     this.setscene(this.engine.systems.world.scene['world-3d']);
-    this.setskyscene(this.engine.systems.world.scene['sky']);
+    if (this.engine.systems.world.scene['sky']) {
+      this.setskyscene(this.engine.systems.world.scene['sky']);
+    }
     //console.log(this.engine.systems.world.scene['world-3d']);
 
     // Depth shader, used for SSAO, god rays, etc
@@ -149,25 +152,25 @@ elation.component.add("engine.systems.render.view", function() {
     this.depthMaterial.blending = THREE.NoBlending;
     this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
+    this.composer = this.createRenderPath([this.rendermode, 'copy']);
+    if (this.showstats) {
+      elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
+    }
 
-    this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
     this.getsize();
-
-    this.showstats = false;
 
     if (this.showstats) {
       this.stats = new Stats();
       this.stats.domElement.style.position = 'absolute';
       this.stats.domElement.style.top = '0px';
+      this.stats.domElement.style.right = '0px';
       this.container.appendChild(this.stats.domElement);
 
       this.renderstats = new THREEx.RendererStats()
       this.renderstats.domElement.style.position = 'absolute'
       this.renderstats.domElement.style.right = '0px'
-      this.renderstats.domElement.style.bottom = '0px'
+      this.renderstats.domElement.style.top = '50px'
       this.container.appendChild( this.renderstats.domElement )
-
-      elation.events.add(mainpass, 'render', elation.bind(this, this.updateRenderStats));
     }
 
     this.glcontext = this.rendersystem.renderer.getContext();
@@ -187,7 +190,7 @@ elation.component.add("engine.systems.render.view", function() {
   this.createRenderPath = function(passes, target) {
     // this.createRenderPath(['picking', 'oculus_deform'], depthTarget)
     // this.createRenderPath(['depth', 'oculus_deform'], pickingTarget)
-    // this.createRenderPath(['sky', 'main', 'FXAA', 'oculus_deform', 'oculus_colorshift'])
+    // this.createRenderPath(['sky', 'default', 'FXAA', 'oculus_deform', 'oculus_colorshift'])
     var composer = new THREE.EffectComposer(this.rendersystem.renderer, target);
 
     var renderToScreen = false;
@@ -209,7 +212,7 @@ elation.component.add("engine.systems.render.view", function() {
   this.createRenderPass = function(name, args) {
     var pass = false;
     switch (name) {
-      case 'main':
+      case 'default':
         pass = new THREE.RenderPass(this.scene, this.camera, null, null, 0);
         break;
       case 'oculus':
@@ -232,6 +235,7 @@ elation.component.add("engine.systems.render.view", function() {
         });
         break;
       case 'sky':
+console.log(this.skyscene, this.skycamera);
         pass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
         break;
       case 'film':
@@ -270,7 +274,7 @@ elation.component.add("engine.systems.render.view", function() {
     return pass;
   }
   this.setRenderMode = function(mode) {
-    // Supported values: 'main', 'oculus'
+    // Supported values: 'default', 'oculus'
 
     var pass = this.createRenderPass(mode);
     this.composer.passes[0] = pass;
@@ -289,7 +293,9 @@ elation.component.add("engine.systems.render.view", function() {
         this.setrendersize(this.size[0], this.size[1]);
       }
 
-      this.setcameranearfar();
+      //this.setcameranearfar();
+
+      elation.events.fire({type: 'render_view_prerender', element: this});
 
       var dims = elation.html.dimensions(this.container);
       if (this.pickingactive) {
@@ -325,12 +331,13 @@ elation.component.add("engine.systems.render.view", function() {
         //this.rendersystem.renderer.render(this.scene, this.camera);
       }
       if (this.rendersystem.cssrenderer) {
-        //this.rendersystem.cssrenderer.render(this.scene, this.camera);
+        this.rendersystem.cssrenderer.render(this.scene, this.camera);
       }
     }
     if (this.stats) {
       this.stats.update();
     }
+    elation.events.fire({type: 'render_view_postrender', element: this});
     this.size_old[0] = this.size[0];
     this.size_old[1] = this.size[1];
 //this.camera.rotation.y += Math.PI/32 * delta;
@@ -423,6 +430,7 @@ elation.component.add("engine.systems.render.view", function() {
 
   }
   this.setskyscene = function(scene) {
+console.log('SETSYSCENE: ', scene);
     this.skyscene = scene || new THREE.Scene();
     this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
     this.skycamera.rotation = this.camera.rotation;
@@ -449,7 +457,9 @@ elation.component.add("engine.systems.render.view", function() {
     this.sizevec.set(width, height);
     this.sizevecinverse.set(1/width, 1/height);
     this.rendersystem.renderer.setSize(width, height);  
-    this.rendersystem.cssrenderer.setSize(width, height);  
+    if (this.rendersystem.cssrenderer) {
+      this.rendersystem.cssrenderer.setSize(width, height);  
+    }
     this.composer.setSize(width, height);
     if (this.pickingcomposer) {
       this.pickingcomposer.setSize(width, height);
@@ -582,7 +592,7 @@ elation.component.add("engine.systems.render.view", function() {
     return null;
   }
   this.initPickingMaterial = function() {
-    elation.engine.utils.materials.addChunk("controls_picking", {
+    elation.engine.materials.addChunk("controls_picking", {
       uniforms: {
         "id" : { type: "i", value: 0 },
         "diffuse" : { type: "c", value: new THREE.Color(0xff0000) },
@@ -609,7 +619,7 @@ elation.component.add("engine.systems.render.view", function() {
           "gl_FragColor = vec4( diffuse, 1.0);",
       ].join('\n')
     });
-    elation.engine.utils.materials.buildShader("controls_picking", {
+    elation.engine.materials.buildShader("controls_picking", {
       uniforms: [
         //'common',
         //'color',
@@ -642,7 +652,7 @@ elation.component.add("engine.systems.render.view", function() {
   this.getPickingMaterial = function(id) {
     if (!this.pickingmaterials[id]) {
       var idcolor = new THREE.Color(id);
-      this.pickingmaterials[id] = elation.engine.utils.materials.getShaderMaterial("controls_picking", {diffuse: idcolor}, null, false);
+      this.pickingmaterials[id] = elation.engine.materials.getShaderMaterial("controls_picking", {diffuse: idcolor}, null, false);
     }
     return this.pickingmaterials[id];
   }
