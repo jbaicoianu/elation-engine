@@ -39,8 +39,8 @@ elation.component.add('engine.things.manipulator', function() {
     return obj;
   }
   this.getArrow = function(dir, origin, size, color) {
-    var mat = new THREE.MeshBasicMaterial({color: color, opacity: this.opacities[0], transparent: true, depthWrite: false});
-    //var mat = elation.engine.utils.materials.getShaderMaterial("manipulator", {color: new THREE.Color(color), opacity: this.opacities[0]});
+    var mat = new THREE.MeshBasicMaterial({color: color, opacity: this.opacities[0], transparent: true, depthWrite: false, depthTest: false});
+    //var mat = elation.engine.materials.getShaderMaterial("manipulator", {color: new THREE.Color(color), opacity: this.opacities[0]});
     var arrowgeo = new THREE.Geometry();
 
     var cone = new THREE.Mesh(new THREE.CylinderGeometry( 0, 0.05 * size, 0.25 * size, 5, 1 ), mat);
@@ -67,8 +67,8 @@ elation.component.add('engine.things.manipulator', function() {
   }
   this.getRing = function(dir, origin, size, color) {
     var ringgeo = new THREE.TorusGeometry(size, .01 * size, 8, 32, Math.PI*2);
-    var ringmat = new THREE.MeshBasicMaterial({color: color, opacity: this.opacities[0], transparent: true, depthWrite: false});
-    //var ringmat = elation.engine.utils.materials.getShaderMaterial("manipulator", {color: new THREE.Color(color), opacity: this.opacities[0]});
+    var ringmat = new THREE.MeshBasicMaterial({color: color, opacity: this.opacities[0], transparent: true, depthWrite: false, depthTest: false});
+    //var ringmat = elation.engine.materials.getShaderMaterial("manipulator", {color: new THREE.Color(color), opacity: this.opacities[0]});
     var ring = new THREE.Mesh(ringgeo, ringmat);
     // FIXME - this could be made to work with arbitrary axes...
     if (dir == this.axes.x) {
@@ -79,13 +79,13 @@ elation.component.add('engine.things.manipulator', function() {
     return ring;
   }
   this.mouseover = function(ev) {
-    if (ev.data && ev.data.material) {
-      ev.data.material.opacity = this.opacities[1];
+    if (ev.data && ev.data.object && ev.data.object.material) {
+      ev.data.object.material.opacity = this.opacities[1];
     }
   }
   this.mouseout = function(ev) {
-    if (ev.data && ev.data.material) {
-      ev.data.material.opacity = this.opacities[0];
+    if (ev.data && ev.data.object && ev.data.object.material) {
+      ev.data.object.material.opacity = this.opacities[0];
     }
   }
   this.mousedown = function(ev) {
@@ -93,7 +93,7 @@ elation.component.add('engine.things.manipulator', function() {
     ev.preventDefault();
 
     elation.events.add(window, 'mousemove,mouseup', this);
-    var mesh = ev.data;
+    var mesh = ev.data.object;
 
     if (!this.camera) this.camera = this.engine.systems.render.views['main'].camera; // FIXME - ugly;
     this.engine.systems.admin.setCameraActive(false); // disable camera controls
@@ -123,20 +123,16 @@ elation.component.add('engine.things.manipulator', function() {
         case 'orientation':
           // Calculate the tangent vector at the point on the ring where the user clicked, and use that for the drag line
           var center3d = this.localToWorld(this.origin.clone());
-          var mouse3d = new THREE.Vector3((ev.clientX / window.innerWidth) * 2 - 1, -(ev.clientY / window.innerHeight) * 2 + 1, -1);
-          this.projector.unprojectVector(mouse3d, this.camera);
+          var point = ev.data.point;
 
-          var ray = new THREE.Raycaster(this.camera.position, mouse3d.sub(this.camera.position).normalize());
-          var intersects = ray.intersectObject(ev.data);
-          if (intersects.length > 0) {
-            var radial = intersects[0].point.clone().sub(center3d);
-            var tangent = radial.cross(this.localToWorld(this.axes[action[1]].clone())).normalize();
-          
-            var start2d = this.projector.projectVector(intersects[0].point.clone(), this.camera);
-            var end2d = this.projector.projectVector(intersects[0].point.clone().add(tangent), this.camera);
-            this.dragline.set(end2d.x - start2d.x, end2d.y - start2d.y).normalize();
-            elation.events.fire({type: 'thing_rotate_start', element: this.parent});
-          }
+          var radial = point.clone().sub(center3d);
+          var tangent = radial.cross(this.localToWorld(this.axes[action[1]].clone())).normalize();
+        
+          var start2d = this.projector.projectVector(point.clone(), this.camera);
+          var end2d = this.projector.projectVector(point.clone().add(tangent), this.camera);
+          this.dragline.set(end2d.x - start2d.x, end2d.y - start2d.y).normalize();
+          elation.events.fire({type: 'thing_rotate_start', element: this.parent});
+
           break;
       }
     } else {
@@ -201,7 +197,7 @@ elation.component.add('engine.things.manipulator', function() {
 }, elation.engine.things.generic);
 
 /*
-elation.engine.utils.materials.addChunk("manipulator", {
+elation.engine.materials.addChunk("manipulator", {
   uniforms: {
     "color": { type: "c", value: new THREE.Color(0xcccccc) },
     "opacity": { type: "f", value: 1.0 },
@@ -223,7 +219,7 @@ elation.engine.utils.materials.addChunk("manipulator", {
     "gl_FragColor = vec4( color, opacity);",
   ].join('\n'),
 });
-elation.engine.utils.materials.buildShader("manipulator", {
+elation.engine.materials.buildShader("manipulator", {
   uniforms: [
     'common',
     'manipulator'
