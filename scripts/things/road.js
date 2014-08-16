@@ -11,8 +11,8 @@ elation.component.add("engine.things.road", function(args) {
     var repeatt = (params['repeat'] ? params['repeat'][1] : 1);
 
     var parameters = {
-      map: elation.engine.utils.materials.getTexture("/media/space/textures/asphalt.jpg", [repeats, repeatt]),
-      normalMap: elation.engine.utils.materials.getTexture("/media/space/textures/asphalt-normal.jpg", [repeats, repeatt]),
+      map: elation.engine.materials.getTexture("/media/space/textures/asphalt.jpg", [repeats, repeatt]),
+      normalMap: elation.engine.materials.getTexture("/media/space/textures/asphalt-normal.jpg", [repeats, repeatt]),
       offsetRepeat: new THREE.Vector4(0,0,repeats,repeatt),
       shading: THREE.SmoothShading,
       shininess: 10,
