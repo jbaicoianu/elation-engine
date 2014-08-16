@@ -97,27 +97,29 @@ elation.extend("engine.systems.physics", function(args) {
       var thing = this.debugthings[name];
       var win = this.debugwindows[name];
       var ul = win.content;
-      ul.innerHTML = '';
-      var values = ['state', 'mass', 'position', 'velocity', 'acceleration', 'angular', 'angularaccel', 'force_accumulator', 'damping'];
       if (thing.objects.dynamics) {
-        for (var i = 0; i < values.length; i++) {
-          var li = elation.html.create('li');
-          var content = "<strong>" + values[i] + ":</strong> ";
-          var value = thing.objects.dynamics[values[i]];
-          if (value instanceof THREE.Vector3) {
-            content += "[ " + value.x.toFixed(4) + ", " + value.y.toFixed(4) + ", " + value.z.toFixed(4) + " ]";
-          } else if (values[i] == 'state') {
-            for (var k in value) {
-              var tag = (value[k] ? "add" : "del");
-              content += "<" + tag + ">" + k + "</" + tag + "> ";
+        if (ul.innerHTML == '' || !thing.objects.dynamics.state.sleeping) {
+          ul.innerHTML = '';
+          var values = ['state', 'mass', 'position', 'velocity', 'acceleration', 'angular', 'angularacceleration', 'force_accumulator', 'damping'];
+          for (var i = 0; i < values.length; i++) {
+            var li = elation.html.create('li');
+            var content = "<strong>" + values[i] + ":</strong> ";
+            var value = thing.objects.dynamics[values[i]];
+            if (value instanceof THREE.Vector3) {
+              content += "[ " + value.x.toFixed(4) + ", " + value.y.toFixed(4) + ", " + value.z.toFixed(4) + " ]";
+            } else if (values[i] == 'state') {
+              for (var k in value) {
+                var tag = (value[k] ? "add" : "del");
+                content += "<" + tag + ">" + k + "</" + tag + "> ";
+              }
+            } else if (values[i] == 'damping') {
+              content += "[" + thing.objects.dynamics.linearDamping + ', ' + thing.objects.dynamics.angularDamping + "]";
+            } else {
+              content += value;
             }
-          } else if (values[i] == 'damping') {
-            content += "[" + thing.objects.dynamics.linearDamping + ', ' + thing.objects.dynamics.angularDamping + "]";
-          } else {
-            content += value;
+            li.innerHTML = content;
+            ul.appendChild(li);
           }
-          li.innerHTML = content;
-          ul.appendChild(li);
         }
       } else {
         this.debugwindows[thing.name].close();
@@ -506,7 +508,7 @@ elation.component.add("engine.things.physics_forces_gravity", function(args) {
     var obj = new THREE.Object3D();
     obj.add(this.arrow);
 
-    var labeltext = elation.engine.utils.materials.getTextureLabel('Hello cool');
+    var labeltext = elation.engine.materials.getTextureLabel('gravity');
     //var labelgeo = new THREE.PlaneGeometry(labeltext.image.width / 100, labeltext.image.height / 100);
     //var label = new THREE.Mesh(labelgeo, new THREE.MeshBasicMaterial({map: labeltext, side: THREE.DoubleSide, transparent: true, depthWrite: false, depthTest: false}));
 var mapB = THREE.ImageUtils.loadTexture( "/media/space/textures/sprite1.png" );
@@ -569,14 +571,11 @@ elation.component.add("engine.things.physics_forces_buoyancy", function(args) {
       if (!this.arrow.parent) {
         this.objects['3d'].add(this.arrow);
       }
-//console.log('length is', len, this.properties.force.force.toArray());
       this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
       this.arrow.setDirection(grav);
     } else {
         this.objects['3d'].remove(this.arrow);
-//console.log('HIDEY length is', len, this.properties.force.force.toArray());
     }
-//console.log('ARROW', this.arrow);
   }
 }, elation.engine.things.generic);
 
