@@ -29,7 +29,7 @@ THREE.OculusRenderPass.prototype = {
 
   initOculus: function() {
     this.oculusparams = {};
-    document.body.addEventListener('click', this.fullscreen.bind(this));
+    //document.body.addEventListener('click', this.fullscreen.bind(this));
   },
   fullscreen: function() {
     if (!this.isfullscreen) {
