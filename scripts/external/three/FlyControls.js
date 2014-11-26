@@ -186,18 +186,30 @@ THREE.FlyControls = function ( object, domElement ) {
 
 		var moveMult = delta * this.movementSpeed;
 		var rotMult = delta * this.rollSpeed;
+		var changed = false;
+		var lastPosition = this.object.position.clone();
 
-		this.object.translateX( this.moveVector.x * moveMult );
-		this.object.translateY( this.moveVector.y * moveMult );
-		this.object.translateZ( this.moveVector.z * moveMult );
+		if (this.moveVector.lengthSq() > 1e-6) {
+			this.object.translateX( this.moveVector.x * moveMult );
+			this.object.translateY( this.moveVector.y * moveMult );
+			this.object.translateZ( this.moveVector.z * moveMult );
+			this.object.matrix.setPosition( this.object.position );
+			changed = true;
+		}
 
-		this.tmpQuaternion.set( this.rotationVector.x * rotMult, this.rotationVector.y * rotMult, this.rotationVector.z * rotMult, 1 ).normalize();
-		this.object.quaternion.multiply( this.tmpQuaternion );
+		if (this.rotationVector.lengthSq() > 1e-6) {
+			this.tmpQuaternion.set( this.rotationVector.x * rotMult, this.rotationVector.y * rotMult, this.rotationVector.z * rotMult, 1 ).normalize();
+			this.object.quaternion.multiply( this.tmpQuaternion );
+			this.object.matrix.makeRotationFromQuaternion( this.object.quaternion );
+			changed = true;
+		}
 
-		this.object.matrix.makeRotationFromQuaternion( this.object.quaternion );
-		this.object.matrix.setPosition( this.object.position );
-		this.object.matrixWorldNeedsUpdate = true;
-
+		if (changed) {
+			this.object.matrixWorldNeedsUpdate = true;
+			var changeEvent = { type: 'change' };
+			changeEvent.data = { lastPosition: lastPosition.toArray(), position: this.object.position.toArray(), distance: lastPosition.distanceTo( this.object.position ) };
+			this.dispatchEvent( changeEvent );
+		}
 
 	};
 
@@ -280,3 +292,4 @@ THREE.FlyControls = function ( object, domElement ) {
 	this.updateRotationVector();
 
 };
+THREE.FlyControls.prototype = Object.create( THREE.EventDispatcher.prototype );
