@@ -18,6 +18,7 @@ elation.require([
   //"engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
+  //"engine.external.three.fonts.drive-thru_regular",
   "engine.materials",
   "engine.geometries",
 ]);
@@ -25,6 +26,7 @@ elation.require([
 elation.extend("engine.systems.render", function(args) {
   elation.implement(this, elation.engine.systems.system);
   this.views = {};
+  this.forcerefresh = false;
 
   this.view_init = function(viewname, viewargs) {
     var newview = new elation.engine.systems.render.view(viewargs);
@@ -46,7 +48,7 @@ elation.extend("engine.systems.render", function(args) {
     this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
     this.lastframetime = 0;
 
-    elation.events.add(this.engine.systems.world, 'world_thing_add,world_thing_remove,world_thing_change', this);
+    elation.events.add(this.engine.systems.world, 'world_change,world_thing_add,world_thing_remove,world_thing_change', this);
     // FIXME - globally-bound events are dirty, things should fire events when their properties change
     elation.events.add(null, 'physics_update,thing_drag_move,thing_rotate_move,engine_texture_load', elation.bind(this, this.setdirty));
   }
@@ -57,9 +59,9 @@ elation.extend("engine.systems.render", function(args) {
     console.log('SHUTDOWN: render');
   }
   this.engine_frame = function(ev) {
-    //console.log('FRAME: render');
     this.lastframetime += ev.data.delta;
-    if (this.dirty) {
+    if (this.forcerefresh || this.dirty) {
+      //console.log('FRAME: render');
       this.dirty = false;
       this.renderer.clear();
       for (var k in this.views) {
@@ -78,6 +80,9 @@ elation.extend("engine.systems.render", function(args) {
     this.setdirty();
   }
   this.world_thing_change = function(ev) {
+    this.setdirty();
+  }
+  this.world_change = function(ev) {
     this.setdirty();
   }
 });
@@ -128,14 +133,9 @@ elation.component.add("engine.systems.render.view", function() {
     }
     this.rendersystem.view_add(this.id, this);
 
-    var cam = new THREE.PerspectiveCamera(50, this.container.offsetWidth / this.container.offsetHeight, 1e-2, 1e4);
+    var cam = new THREE.PerspectiveCamera(60, this.container.offsetWidth / this.container.offsetHeight, 1e-2, 1e4);
+    this.actualcamera = cam;
 
-    cam.position.x = 0;
-    cam.position.z = 0;
-    cam.position.y = 1;
-    cam.rotation.order = "YXZ";
-    cam.rotation.x = -Math.PI/24;
-    //cam.rotation.y = -Math.PI/4;
     this.setcamera(cam);
 
     this.setscene(this.engine.systems.world.scene['world-3d']);
@@ -152,7 +152,7 @@ elation.component.add("engine.systems.render.view", function() {
     this.depthMaterial.blending = THREE.NoBlending;
     this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
-    this.composer = this.createRenderPath([this.rendermode, 'copy']);
+    this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
     if (this.showstats) {
       elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
     }
@@ -213,13 +213,13 @@ elation.component.add("engine.systems.render.view", function() {
     var pass = false;
     switch (name) {
       case 'default':
-        pass = new THREE.RenderPass(this.scene, this.camera, null, null, 0);
+        pass = new THREE.RenderPass(this.scene, this.actualcamera, null, null, 0);
         break;
       case 'oculus':
-        pass = new THREE.OculusRenderPass(this.scene, this.camera, null, null, 0);
+        pass = new THREE.OculusRenderPass(this.scene, this.actualcamera, null, null, 0);
         break;
       case '3dtvsbs':
-        pass = new THREE.OculusRenderPass(this.scene, this.camera, null, null, 0);
+        pass = new THREE.OculusRenderPass(this.scene, this.actualcamera, null, null, 0);
         pass.setOculusParameters({
           HMD: {
             hResolution: window.innerWidth,
@@ -235,7 +235,6 @@ elation.component.add("engine.systems.render.view", function() {
         });
         break;
       case 'sky':
-console.log(this.skyscene, this.skycamera);
         pass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
         break;
       case 'film':
@@ -267,8 +266,8 @@ console.log(this.skyscene, this.skycamera);
         //pass.uniforms[ 'size' ].value.set( this.container.offsetWidth, this.container.offsetHeight);
         pass.uniforms[ 'size' ].value = this.sizevec;
         pass.uniforms[ 'tDepth' ].value = this.depthTarget;
-        pass.uniforms[ 'cameraNear' ].value = this.camera.near;
-        pass.uniforms[ 'cameraFar' ].value = this.camera.far;
+        pass.uniforms[ 'cameraNear' ].value = this.actualcamera.near;
+        pass.uniforms[ 'cameraFar' ].value = this.actualcamera.far;
         //pass.clear = true;
     }
     return pass;
@@ -279,16 +278,39 @@ console.log(this.skyscene, this.skycamera);
     var pass = this.createRenderPass(mode);
     this.composer.passes[0] = pass;
     this.pickingcomposer.passes[0] = pass;
+    pass.camera = this.actualcamera;
+
+    this.rendermode = mode;
 
     this.rendersystem.setdirty();
   }
   this.render = function(delta) {
     if (this.scene && this.camera) {
-      if (this.skycamera) {
-        this.skycamera.rotation.copy(this.camera.rotation);
-        this.skycamera.quaternion.copy(this.camera.quaternion);
-        this.skycamera.matrix.copy(this.camera.matrix);
+      if (this.actualcamera) {
+        if (this.actualcamera.parent && this.actualcamera.parent != this.camera.parent) {
+          this.actualcamera.parent.remove(this.actualcamera);
+        } 
+        if (this.camera.parent && this.actualcamera.parent != this.camera.parent) {
+          this.camera.parent.add(this.actualcamera);
+        }
+        this.actualcamera.position.copy(this.camera.position);
+        this.actualcamera.rotation.copy(this.camera.rotation);
+        this.actualcamera.quaternion.copy(this.camera.quaternion);
+        this.actualcamera.matrix.copy(this.camera.matrix);
       }
+      if (this.skycamera) {
+        var position = new THREE.Vector3();
+        var quaternion = new THREE.Quaternion();
+        var scale = new THREE.Vector3();
+        this.camera.updateMatrixWorld(true);
+        this.camera.matrixWorld.decompose( position, quaternion, scale );
+
+        this.skycamera.quaternion.copy(quaternion);
+        this.skycamera.updateMatrix();
+        this.skycamera.matrix.copy(this.camera.matrix);
+        this.skycamera.matrixWorld.copy(this.camera.matrixWorld);
+      }
+      
       if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
         this.setrendersize(this.size[0], this.size[1]);
       }
@@ -324,14 +346,14 @@ console.log(this.skyscene, this.skycamera);
         //this.pickingdebugcomposer.render();
       } else {
         this.scene.overrideMaterial = this.depthMaterial;
-        //this.rendersystem.renderer.render(this.scene, this.camera, this.depthTarget, true);
+        //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
 
         this.scene.overrideMaterial = null;
         this.composer.render(delta);
-        //this.rendersystem.renderer.render(this.scene, this.camera);
+        //this.rendersystem.renderer.render(this.scene, this.actualcamera);
       }
       if (this.rendersystem.cssrenderer) {
-        this.rendersystem.cssrenderer.render(this.scene, this.camera);
+        this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
       }
     }
     if (this.stats) {
@@ -345,16 +367,38 @@ console.log(this.skyscene, this.skycamera);
   this.updateRenderStats = function() {
     this.renderstats.update(this.rendersystem.renderer);
   }
-
+  this.toggleStats = function() {
+    if (this.showstats) {
+      this.container.removeChild(this.renderstats.domElement)
+      this.container.removeChild(this.stats.domElement);
+      this.showstats = false;
+    } else {
+      this.container.appendChild(this.renderstats.domElement)
+      this.container.appendChild(this.stats.domElement);
+      this.showstats = true;
+    }
+  }
+  this.setactivething = function(thing) {
+    if (thing.camera) {
+      this.setcamera(thing.camera);
+      // update camera aspect ratio
+      this.getsize();
+    }
+  }
   this.setcamera = function(camera) {
+    if (camera instanceof elation.component.base && camera.type == 'camera') {
+      camera = camera.objects['3d'];
+    }
     this.camera = camera;
     this.setscene(this.getscene(camera));
+/*
     if (this.composer) {
-      this.composer.passes[0].camera = camera;
+      this.composer.passes[0].camera = this.camera;
     }
     if (this.pickingcomposer) {
-      this.pickingcomposer.passes[0].camera = camera;
+      this.pickingcomposer.passes[0].camera = this.camera;
     }
+*/
   }
   this.setscene = function(scene) {
     this.scene = scene;
@@ -430,12 +474,17 @@ console.log(this.skyscene, this.skycamera);
 
   }
   this.setskyscene = function(scene) {
-console.log('SETSYSCENE: ', scene);
     this.skyscene = scene || new THREE.Scene();
     this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
-    this.skycamera.rotation = this.camera.rotation;
-    this.skycamera.quaternion = this.camera.quaternion;
+    //this.skycamera.rotation = this.camera.rotation;
+    //this.skycamera.quaternion = this.camera.quaternion;
     this.skyscene.add(this.skycamera);
+
+    if (!this.skypass) {
+      this.skypass = this.createRenderPass('sky');
+      this.composer.passes[0].clear = false;
+      this.composer.passes.unshift(this.skypass);
+    }
   }
   this.getscene = function(obj) {
     var scene = obj;
