@@ -22,6 +22,7 @@ elation.component.add("engine.things.generic", function() {
     this.children = {};
     this.tags = [];
 
+    elation.events.add(this, 'thing_create', this);
     this.defineActions({
       'spawn': this.spawn,
       'move': this.move
@@ -76,7 +77,10 @@ elation.component.add("engine.things.generic", function() {
     this.initDOM();
     this.initPhysics();
 
-    elation.events.fire({type: 'thing_create', element: this});
+    setTimeout(elation.bind(this, function() {
+      // Fire create event next frame
+      elation.events.fire({type: 'thing_create', element: this});
+    }), 0);
   }
   this.initProperties = function() {
     if (!this.properties) {
@@ -406,7 +410,9 @@ elation.component.add("engine.things.generic", function() {
       if (this.parent) {
         this.parent.remove(this);
       }
-      return newparent.add(this);
+      var success = newparent.add(this);
+      this.refresh();
+      return success;
     }
     return false;
   }
@@ -455,9 +461,13 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.removeDynamics = function() {
-    if (this.objects['dynamics']) {
-      this.engine.systems.physics.remove(this.objects['dynamics']);
-      delete this.objects['dynamics'];
+    if (this.objects.dynamics) {
+      if (this.objects.dynamics.parent) {
+        this.objects.dynamics.parent.remove(this.objects.dynamics);
+      } else {
+        this.engine.systems.physics.remove(this.objects.dynamics);
+      }
+      delete this.objects.dynamics;
     }
   }
   this.createForces = function() {
@@ -521,39 +531,47 @@ elation.component.add("engine.things.generic", function() {
     this.refresh();
   }
   this.loadCollada = function(url) {
-    var loader = new THREE.ColladaLoader();
-    (function(self) {
-      loader.load(url, function(collada) {
-        self.processCollada(collada);
-      });
-    })(this);
+    if (!THREE.ColladaLoader) {
+      // If the loader hasn't been initialized yet, fetch it!
+      elation.require('engine.external.three.ColladaLoader', elation.bind(this, this.loadCollada, url));
+    } else {
+      var loader = new THREE.ColladaLoader();
+      var xhr = loader.load(url, elation.bind(this, this.processCollada, url));
+      elation.events.fire({ type: 'resource_load_start', element: this, data: { type: 'model', url: url } });
+    }
   }
-  this.processCollada = function(collada) {
+  this.processCollada = function(url, collada) {
     collada.scene.rotation.x = -Math.PI / 2;
     collada.scene.rotation.z = Math.PI;
     this.extractEntities(collada.scene);
+/*
     collada.scene.computeBoundingSphere();
     collada.scene.computeBoundingBox();
     //this.updateCollisionSize();
-    elation.events.fire({type: "thing_load", element: this, data: collada.scene});
+*/
     this.objects['3d'].add(collada.scene);
+
+    this.colliders = this.extractColliders(collada.scene);
+    var textures = this.extractTextures(collada.scene, true);
+    this.loadTextures(textures);
+    elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
+
     this.refresh();
   }
   this.loadglTF = function(url) {
     if (!THREE.glTFLoader) {
       // If the loader hasn't been initialized yet, fetch it!
-      // FIXME - this might be abit hackish and is mostly to get around the fact that sometimes glTFLoader loads before three.js does
-      elation.require('engine.external.three.glTFLoader-combined', elation.bind(this, function() { this.loadglTF(url); }));
+      elation.require('engine.external.three.glTFLoader-combined', elation.bind(this, this.loadglTF, url));
     } else {
       var loader = new THREE.glTFLoader();
       loader.useBufferGeometry = true;
-      loader.load(url, elation.bind(this, this.processglTF));
+      loader.load(url, elation.bind(this, this.processglTF, url));
+      elation.events.fire({ type: 'resource_load_start', data: { type: 'model', url: url } });
     }
   }
-  this.processglTF = function(scenedata) {
+  this.processglTF = function(url, scenedata) {
     this.extractEntities(scenedata.scene);
     //this.updateCollisionSize();
-    elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
     //this.objects['3d'].add(scenedata.scene);
     var parent = this.objects['3d'].parent;
     parent.remove(this.objects['3d']);
@@ -563,20 +581,48 @@ elation.component.add("engine.things.generic", function() {
     this.objects['3d'].scale = this.properties.scale;
     this.objects['3d'].userData.thing = this;
 
+    // Correct coordinate space from various modelling programs
+    // FIXME - hardcoded for blender's settings for now, this should come from a property
+    var scene = scenedata.scene;
+    scene.rotation.x = -Math.PI/2;
+
+    // FIXME - enable shadows for all non-transparent materials.  This should be coming from the model file...
+    scene.traverse(function(n) {
+      if (n instanceof THREE.Mesh) {
+        if (n.material && !(n.material.transparent || n.material.opacity < 1.0)) {
+          n.castShadow = true;
+          n.receiveShadow = true;
+        } else {
+          n.castShadow = false;
+          n.receiveShadow = false;
+        }
+      }
+    });
+
+/*
     while (scenedata.scene.children.length > 0) {
       var obj = scenedata.scene.children[0];
       scenedata.scene.remove(obj);
-      this.objects['3d'].add(obj);
+      coordspace.add(obj);
     }
+    this.objects['3d'].add(coordspace);
+*/
+    this.objects['3d'].add(scene);
 
     //this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
 
-    var textures = this.extractTextures();
-    for (var i = 0; i < textures.length; i++) {
-      elation.events.add(textures[i].image, 'load', elation.bind(this, this.refresh));
-    }
+    var textures = this.extractTextures(scene, true);
+    this.loadTextures(textures);
 
     parent.add(this.objects['3d']);
+
+    // If no pending textures, we're already loaded, so fire the event
+    if (this.pendingtextures == 0) {
+      elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
+    }
+
+    elation.events.fire({ type: 'resource_load_finish', data: { type: 'model', url: url } });
+
     this.refresh();
   }
   this.extractEntities = function(scene) {
@@ -598,19 +644,124 @@ elation.component.add("engine.things.generic", function() {
     }
     //this.updateCollisionSize();
   }
-  this.extractTextures = function(object) {
+  this.extractColliders = function(obj) {
+    var meshes = [];
+    obj.traverse(function(n) { if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(/^_collider-/)) { n.geometry.computeBoundingBox(); n.geometry.computeBoundingSphere(); meshes.push(n); } });
+
+    /*
+    var collidermat = new THREE.MeshPhongMaterial({color: 0xaaaa00, opacity: .5, transparent: true});
+    var new3d = new THREE.Object3D();
+    */
+    var root = new elation.physics.rigidbody({ orientation: obj.quaternion });
+
+    for (var i = 0; i < meshes.length; i++) {
+      var type = meshes[i].material.name.replace('_collider-', '');
+      var rigid = new elation.physics.rigidbody();
+      var min = meshes[i].geometry.boundingBox.min,
+          max = meshes[i].geometry.boundingBox.max;
+//console.log('type is', type, min, max);
+
+      rigid.position.copy(meshes[i].parent.position);
+      rigid.position.copy(meshes[i].parent.position);
+
+      min.x *= this.properties.scale.x;
+      min.y *= this.properties.scale.y;
+      min.z *= this.properties.scale.z;
+      max.x *= this.properties.scale.x;
+      max.y *= this.properties.scale.y;
+      max.z *= this.properties.scale.z;
+
+      rigid.position.x *= this.properties.scale.x;
+      rigid.position.y *= this.properties.scale.y;
+      rigid.position.z *= this.properties.scale.z;
+
+      rigid.orientation.copy(meshes[i].parent.quaternion);
+
+      if (type == 'box') {
+        rigid.setCollider('box', {min: min, max: max});
+        /*
+        var collidermesh = new THREE.Mesh(new THREE.BoxGeometry(max.x - min.x, max.y - min.y, max.z - min.z), collidergeomat);
+        collidermesh.position.copy(meshes[i].parent.position);
+        collidermesh.quaternion.copy(meshes[i].parent.quaternion);
+        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
+        new3d.add(collidermesh);
+        */
+      } else if (type == 'cylinder') {
+        var radius = Math.max(max.x - min.x, max.y - min.y) / 2,
+            height = max.z - min.z;
+        rigid.setCollider('cylinder', {radius: radius, height: height});
+
+        /*
+        var collidermesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height), buggermat);
+        collidermesh.position.copy(meshes[i].parent.position);
+        collidermesh.quaternion.copy(meshes[i].parent.quaternion);
+        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
+
+        // FIXME - rotate everything by 90 degrees on x axis
+        var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
+        collidermesh.quaternion.multiply(rot);
+        rigid.orientation.multiply(rot);
+        new3d.add(collidermesh);
+        */
+      }
+
+      //console.log('add collider:', rigid, rigid.position.toArray(), rigid.orientation.toArray());
+      root.add(rigid);
+
+      meshes[i].parent.remove(meshes[i]);
+    }
+    this.objects.dynamics.add(root);
+
+    /*
+    new3d.scale.copy(obj.scale);
+    new3d.position.copy(obj.position);
+    new3d.quaternion.copy(obj.quaternion);
+    this.objects['3d'].add(new3d);
+    */
+  }
+  this.extractTextures = function(object, useloadhandler) {
     if (!object) object = this.objects['3d'];
+
+    // Extract the unique texture images out of the specified object
+    var unique = {};
     var ret = [];
-    var mapnames = ['map', 'lightMap', 'normalMap', 'specularMap', 'envMap'];
+    var mapnames = ['map', 'lightMap', 'bumpMap', 'normalMap', 'specularMap', 'envMap'];
     object.traverse(function(n) {
       if (n instanceof THREE.Mesh) {
         var m = n.material;
         for (var mapidx = 0; mapidx < mapnames.length; mapidx++) {
-          if (m[mapnames[mapidx]]) ret.push(m[mapnames[mapidx]]);
+          var tex = m[mapnames[mapidx]];
+          if (tex && !unique[tex.image.src]) {
+            unique[tex.image.src] = true;
+            ret.push(tex);
+          }
         }
       }
     });
     return ret;
+  }
+  this.loadTextures = function(textures) {
+    this.pendingtextures = 0;
+    for (var i = 0; i < textures.length; i++) {
+      if (!textures[i].image.complete) {
+        elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: textures[i].image } });
+        this.pendingtextures++;
+        elation.events.add(textures[i].image, 'load', elation.bind(this, this.textureLoadComplete));
+      }
+    }
+
+    // Everything was already loaded, so fire the event immediately
+    if (this.pendingtextures === 0) {
+      this.refresh();
+      elation.events.fire({type: "thing_load", element: this, data: this.objects['3d']});
+    }
+  }
+  this.textureLoadComplete = function(ev) {
+    this.refresh();
+    if (--this.pendingtextures == 0) {
+      // Fire the thing_load event once all textures are loaded
+      elation.events.fire({type: "thing_load", element: this, data: this.objects['3d']});
+    }
   }
   this.spawn = function(type, name, spawnargs, orphan) {
     var newspawn = this.engine.systems.world.spawn(type, name, spawnargs, (orphan ? null : this));
@@ -647,6 +798,24 @@ elation.component.add("engine.things.generic", function() {
   this.localToParent = function(localpos) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
     return localpos.applyMatrix4(this.objects['3d'].matrix);
+  }
+  this.lookAt = function(other, up) {
+    if (!up) up = new THREE.Vector3(0,1,0);
+    var otherpos = false;
+    if (other.properties && other.properties.position) {
+      otherpos = other.localToWorld(new THREE.Vector3());
+    } else if (other instanceof THREE.Vector3) {
+      otherpos = other.clone();
+    }
+    var thispos = this.localToWorld(new THREE.Vector3());
+
+    if (otherpos) {
+      var dir = thispos.clone().sub(otherpos).normalize();
+      var axis = new THREE.Vector3().crossVectors(up, dir);
+      var angle = dir.dot(up);
+      //this.properties.orientation.setFromAxisAngle(axis, -angle);
+console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray(), angle, this.properties.orientation.toArray());
+    }
   }
   this.serialize = function() {
     var ret = {
