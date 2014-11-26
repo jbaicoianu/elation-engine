@@ -21,14 +21,16 @@ elation.component.add("engine.things.pathedit", function(args) {
   };
 
   this.postinit = function() {
+    //elation.engine.things.pathedit.extendclass.postinit.call(this);
     this.defineProperties({
-      'path': { type: 'json' }
+      'path': { type: 'json' },
+      'yOffset': { type: 'float', default: 0.0 }
     });
     this.controlpoints = [];
     this.labels = [];
     this.activepoint = false;
     this.dragpoint = -1;
-    this.offsetY = 5;
+    this.offsetY = this.properties.yOffset;
     this.pointsize = 1;
     elation.events.add(this, "mouseover,mouseout,mousemove,mousedown", this);
   }
@@ -38,20 +40,23 @@ elation.component.add("engine.things.pathedit", function(args) {
     return this.objects['3d'];
   }
   this.create = function() {
+console.log('pathedit!', this);
     if (this.args.properties.path) {
       this.path = this.args.properties.path;
       var pnum = 0;
       if (this.path.curves && this.path.curves.length > 0) {
         for (var i = 0; i < this.path.curves.length; i++) {
-          if (this.path.curves[i] instanceof THREE.SplineCurve) {
-            for (var j = 0; j < this.path.curves[i].points.length; j++) {
-              this.addControlPoint(pnum++, this.path.curves[i].points[j]);
+          var curve = this.path.curves[i];
+console.log(curve);
+          if (curve instanceof THREE.SplineCurve || curve instanceof THREE.SplineCurve3) {
+            for (var j = 0; j < curve.points.length; j++) {
+              this.addControlPoint(pnum++, curve.points[j]);
             }
-          } else if (this.path.curves[i] instanceof THREE.LineCurve) {
-            if (pnum == 0 || this.controlpoints[pnum-1].position.distanceTo(this.path.curves[i].v1) > .0001) {
-              this.addControlPoint(pnum++, this.path.curves[i].v1);
+          } else if (curve instanceof THREE.LineCurve || curve instanceof THREE.LineCurve3) {
+            if (pnum == 0 || this.controlpoints[pnum-1].position.distanceTo(curve.v1) > .0001) {
+              this.addControlPoint(pnum++, curve.v1);
             }
-            this.addControlPoint(pnum++, this.path.curves[i].v2);
+            this.addControlPoint(pnum++, curve.v2);
           }
         }
       } else if (this.path.points) {
@@ -60,20 +65,42 @@ elation.component.add("engine.things.pathedit", function(args) {
         }
       }
     }
+    this.updatePreview();
+  }
+  this.createPathFromPoints = function(points) {
+  }
+  this.updatePreview = function() {
+    if (!this.extrudeshape) {
+      this.extrudeshape = new THREE.Shape([
+        new THREE.Vector2(0,.1),
+        new THREE.Vector2(-.1,-.1),
+        new THREE.Vector2(.1,-.1),
+      ]);
+    }
+    if (this.preview) {
+      this.preview.parent.remove(this.preview);
+    }
+  
+    console.log('update path!', this.preview, this.extrudeshape, this.path);
+    var extrudegeo = new THREE.ExtrudeGeometry(this.extrudeshape, { extrudePath: this.path, steps: 1000, closed: false });
+    this.preview = new THREE.Mesh(extrudegeo, new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .5}));
+    this.objects['3d'].add(this.preview);
+    this.refresh();
   }
   this.addControlPoint = function(num, p) {
     // Add one new label to the END of the list
 console.log('add point ' + this.controlpoints.length, num);
-    this.controlpoints.push(this.getLabel(this.controlpoints.length));
+    var label = this.getLabel(this.controlpoints.length);
+    this.controlpoints.push(label);
     //this.controlpoints[num] = this.getLabel(num);
     for (var i = this.controlpoints.length-1; i >= num && i >= 1; i--) {
       this.controlpoints[i].properties.position.copy(this.controlpoints[i-1].properties.position);
     }
     //this.controlpoints[num].properties.position.set(p.x, p.y + this.offsetY, p.z);
     var vpos = this.worldToLocal(new THREE.Vector3(p.x, p.y + this.offsetY, p.z));
-    this.controlpoints[num].properties.position.copy(vpos);
-    //this.objects['3d'].add(this.controlpoints[num]);
-    this.objects['3d'].add(this.controlpoints[this.controlpoints.length-1]);
+    label.properties.position.copy(vpos);
+    this.objects['3d'].add(label);
+    this.refresh();
   }
   this.removeControlPoint = function(num) {
     for (var i = num; i < this.controlpoints.length-1; i++) {
@@ -120,8 +147,22 @@ console.log('add point ' + this.controlpoints.length, num);
       path[k] = this.localToParent(vpos.copy(this.controlpoints[k].properties.position)).toArray();
       path[k][1] -= this.offsetY;
     }
-    //this.set('path', path);
-    this.parent.set('path', path, true);
+    //this.set('path', path, true);
+    //this.path = path;
+
+    if (this.path && this.path.curves) {
+      var curve = this.path.curves[0];
+      for (var i = 0; i < path.length; i++) {
+        if (curve.points[i]) {
+          curve.points[i].set(path[i][0], path[i][1], path[i][2]);
+        } else {
+          curve.points[i] = new THREE.Vector3(path[i][0], path[i][1], path[i][2]);
+        }
+      }
+    }
+
+    this.updatePreview();
+    //this.parent.set('path', path, true);
   }
   this.getControlPoints = function() {
     var points = [];
@@ -290,8 +331,10 @@ elation.component.add('engine.things.pathnode', function() {
       //this.controlpoints[pointnum].scale.set(1.5,1.5,1.5);
       this.activepoint = pointnum;
 */
+    this.refresh();
   }
   this.mouseout = function(ev) {
+    this.refresh();
     //if (this.activepoint !== false) {
     //  if (this.activepoint != this.dragpoint) {
         this.setState("default");
@@ -300,7 +343,6 @@ elation.component.add('engine.things.pathnode', function() {
     //}
   }
   this.mousedown = function(ev) {
-    ev.stopPropagation();
     switch (ev.button) {
       case 0:
         if (ev.shiftKey) {
@@ -325,11 +367,14 @@ elation.component.add('engine.things.pathnode', function() {
         ev.preventDefault();
         break;
     }
+    ev.stopPropagation();
+    this.refresh();
   }
   this.click = function(ev) {
   }
   this.thing_drag_end = function(ev) {
     this.parent.updatePath();
+    this.refresh();
   }
   this.setState = function(state) {
     if (!this.states[state]) {
@@ -349,5 +394,7 @@ elation.component.add('engine.things.pathnode', function() {
           material[k] = val;
       }
     }
+    elation.events.fire({type: 'thing_change', element: this});
+    this.refresh();
   }
 }, elation.engine.things.generic);
