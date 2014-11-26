@@ -691,16 +691,16 @@ elation.component.add("engine.things.generic", function() {
             height = max.z - min.z;
         rigid.setCollider('cylinder', {radius: radius, height: height});
 
+        // FIXME - rotate everything by 90 degrees on x axis to match default orientation
+        var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
+        rigid.orientation.multiply(rot);
+
         /*
         var collidermesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height), buggermat);
         collidermesh.position.copy(meshes[i].parent.position);
         collidermesh.quaternion.copy(meshes[i].parent.quaternion);
-        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
-
-        // FIXME - rotate everything by 90 degrees on x axis
-        var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
         collidermesh.quaternion.multiply(rot);
-        rigid.orientation.multiply(rot);
+        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
         new3d.add(collidermesh);
         */
       }
