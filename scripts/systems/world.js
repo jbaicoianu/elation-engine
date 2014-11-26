@@ -14,7 +14,7 @@ elation.extend("engine.systems.world", function(args) {
   this.lastpersist = 0;
 
   //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
-  this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
+  //this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
 
   this.system_attach = function(ev) {
     console.log('INIT: world');
@@ -63,6 +63,20 @@ elation.extend("engine.systems.world", function(args) {
   this.thing_add = function(ev) {
     elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
     elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+
+    if (ev.data.thing && ev.data.thing.objects['3d']) {
+      var object = ev.data.thing.objects['3d'];
+      var hasLight = object instanceof THREE.Light;
+      if (!hasLight && object.children.length > 0) {
+        object.traverse(function(n) { if (n instanceof THREE.Light) { hasLight = true; } });
+      }
+      if (hasLight) {
+        //console.log('the new thing has a light!');
+        this.refreshLights();
+      } else {
+        //console.log('no light here');
+      }
+    }
   }
   this.thing_remove = function(ev) {
     elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
@@ -176,6 +190,12 @@ elation.extend("engine.systems.world", function(args) {
       this.loadLocal(this.rootname);
     }
   }
+  this.refresh = function() {
+    elation.events.fire({type: 'world_change', element: this});
+  }
+  this.refreshLights = function() {
+    this.scene['world-3d'].traverse(function(n) { if (n instanceof THREE.Mesh) { n.material.needsUpdate = true; } });
+  }
   this.createDefaultScene = function() {
     var scenedef = {
       type: 'sector',
@@ -244,7 +264,7 @@ elation.extend("engine.systems.world", function(args) {
         parent.add(currentobj);
         //currentobj.reparent(parent);
 
-        //console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+        console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
       }
     } catch (e) {
       console.error(e.stack);
@@ -258,33 +278,48 @@ elation.extend("engine.systems.world", function(args) {
     }
     return ret[k]; // FIXME - dumb
   }
-  this.setSky = function(texture) {
+  this.setSky = function(texture, format, prefixes) {
 console.log('new sky is', texture);
     if (texture !== false) {
+      if (!(texture instanceof THREE.Texture)) {
+        format = format || 'jpg';
+        prefixes = prefixes || ['p', 'n'];
+        if (texture.substr(texture.length-1) != '/') {
+          texture += '/';
+        }
+        var urls = [
+          texture + prefixes[0] + 'x' + '.' + format, texture + prefixes[1] + 'x' + '.' + format,
+          texture + prefixes[0] + 'y' + '.' + format, texture + prefixes[1] + 'y' + '.' + format,
+          texture + prefixes[0] + 'z' + '.' + format, texture + prefixes[1] + 'z' + '.' + format
+        ];
+        var texturecube = THREE.ImageUtils.loadTextureCube( urls, undefined, elation.bind(this, this.refresh) );
+        texturecube.format = THREE.RGBFormat;
+        this.skytexture = texturecube;
+      }
       if (!this.scene['sky']) {
         this.scene['sky'] = (this.engine.systems.render && this.engine.systems.render.views[0] ? this.engine.systems.render.views[0].skyscene : new THREE.Scene());
         var skygeom = new THREE.BoxGeometry(1,1,1, 10, 10, 10);
         var skymat = new THREE.MeshBasicMaterial({color: 0xff0000, side: THREE.DoubleSide, wireframe: true, depthWrite: false});
 
-        var shader = THREE.ShaderLib[ "cube" ];
-        shader.uniforms[ "tCube" ].value = texture;
+        this.skyshader = THREE.ShaderLib[ "cube" ];
 
         var skymat = new THREE.ShaderMaterial( {
-          fragmentShader: shader.fragmentShader,
-          vertexShader: shader.vertexShader,
-          uniforms: shader.uniforms,
+          fragmentShader: this.skyshader.fragmentShader,
+          vertexShader: this.skyshader.vertexShader,
+          uniforms: this.skyshader.uniforms,
           depthWrite: false,
           side: THREE.DoubleSide
         } );
 
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
-        console.log('create sky mesh', this.scene['sky']);
-        if (this.engine.systems.render && this.engine.systems.render.views[0]) {
-          this.engine.systems.render.views[0].setskyscene(this.scene['sky']);
+        console.log('create sky mesh', this.scene['sky'], this.engine.systems.render.views['main']);
+        if (this.engine.systems.render && this.engine.systems.render.views['main']) {
+          this.engine.systems.render.views['main'].setskyscene(this.scene['sky']);
         }
 
       }
+      this.skyshader.uniforms[ "tCube" ].value = this.skytexture;
       this.skyenabled = true;
     } else {
       this.skyenabled = false;
@@ -292,6 +327,14 @@ console.log('new sky is', texture);
     if (this.skyenabled) {
       
     }
+  }
+  this.setFog = function(near, far, color) {
+    if (typeof color == 'undefined') color = 0xffffff;
+    this.scene['world-3d'].fog = new THREE.Fog(color, near, far);
+  }
+  this.setFogExp = function(exp, color) {
+    if (!color) color = 0xffffff;
+    this.scene['world-3d'].fog = new THREE.FogExp2(color, amount);
   }
   this.parseDocumentHash = function() {
     var parsedurl = elation.utils.parseURL(document.location.hash);
