@@ -264,7 +264,7 @@ elation.extend("engine.systems.world", function(args) {
         parent.add(currentobj);
         //currentobj.reparent(parent);
 
-        console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
+        //console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
       }
     } catch (e) {
       console.error(e.stack);
@@ -279,7 +279,6 @@ elation.extend("engine.systems.world", function(args) {
     return ret[k]; // FIXME - dumb
   }
   this.setSky = function(texture, format, prefixes) {
-console.log('new sky is', texture);
     if (texture !== false) {
       if (!(texture instanceof THREE.Texture)) {
         format = format || 'jpg';
@@ -313,7 +312,7 @@ console.log('new sky is', texture);
 
         this.skymesh = new THREE.Mesh(skygeom, skymat);
         this.scene['sky'].add(this.skymesh);
-        console.log('create sky mesh', this.scene['sky'], this.engine.systems.render.views['main']);
+        //console.log('create sky mesh', this.scene['sky'], this.engine.systems.render.views['main']);
         if (this.engine.systems.render && this.engine.systems.render.views['main']) {
           this.engine.systems.render.views['main'].setskyscene(this.scene['sky']);
         }
