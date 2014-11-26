@@ -191,6 +191,13 @@ THREE.OculusRiftEffect = function ( renderer, options ) {
 		pCamera.matrix.copy(camera.matrix).multiply(left.tranform);
 		pCamera.matrixWorldNeedsUpdate = true;
 
+		if (pCamera.parent && pCamera.parent != camera.parent) {
+			pCamera.parent.remove(pCamera);
+		}
+		if (camera.parent && camera.parent != pCamera.parent) {
+			camera.parent.add(pCamera);
+		}
+
 		renderer.setViewport(left.viewport[0], left.viewport[1], left.viewport[2], left.viewport[3]);
 
 		RTMaterial.uniforms['lensCenter'].value = left.lensCenter;
