@@ -26,13 +26,14 @@ elation.component.add('engine.things.light', function() {
         break;
       case 'directional':
         this.lightobj = new THREE.DirectionalLight(this.properties.color, this.properties.intensity);
+        this.lightobj.shadowCameraVisible = true;
         this.initShadowmap(this.lightobj);
 
         var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
         this.lightobj.add(helper);
         break;
       case 'ambient':
-        this.lightobj = new THREE.AmbientLight(this.properties.color);
+        this.lightobj = new THREE.AmbientLight(0x999999);
         break;
     } 
 
@@ -60,7 +61,7 @@ elation.component.add('engine.things.light', function() {
 		light.shadowCameraBottom = -d;
 
 		light.shadowDarkness = 0.6;
-		light.shadowBias = .0015;
+		light.shadowBias = 2.0e-3;
 
     light.shadowCascade = false;
     light.shadowCascadeCount = 3;
@@ -73,7 +74,7 @@ elation.component.add('engine.things.light', function() {
 
     //light.shadowCascadeOffset.set( 0, 0, -10 );
 
-    light.shadowMapWidth = 2048;
-    light.shadowMapHeight = 2048;
+    light.shadowMapWidth = 4096;
+    light.shadowMapHeight = 4096;
   }
 }, elation.engine.things.generic);
