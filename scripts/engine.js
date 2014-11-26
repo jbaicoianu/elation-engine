@@ -12,6 +12,7 @@ elation.extend("engine", {
 elation.require([
   "engine.external.three.three",
   "engine.parts",
+  "engine.materials",
   "engine.things.generic",
   "utils.math"
 ], function() {
