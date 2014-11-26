@@ -87,3 +87,9 @@ ul.engine_materials_chunk_uniform {
   border: 1px solid #ccc;
   font-size: .9em;
 }
+.ui_window .engine_material.ui_window_content {
+  min-width: 98em;
+  max-height: 40em;
+  background: black;
+  white-space: nowrap;
+}
