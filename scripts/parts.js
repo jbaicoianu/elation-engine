@@ -88,3 +88,41 @@ elation.component.add('engine.parts.render.mesh', function() {
     
   }
 }, elation.engine.parts.base);
+
+elation.component.add('engine.parts.statemachine', function() {
+  this.init = function() {
+    //this.initParentClass(elation.engine.parts.statemachine);
+    elation.engine.parts.statemachine.extendclass.init.call(this);
+
+    this.behaviors = {};
+    this.activebehavior = false;
+    this.thinktime = 0;
+    this.lastthink = 0;
+    elation.events.add(this, 'thing_think', this);
+  }
+  this.addBehavior = function(name, func, thinktime) {
+    this.behaviors[name] = {func: elation.bind(this, func), thinktime: thinktime};
+  }
+  this.setBehavior = function(behavior, args) {
+    if (!this.activebehavior) {
+      // we're not even registered as a thinker yet
+      if (this.thing.parent) {
+        this.thing.engine.systems.ai.add(this);
+      } else {
+        elation.events.add(this.thing, 'thing_create', elation.bind(this, function() {
+          this.thing.engine.systems.ai.add(this);
+        }));
+      }
+    }
+    this.activebehavior = [behavior, args];
+    this.thinktime = this.behaviors[behavior].thinktime;
+  }
+  this.thing_think = function(ev) {
+    if (this.activebehavior && this.behaviors[this.activebehavior[0]]) {
+      this.behaviors[this.activebehavior[0]].func.call(this);
+    } else {
+      // nothing to think about...
+      //this.engine.systems.ai.remove(this);
+    }
+  }
+}, elation.engine.parts.base);
