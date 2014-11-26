@@ -81,6 +81,7 @@ elation.extend("engine.systems.controls", function(args) {
   this.bindings = {};
   this.state = {};
   this.contexttargets = {};
+  this.contextstates = {};
   this.changes = [];
   this.gamepads = [];
   this.viewport = [];
@@ -123,16 +124,21 @@ elation.extend("engine.systems.controls", function(args) {
   this.addContext = function(context, contextargs) {
     var commands = {};
     var bindings = {};
+    var states = {};
     for (var k in contextargs) {
       var newbindings = contextargs[k][0].split(',');
       for (var i = 0; i < newbindings.length; i++) {
         bindings[newbindings[i]] = k;
       }
       commands[k] = contextargs[k][1];
+      states[k] = 0;
     }
     this.addCommands(context, commands);
     this.addBindings(context, bindings);
+    this.contextstates[context] = states;
     console.log("\t- added control context: " + context);
+
+    return states;
   }
   this.activateContext = function(context, target) {
     if (this.activecontexts.indexOf(context) == -1) {
@@ -163,19 +169,22 @@ elation.extend("engine.systems.controls", function(args) {
   }
   this.update = function(t) {
     this.pollGamepads();
+    this.pollHMDs();
 
     if (this.changes.length > 0) {
       var now = new Date().getTime();
       for (var i = 0; i < this.changes.length; i++) {
         for (var j = 0; j < this.activecontexts.length; j++) {
           var context = this.activecontexts[j];
+          var contextstate = this.contextstates[context] || {};
           if (this.bindings[context] && this.bindings[context][this.changes[i]]) {
             var action = this.bindings[context][this.changes[i]];
             if (this.contexts[context][action]) {
-              var ev = {timeStamp: now, type: this.changes[i], value: this.state[this.changes[i]]};
+              contextstate[action] = this.state[this.changes[i]];
+              var ev = {timeStamp: now, type: this.changes[i], value: this.state[this.changes[i]], data: contextstate};
               //console.log('call it', this.changes[i], this.bindings[context][this.changes[i]], this.state[this.changes[i]]);
               if (this.contexttargets[context]) {
-                ev.data = this.contexttargets[context];
+                ev.target = this.contexttargets[context];
                 this.contexts[context][action].call(ev.data, ev);
               } else {
                 this.contexts[context][action](ev);
@@ -285,9 +294,9 @@ elation.extend("engine.systems.controls", function(args) {
           }
           for (var b = 0; b < gamepad.buttons.length; b++) {
             var bindname = this.getBindingName('gamepad', i, 'button_' + b);
-            if (this.state[bindname] != gamepad.buttons[b]) {
+            if (this.state[bindname] != gamepad.buttons[b].value) {
               this.changes.push(bindname);
-              this.state[bindname] = gamepad.buttons[b];
+              this.state[bindname] = gamepad.buttons[b].value;
             }
           }
         }
@@ -301,10 +310,50 @@ elation.extend("engine.systems.controls", function(args) {
       //console.log(this.gamepads);
     }
   }
+  this.pollHMDs = function() {
+    if (typeof this.hmds == 'undefined') {
+      this.updateConnectedHMDs();
+    } else if (this.hmds && this.hmds.length > 0) {
+      for (var i = 0; i < this.hmds.length; i++) {
+        var hmdstate = this.hmds[i].getState();
+        //console.log(hmdstate); 
+        var bindname = "hmd_" + i;
+        this.changes.push(bindname);
+        this.state[bindname] = hmdstate;
+      }
+    }
+  }
+  this.updateConnectedHMDs = function() {
+    this.hmds = false;
+    if (typeof navigator.getVRDevices == 'function') {
+      navigator.getVRDevices().then(elation.bind(this, this.processConnectedHMDs));
+    }
+  }
+  this.processConnectedHMDs = function(hmds) {
+    this.hmds = [];
+    for (var i = 0; i < hmds.length; i++) {
+      // We only care about position sensors
+      if (hmds[i] instanceof PositionSensorVRDevice) {
+        this.hmds.push(hmds[i]);
+      }
+    }
+  }
+  this.calibrateHMDs = function() {
+    if (this.hmds) {
+      for (var i = 0; i < this.hmds.length; i++) {
+        this.hmds[i].zeroSensor();
+      }
+    }
+  }
   this.getMousePosition = function(ev) {
-    var relpos = [ev.clientX - this.container.offsetLeft, ev.clientY - this.container.offsetTop];
-    //console.log(relpos, [ev.clientX, ev.clientY], [this.container.offsetWidth, this.container.offsetHeight], [this.container.offsetTop, this.container.offsetLeft]);
-    var ret = [(relpos[0] / this.container.offsetWidth - .5) * 2, (relpos[1] / this.container.offsetHeight - .5) * 2];
+    var width = this.container.offsetWidth || this.container.innerWidth,
+        height = this.container.offsetHeight || this.container.innerHeight,
+        top = this.container.offsetTop || 0,
+        left = this.container.offsetLeft || 0;
+    var relpos = [ev.clientX - left, ev.clientY - top];
+
+    //console.log(relpos, [ev.clientX, ev.clientY], this.container, [width, height], [top, left]);
+    var ret = [(relpos[0] / width - .5) * 2, (relpos[1] / height - .5) * 2];
     return ret;
   }
   this.getKeyboardModifiers = function(ev) {
