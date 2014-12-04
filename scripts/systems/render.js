@@ -40,7 +40,7 @@ elation.extend("engine.systems.render", function(args) {
 
   this.system_attach = function(ev) {
     console.log('INIT: render');
-    this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true});
+    this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true});
     this.cssrenderer = new THREE.CSS3DRenderer();
     this.renderer.autoClear = false;
     this.renderer.setClearColor(0xffffff, 0);
@@ -98,7 +98,7 @@ elation.component.add("engine.systems.render.view", function() {
     this.size = [0, 0];
     this.size_old = [0, 0];
     this.showstats = this.args.showstats || false;
-
+    this.fullscreen = false;
 
     // Used by various render pass shaders
     this.sizevec = new THREE.Vector2();
@@ -284,8 +284,33 @@ elation.component.add("engine.systems.render.view", function() {
 
     this.rendersystem.setdirty();
   }
-  this.render = function(delta) {
-    if (this.scene && this.camera) {
+  this.toggleFullscreen = function(fullscreen) {
+    if (typeof fullscreen == 'undefined') {
+      fullscreen = !this.fullscreen;
+    }
+    if (fullscreen) {
+      var c = this.container;
+      c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
+      if (typeof c.requestFullscreen == 'function') {
+        c.requestFullscreen();
+      }
+    } else {
+      var fsel = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+      if (fsel) {
+        document.exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.mozExitFullScreen;
+        document.exitFullscreen();
+      }
+
+    }
+  }
+  this.updateCameras = (function() {
+    // Closure scratch variables
+    var _position = new THREE.Vector3(),
+        _quaternion = new THREE.Quaternion(),
+        _scale = new THREE.Vector3();
+    
+    return function() {
+//console.log('updaten', this, this.camera.position.toArray(), this.camera.quaternion.toArray());
       if (this.actualcamera) {
         if (this.actualcamera.parent && this.actualcamera.parent != this.camera.parent) {
           this.actualcamera.parent.remove(this.actualcamera);
@@ -299,18 +324,19 @@ elation.component.add("engine.systems.render.view", function() {
         this.actualcamera.matrix.copy(this.camera.matrix);
       }
       if (this.skycamera) {
-        var position = new THREE.Vector3();
-        var quaternion = new THREE.Quaternion();
-        var scale = new THREE.Vector3();
         this.camera.updateMatrixWorld(true);
-        this.camera.matrixWorld.decompose( position, quaternion, scale );
+        this.camera.matrixWorld.decompose( _position, _quaternion, _scale );
 
-        this.skycamera.quaternion.copy(quaternion);
+        this.skycamera.quaternion.copy(_quaternion);
         this.skycamera.updateMatrix();
         this.skycamera.matrix.copy(this.camera.matrix);
         this.skycamera.matrixWorld.copy(this.camera.matrixWorld);
       }
-      
+    }
+  })();
+  this.render = function(delta) {
+    if (this.scene && this.camera) {
+      this.updateCameras();
       if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
         this.setrendersize(this.size[0], this.size[1]);
       }
@@ -525,6 +551,10 @@ elation.component.add("engine.systems.render.view", function() {
     if (this.camera) {
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
+    }
+    if (this.actualcamera) {
+      this.actualcamera.aspect = width / height;
+      this.actualcamera.updateProjectionMatrix();
     }
   }
   this.system_attach = function(ev) {
