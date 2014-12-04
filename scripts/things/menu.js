@@ -58,9 +58,10 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         color: color
       });
       var bbox = this.label.objects['3d'].geometry.boundingBox;
-      var boxgeo = new THREE.BoxGeometry(this.properties.size * 10, this.properties.size * 1.4, this.properties.size / 4);
+      var boxgeo = new THREE.PlaneGeometry(this.properties.size * 10, this.properties.size * 1.4);
       var mat = new THREE.MeshBasicMaterial({color: this.properties.color, opacity: .1, transparent: true});
       var mesh = new THREE.Mesh(boxgeo, mat);
+      mesh.position.z = this.properties.size;
       this.objects['3d'].add(mesh);
       elation.events.add(this.label, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
