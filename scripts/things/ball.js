@@ -25,7 +25,7 @@ elation.require(['engine.things.generic'], function() {
       return obj;
     }
     this.createForces = function() {
-      this.objects.dynamics.setDamping(.95);
+      this.objects.dynamics.setDamping(1, .5);
       this.objects.dynamics.restitution = .9;
       if (this.properties.gravity) {
         this.objects.dynamics.addForce('gravity', new THREE.Vector3(0,-9.8,0));
