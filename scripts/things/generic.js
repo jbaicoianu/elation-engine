@@ -79,8 +79,14 @@ elation.component.add("engine.things.generic", function() {
 
     setTimeout(elation.bind(this, function() {
       // Fire create event next frame
+      this.createChildren();
+      this.refresh();
       elation.events.fire({type: 'thing_create', element: this});
     }), 0);
+  }
+  this.preinit = function() {
+  }
+  this.postinit = function() {
   }
   this.initProperties = function() {
     if (!this.properties) {
@@ -248,8 +254,8 @@ elation.component.add("engine.things.generic", function() {
       this.objects['3d'].scale = this.properties.scale;
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
-
     }
+
     var childkeys = Object.keys(this.children);
     if (childkeys.length > 0) {
       // Things were added during initialization, so make sure they're added to the scene
@@ -349,8 +355,8 @@ elation.component.add("engine.things.generic", function() {
     }
 
     if (!geometry && !material) {
-      geometry = new THREE.BoxGeometry(1, 1, 1);
-      material = new THREE.MeshPhongMaterial({color: 0xcccccc, opacity: .2, emissive: 0x333333, transparent: true});
+      //geometry = new THREE.BoxGeometry(1, 1, 1);
+      //material = new THREE.MeshPhongMaterial({color: 0xcccccc, opacity: .2, emissive: 0x333333, transparent: true});
       //console.log('made placeholder thing', geometry, material);
     }
 
@@ -364,6 +370,9 @@ elation.component.add("engine.things.generic", function() {
     return object;
   }
   this.createObjectDOM = function() {
+    return;
+  }
+  this.createChildren = function() {
     return;
   }
   this.add = function(thing) {
