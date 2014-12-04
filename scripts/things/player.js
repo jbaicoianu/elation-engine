@@ -7,16 +7,20 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
         'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
         'move_right': ['keyboard_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
         'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
-        'turn_right': ['keyboard_right,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+        'turn_right': ['keyboard_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
         'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
-        'look_down': ['keyboard_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
+        'look_down': ['keyboard_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
+        'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        'toss_ball': ['keyboard_space,gamepad_0_button_0', elation.bind(this, this.toss_ball)],
+        'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
         'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
         'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
-        'hmd': ['hmd_0', elation.bind(this, this.updateControls)],
+        'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
+        'hmd': ['hmd_0', elation.bind(this, this.refresh)],
       });
+      //this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
+      //});
       this.moveVector = new THREE.Vector3();
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
@@ -50,7 +54,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
     this.toss_ball = function(ev) {
       if (ev.value == 1) {
         this.charging = new Date().getTime();
-      } else {
+      } else if (this.charging) {
         var cam = this.engine.systems.render.views['main'].camera;
         var campos = cam.localToWorld(new THREE.Vector3(0,0,-1));
         var camdir = cam.localToWorld(new THREE.Vector3(0,0,-2)).sub(campos).normalize();
@@ -61,7 +65,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
         var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity }, true);
 
         if (!this.lights[this.lightnum]) {
-          this.lights[this.lightnum] = foo.spawn('light', null, { radius: 60, intensity: 1, color: 0xffcc00});
+          this.lights[this.lightnum] = foo.spawn('light', null, { radius: 60, intensity: 1, color: 0xffffff});
         } else {
           this.lights[this.lightnum].reparent(foo);
         }
@@ -103,51 +107,85 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       //this.camera.add(camhelper);
       return this.objects['3d'];
     }
+    this.createChildren = function() {
+    }
     this.createForces = function() {
-      this.camera = this.spawn('camera', null, { position: [0,0,0], mass: 0.1 } );
       this.frictionForce = this.objects.dynamics.addForce("friction", this.moveFriction);
       this.moveForce = this.objects.dynamics.addForce("static", {});
-      this.objects.dynamics.setCollider('sphere', {radius: .5});
+      this.objects.dynamics.setCollider('sphere', {radius: .25});
+      this.camera = this.spawn('camera', null, { position: [0,0,0], mass: 0.1 } );
     }
     this.getGroundHeight = function() {
       
     }
-    this.refresh = function() {
-      if (this.moveForce) {
-        var moveSpeed = Math.min(1.0, this.moveVector.length()) * this.moveSpeed * (this.controlstate.run ? this.runMultiplier : 1);
-        this.moveForce.update(this.moveVector.clone().normalize().multiplyScalar(moveSpeed));
-        this.objects.dynamics.setAngularVelocity(this.turnVector);
-
-        if (this.controlstate.hmd) {
-//console.log('hmd data!', this.controlstate.hmd);
-          var scale = 1/.3048;
-          this.camera.objects.dynamics.position.copy(this.controlstate.hmd.position).multiplyScalar(scale);
-          this.camera.objects.dynamics.velocity.copy(this.controlstate.hmd.linearVelocity).multiplyScalar(scale);
-          //this.camera.objects.dynamics.orientation.copy(this.controlstate.hmd.orientation);
-
-          var o = this.controlstate.hmd.orientation;
-          this.camera.objects.dynamics.orientation.set(o.x, o.y, o.z, o.w);
-          this.camera.objects.dynamics.angular.copy(this.controlstate.hmd.angularVelocity);
-
-          this.camera.objects.dynamics.updateState();
-        } else {
-          this.camera.objects.dynamics.setAngularVelocity(this.lookVector);
-          this.camera.objects.dynamics.updateState();
-        }
-        this.camera.refresh();
-      }
-      elation.events.fire({type: 'thing_change', element: this});
+    this.enable = function() {
+      this.engine.systems.controls.activateContext('player');
+      this.engine.systems.controls.enablePointerLock(true);
     }
+    this.disable = function() {
+      this.engine.systems.controls.deactivateContext('player');
+      this.engine.systems.controls.enablePointerLock(false);
+      this.moveForce.update(this.moveVector.set(0,0,0));
+      this.objects.dynamics.angular.set(0,0,0);
+      this.objects.dynamics.velocity.set(0,0,0);
+      this.objects.dynamics.updateState();
+
+      this.camera.objects.dynamics.velocity.set(0,0,0);
+      this.camera.objects.dynamics.angular.set(0,0,0);
+      this.camera.objects.dynamics.updateState();
+    }
+    this.refresh = (function() {
+      var _dir = new THREE.Euler(); // Closure scratch variable
+      return function() {
+        if (this.camera) {
+          this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
+          this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
+
+          this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.turnSpeed;
+
+          this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.turnSpeed;
+
+          if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
+          if (this.controlstate.crouch) {
+            this.camera.properties.position.y = -1;
+          } else {
+            this.camera.properties.position.y = 0;
+          }
+
+          if (this.moveForce) {
+            var moveSpeed = Math.min(1.0, this.moveVector.length()) * this.moveSpeed * (this.controlstate.run ? this.runMultiplier : 1) * (this.controlstate.crouch ? .5 : 1);
+            this.moveForce.update(this.moveVector.clone().normalize().multiplyScalar(moveSpeed));
+            this.objects.dynamics.setAngularVelocity(this.turnVector);
+
+            if (this.controlstate.hmd && this.controlstate.hmd.timeStamp !== 0) {
+    //console.log('hmd data!', this.controlstate.hmd);
+              var scale = 1/.3048;
+              this.camera.objects.dynamics.position.copy(this.controlstate.hmd.position).multiplyScalar(scale);
+              this.camera.objects.dynamics.velocity.copy(this.controlstate.hmd.linearVelocity).multiplyScalar(scale);
+
+              var o = this.controlstate.hmd.orientation;
+              this.camera.objects.dynamics.orientation.set(o.x, o.y, o.z, o.w);
+              this.camera.objects.dynamics.angular.copy(this.controlstate.hmd.angularVelocity);
+
+              this.camera.objects.dynamics.updateState();
+            } 
+            if (true) {
+              _dir.setFromQuaternion(this.camera.properties.orientation);
+              // Constrain camera angle to +/- 90 degrees
+              // Only zero-out look velocity if it's the same sign as our rotation
+              if (Math.abs(_dir.x)  > Math.PI/2 && _dir.x * this.lookVector.x > 0) {
+                this.lookVector.x = 0;
+              }
+              this.camera.objects.dynamics.setAngularVelocity(this.lookVector);
+              this.camera.objects.dynamics.updateState();
+            }
+            this.camera.refresh();
+          }
+        }
+        elation.events.fire({type: 'thing_change', element: this});
+      }
+    })();
     this.updateControls = function() {
-      this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
-      this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
-
-      this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.turnSpeed;
-
-      this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.turnSpeed;
-
-      if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
-
       this.refresh();
     }
   }, elation.engine.things.generic);
