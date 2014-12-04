@@ -85,6 +85,7 @@ elation.extend("engine.systems.controls", function(args) {
   this.changes = [];
   this.gamepads = [];
   this.viewport = [];
+  this.mousesensitivity = 50;
 
 
   this.system_attach = function(ev) {
@@ -108,6 +109,8 @@ elation.extend("engine.systems.controls", function(args) {
     if (!this.container) this.container = window;
     elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll", this);
     elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
+    elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
+    elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
 
     if (args) {
       this.addContexts(args);
@@ -197,7 +200,12 @@ elation.extend("engine.systems.controls", function(args) {
         }
       }
       this.changes = [];
-
+    }
+    if (this.state['mouse_delta_x'] != 0 || this.state['mouse_delta_y'] != 0) {
+      this.state['mouse_delta_x'] = 0;
+      this.state['mouse_delta_y'] = 0;
+      this.changes.push('mouse_delta_x');
+      this.changes.push('mouse_delta_y');
     }
   }
   this.getBindingName = function(type, id, subid) {
@@ -310,13 +318,21 @@ elation.extend("engine.systems.controls", function(args) {
       //console.log(this.gamepads);
     }
   }
+  this.getGamepads = function() {
+    var gamepads = [];
+    for (var i = 0; i < this.gamepads.length; i++) {
+      if (this.gamepads[i]) {
+        gamepads.push(this.gamepads[i]);
+      }
+    }
+    return gamepads;
+  }
   this.pollHMDs = function() {
     if (typeof this.hmds == 'undefined') {
       this.updateConnectedHMDs();
     } else if (this.hmds && this.hmds.length > 0) {
       for (var i = 0; i < this.hmds.length; i++) {
         var hmdstate = this.hmds[i].getState();
-        //console.log(hmdstate); 
         var bindname = "hmd_" + i;
         this.changes.push(bindname);
         this.state[bindname] = hmdstate;
@@ -330,11 +346,13 @@ elation.extend("engine.systems.controls", function(args) {
     }
   }
   this.processConnectedHMDs = function(hmds) {
-    this.hmds = [];
-    for (var i = 0; i < hmds.length; i++) {
-      // We only care about position sensors
-      if (hmds[i] instanceof PositionSensorVRDevice) {
-        this.hmds.push(hmds[i]);
+    if (hmds.length > 0) {
+      this.hmds = [];
+      for (var i = 0; i < hmds.length; i++) {
+        // We only care about position sensors
+        if (hmds[i] instanceof PositionSensorVRDevice) {
+          this.hmds.push(hmds[i]);
+        }
       }
     }
   }
@@ -344,6 +362,47 @@ elation.extend("engine.systems.controls", function(args) {
         this.hmds[i].zeroSensor();
       }
     }
+  }
+  this.getPointerLockElement = function() {
+    var el = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+    return el;
+  }
+  this.enablePointerLock = function(enable) {
+    this.pointerLockEnabled = enable;
+    if (!this.pointerLockEnabled && this.pointerLockActive) {
+      this.releasePointerLock();
+    }
+  }
+  this.requestPointerLock = function() {
+    if (this.pointerLockEnabled && !this.pointerLockActive) {
+      var domel = this.engine.systems.render.renderer.domElement;
+      domel.requestPointerLock = domel.requestPointerLock || domel.mozRequestPointerLock || domel.webkitRequestPointerLock;
+      domel.requestPointerLock();
+    }
+  }
+  this.releasePointerLock = function() {
+    this.pointerLockActive = false;
+    var lock = this.getPointerLockElement();
+    if (lock) {
+      document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock || document.webkitExitPointerLock;
+      document.exitPointerLock();
+    }
+  }
+  this.pointerLockChange = function(ev) {
+    var lock = this.getPointerLockElement();
+    if (lock && !this.pointerLockActive) {
+      this.pointerLockActive = true;
+      this.state['pointerlock'] = this.pointerLockActive;
+      this.changes.push('pointerlock');
+    } else if (!lock && this.pointerLockActive) {
+      this.pointerLockActive = false;
+      this.state['pointerlock'] = this.pointerLockActive;
+      this.changes.push('pointerlock');
+    }
+  }
+  this.pointerLockError = function(ev) {
+    console.error('[controls] Pointer lock error');
+    this.pointerLockChange(ev);
   }
   this.getMousePosition = function(ev) {
     var width = this.container.offsetWidth || this.container.innerWidth,
@@ -356,6 +415,15 @@ elation.extend("engine.systems.controls", function(args) {
     var ret = [(relpos[0] / width - .5) * 2, (relpos[1] / height - .5) * 2];
     return ret;
   }
+  this.getMouseDelta = function(ev) {
+    var width = this.container.offsetWidth || this.container.innerWidth,
+        height = this.container.offsetHeight || this.container.innerHeight;
+    var deltas = [
+      this.mousesensitivity * (elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX) / height),
+      this.mousesensitivity * (elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY) / height)
+    ];
+    return deltas;
+  }
   this.getKeyboardModifiers = function(ev) {
     var ret = "";
     var modifiers = {'shiftKey': 'shift', 'altKey': 'alt', 'ctrlKey': 'ctrl'};
@@ -367,6 +435,7 @@ elation.extend("engine.systems.controls", function(args) {
     return ret;
   }
   this.mousedown = function(ev) {
+    this.requestPointerLock();
     var bindid = "mouse_button_" + ev.button;
     if (!this.state[bindid]) {
       this.state[bindid] = 1;
@@ -376,10 +445,9 @@ elation.extend("engine.systems.controls", function(args) {
   }
   this.mousemove = function(ev) {
     var mpos = this.getMousePosition(ev);
-    if (this.scene) {
-this.fuh = [ev.clientX, ev.clientY];
-    }
-    var status = {mouse_pos: false, mouse_x: false, mouse_y: false};
+    var deltas = this.getMouseDelta(ev);
+
+    var status = {mouse_pos: false, mouse_delta: false, mouse_x: false, mouse_y: false};
     if (!this.state["mouse_pos"]) {
       status["mouse_pos"] = true;
       status["mouse_x"] = true;
@@ -394,17 +462,14 @@ this.fuh = [ev.clientX, ev.clientY];
         status["mouse_y"] = true;
       }
     }
+    status["mouse_delta"] = (Math.abs(deltas[0]) != 0 || Math.abs(deltas[1]) != 0);
     if (status["mouse_pos"]) {
       if (status["mouse_x"]) {
-        this.state["mouse_delta_x"] = this.state["mouse_x"] - mpos[0];
         this.state["mouse_x"] = mpos[0];
         this.changes.push("mouse_x");
-        this.changes.push("mouse_delta_x");
         if (this.state["mouse_button_0"]) {
           this.state["mouse_drag_x"] = this.state["mouse_x"];
-          this.state["mouse_drag_delta_x"] = this.state["mouse_delta_x"];
           this.changes.push("mouse_drag_x");
-          this.changes.push("mouse_drag_delta_x");
         }
       } else {
         this.state["mouse_delta_x"] = 0;
@@ -415,15 +480,11 @@ this.fuh = [ev.clientX, ev.clientY];
       this.changes.push("mouse_pos");
       this.changes.push("mouse_delta");
       if (status["mouse_y"]) {
-        this.state["mouse_delta_y"] = this.state["mouse_y"] - mpos[1];
         this.state["mouse_y"] = mpos[1];
         this.changes.push("mouse_y");
-        this.changes.push("mouse_delta_y");
         if (this.state["mouse_button_0"]) {
           this.state["mouse_drag_y"] = this.state["mouse_y"];
-          this.state["mouse_drag_delta_y"] = this.state["mouse_delta_y"];
           this.changes.push("mouse_drag_y");
-          this.changes.push("mouse_drag_delta_y");
         }
       } else {
         this.state["mouse_delta_y"] = 0;
@@ -435,6 +496,28 @@ this.fuh = [ev.clientX, ev.clientY];
         this.changes.push("mouse_drag");
         this.changes.push("mouse_drag_delta");
       }
+    } 
+    if (status["mouse_delta"]) {
+      this.state["mouse_delta_x"] = deltas[0];
+      this.state["mouse_delta_y"] = deltas[1];
+      this.changes.push("mouse_delta_x");
+      this.changes.push("mouse_delta_y");
+
+      if (this.state["mouse_button_0"]) {
+        this.state["mouse_drag_x"] = this.state["mouse_x"];
+        this.state["mouse_drag_y"] = this.state["mouse_y"];
+        this.state["mouse_drag_delta_x"] = this.state["mouse_delta_x"];
+        this.state["mouse_drag_delta_y"] = this.state["mouse_delta_y"];
+        this.changes.push("mouse_drag_x");
+        this.changes.push("mouse_drag_y");
+        this.changes.push("mouse_drag_delta_x");
+        this.changes.push("mouse_drag_delta_y");
+      }
+    } else {
+      this.state["mouse_delta_x"] = 0;
+      this.state["mouse_drag_delta_x"] = 0;
+      this.state["mouse_delta_y"] = 0;
+      this.state["mouse_drag_delta_y"] = 0;
     }
   }
   this.mouseup = function(ev) {
