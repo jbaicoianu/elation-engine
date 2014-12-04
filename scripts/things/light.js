@@ -14,7 +14,7 @@ elation.component.add('engine.things.light', function() {
       case 'point':
         this.lightobj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
         var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
-        this.lightobj.add(helper);
+        //this.lightobj.add(helper);
         this.lightobj.castShadow = false;
         break;
       case 'spot':
@@ -22,15 +22,15 @@ elation.component.add('engine.things.light', function() {
         this.initShadowmap(this.lightobj);
 
         var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
-        this.lightobj.add(helper);
+        //this.lightobj.add(helper);
         break;
       case 'directional':
         this.lightobj = new THREE.DirectionalLight(this.properties.color, this.properties.intensity);
-        this.lightobj.shadowCameraVisible = true;
+        this.lightobj.shadowCameraVisible = false;
         this.initShadowmap(this.lightobj);
 
         var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
-        this.lightobj.add(helper);
+        //this.lightobj.add(helper);
         break;
       case 'ambient':
         this.lightobj = new THREE.AmbientLight(0x999999);
