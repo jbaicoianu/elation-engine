@@ -57,8 +57,6 @@ elation.require([
           'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
           'toggle_camera': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleControls(); }}),
           'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); }}),
-          'toggle_vr': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleVR(); }}),
-          'calibrate_vr': elation.bind(this, function(ev) { if (ev.value == 1) { this.calibrateVR(); }}),
   /*
           'move_left': elation.bind(this, this.moveleft),
           'move_right': elation.bind(this, this.moveright),
@@ -158,17 +156,6 @@ elation.require([
         this.worldcontrol.show();
         //this.inspector.show();
         view.toggleStats(true);
-      }
-    }
-    this.toggleVR = function(forceshow) {
-      var render = this.engine.systems.render,
-          view = render.views['main'];
-      var mode = (view.rendermode == 'default' ? 'oculus' : 'default');
-      view.setRenderMode(mode);
-    }
-    this.calibrateVR = function(forceshow) {
-      if (this.engine.systems.controls) {
-        this.engine.systems.controls.calibrateHMDs();
       }
     }
     this.dragenter = function(ev) {
