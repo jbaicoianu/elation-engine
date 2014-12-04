@@ -17,10 +17,11 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
         'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
         'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
+      });
+      // Separate HMD context so it can remain active when player controls are disabled
+      this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
         'hmd': ['hmd_0', elation.bind(this, this.refresh)],
       });
-      //this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
-      //});
       this.moveVector = new THREE.Vector3();
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
@@ -29,6 +30,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       this.turnSpeed = 2;
       this.moveFriction = 10;
       this.engine.systems.controls.activateContext('player');
+      this.engine.systems.controls.activateContext('playerhmd');
       this.charging = false;
       this.usegravity = true;
 
@@ -157,15 +159,14 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
             this.moveForce.update(this.moveVector.clone().normalize().multiplyScalar(moveSpeed));
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
-            if (this.controlstate.hmd && this.controlstate.hmd.timeStamp !== 0) {
-    //console.log('hmd data!', this.controlstate.hmd);
+            if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               var scale = 1/.3048;
-              this.camera.objects.dynamics.position.copy(this.controlstate.hmd.position).multiplyScalar(scale);
-              this.camera.objects.dynamics.velocity.copy(this.controlstate.hmd.linearVelocity).multiplyScalar(scale);
+              this.camera.objects.dynamics.position.copy(this.hmdstate.hmd.position).multiplyScalar(scale);
+              this.camera.objects.dynamics.velocity.copy(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
 
-              var o = this.controlstate.hmd.orientation;
+              var o = this.hmdstate.hmd.orientation;
               this.camera.objects.dynamics.orientation.set(o.x, o.y, o.z, o.w);
-              this.camera.objects.dynamics.angular.copy(this.controlstate.hmd.angularVelocity);
+              this.camera.objects.dynamics.angular.copy(this.hmdstate.hmd.angularVelocity);
 
               this.camera.objects.dynamics.updateState();
             } 
