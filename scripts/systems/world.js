@@ -35,7 +35,7 @@ elation.extend("engine.systems.world", function(args) {
       if (!elation.utils.isEmpty(args)) {
         this.load(args);
       } else {
-        this.createDefaultScene();
+        //this.createDefaultScene();
       }
     }
   }
