@@ -71,6 +71,9 @@ elation.extend("engine.systems.render", function(args) {
     }
     for (var k in this.views) {
       this.views[k].updatePickingObject();
+      if (this.views[k].stats) {
+        this.views[k].stats.update();
+      }
     }
   }
   this.world_thing_add = function(ev) {
@@ -111,6 +114,7 @@ elation.component.add("engine.systems.render.view", function() {
     }
     this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
     elation.events.add(window, "resize,keydown,keyup", this);
+    elation.events.add(document.body, "mouseenter,mouseleave", this);
     elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
     if (!this.args.engine) {
       console.log("ERROR: couldn't create view, missing engine parameter");
@@ -310,8 +314,12 @@ elation.component.add("engine.systems.render.view", function() {
         _scale = new THREE.Vector3();
     
     return function() {
-//console.log('updaten', this, this.camera.position.toArray(), this.camera.quaternion.toArray());
+      // Make sure the parent's matrixWorld is up to date
+      if (this.camera.parent) {
+        this.camera.parent.updateMatrixWorld(true);
+      }
       if (this.actualcamera) {
+        // Copy this.camera's position/orientation/scale/parent to our actual camera
         if (this.actualcamera.parent && this.actualcamera.parent != this.camera.parent) {
           this.actualcamera.parent.remove(this.actualcamera);
         } 
@@ -321,16 +329,11 @@ elation.component.add("engine.systems.render.view", function() {
         this.actualcamera.position.copy(this.camera.position);
         this.actualcamera.rotation.copy(this.camera.rotation);
         this.actualcamera.quaternion.copy(this.camera.quaternion);
-        this.actualcamera.matrix.copy(this.camera.matrix);
       }
       if (this.skycamera) {
-        this.camera.updateMatrixWorld(true);
+        // Sky camera needs to use our camera's world rotation, and nothing else
         this.camera.matrixWorld.decompose( _position, _quaternion, _scale );
-
         this.skycamera.quaternion.copy(_quaternion);
-        this.skycamera.updateMatrix();
-        this.skycamera.matrix.copy(this.camera.matrix);
-        this.skycamera.matrixWorld.copy(this.camera.matrixWorld);
       }
     }
   })();
@@ -382,9 +385,11 @@ elation.component.add("engine.systems.render.view", function() {
         this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
       }
     }
+    /*
     if (this.stats) {
       this.stats.update();
     }
+    */
     elation.events.fire({type: 'render_view_postrender', element: this});
     this.size_old[0] = this.size[0];
     this.size_old[1] = this.size[1];
@@ -603,6 +608,12 @@ elation.component.add("engine.systems.render.view", function() {
       this.pickingactive = true;
     }
     this.mousemove(ev);
+  }
+  this.mouseenter = function(ev) {
+    this.rendersystem.setdirty();
+  }
+  this.mouseleave = function(ev) {
+    this.rendersystem.setdirty();
   }
   this.mouseout = function(ev) {
     if (this.pickingactive) {
