@@ -130,7 +130,7 @@ THREE.OculusRiftEffect = function ( renderer, options ) {
 		var fov = THREE.Math.radToDeg(2*Math.atan2(HMD.vScreenSize*distScale, 2*HMD.eyeToScreenDistance));
 
 		// Compute camera projection matrices
-		var proj = (new THREE.Matrix4()).makePerspective( fov, aspect, 0.3, 10000 );
+		var proj = (new THREE.Matrix4()).makePerspective( fov, aspect, 0.1, 10000 );
 		var h = 4 * (HMD.hScreenSize/4 - HMD.interpupillaryDistance/2) / HMD.hScreenSize;
 		left.proj = ((new THREE.Matrix4()).makeTranslation( h, 0.0, 0.0 )).multiply(proj);
 		right.proj = ((new THREE.Matrix4()).makeTranslation( -h, 0.0, 0.0 )).multiply(proj);
@@ -197,6 +197,8 @@ THREE.OculusRiftEffect = function ( renderer, options ) {
 		if (camera.parent && camera.parent != pCamera.parent) {
 			camera.parent.add(pCamera);
 		}
+    pCamera.near = camera.near;
+    pCamera.far = camera.far;
 
 		renderer.setViewport(left.viewport[0], left.viewport[1], left.viewport[2], left.viewport[3]);
 
