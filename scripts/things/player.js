@@ -113,6 +113,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
     }
     this.createForces = function() {
       this.frictionForce = this.objects.dynamics.addForce("friction", this.moveFriction);
+      //this.gravityForce = this.objects.dynamics.addForce("gravity", new THREE.Vector3(0,0,0));
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.objects.dynamics.setCollider('sphere', {radius: .25});
       this.camera = this.spawn('camera', null, { position: [0,0,0], mass: 0.1 } );
@@ -121,20 +122,23 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       
     }
     this.enable = function() {
+      //this.gravityForce.update(new THREE.Vector3(0,-9.8 * this.properties.mass,0));
       this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.enablePointerLock(true);
     }
     this.disable = function() {
       this.engine.systems.controls.deactivateContext('player');
       this.engine.systems.controls.enablePointerLock(false);
-      this.moveForce.update(this.moveVector.set(0,0,0));
-      this.objects.dynamics.angular.set(0,0,0);
-      this.objects.dynamics.velocity.set(0,0,0);
-      this.objects.dynamics.updateState();
-
-      this.camera.objects.dynamics.velocity.set(0,0,0);
-      this.camera.objects.dynamics.angular.set(0,0,0);
-      this.camera.objects.dynamics.updateState();
+      if (this.objects.dynamics) {
+        this.moveForce.update(this.moveVector.set(0,0,0));
+        //this.gravityForce.update(new THREE.Vector3(0,0,0));
+        this.objects.dynamics.angular.set(0,0,0);
+        this.objects.dynamics.velocity.set(0,0,0);
+        this.objects.dynamics.updateState();
+        this.camera.objects.dynamics.velocity.set(0,0,0);
+        this.camera.objects.dynamics.angular.set(0,0,0);
+        this.camera.objects.dynamics.updateState();
+      }
     }
     this.refresh = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
