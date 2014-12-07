@@ -85,7 +85,7 @@ elation.extend("engine.systems.controls", function(args) {
   this.changes = [];
   this.gamepads = [];
   this.viewport = [];
-  this.mousesensitivity = 50;
+  this.mousesensitivity = 100;
 
 
   this.system_attach = function(ev) {
