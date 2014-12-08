@@ -85,7 +85,23 @@ elation.extend("engine.systems.controls", function(args) {
   this.changes = [];
   this.gamepads = [];
   this.viewport = [];
-  this.mousesensitivity = 100;
+
+  this.settings = {
+    mouse: {
+      sensitivity: 100,
+      invertY: false,
+      invertX: false
+    },
+    keyboard: {
+      turnspeed: 1,
+      lookspeed: 1
+    },
+    gamepad: {
+      sensitivity: 1
+    },
+    hmd: {
+    }
+  };
 
 
   this.system_attach = function(ev) {
@@ -418,9 +434,11 @@ elation.extend("engine.systems.controls", function(args) {
   this.getMouseDelta = function(ev) {
     var width = this.container.offsetWidth || this.container.innerWidth,
         height = this.container.offsetHeight || this.container.innerHeight;
-    var deltas = [
-      this.mousesensitivity * (elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX) / height),
-      this.mousesensitivity * (elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY) / height)
+    var scaleX = this.settings.mouse.sensitivity * (this.settings.mouse.invertX ? -1 : 1),
+        scaleY = this.settings.mouse.sensitivity * (this.settings.mouse.invertY ? -1 : 1),
+        deltas = [
+      scaleX * (elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX) / height),
+      scaleY * (elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY) / height)
     ];
     return deltas;
   }
