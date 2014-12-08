@@ -100,6 +100,7 @@ elation.component.add("engine.systems.render.view", function() {
     this.picking = this.args.picking || false;
     this.size = [0, 0];
     this.size_old = [0, 0];
+    this.scale = 100;
     this.showstats = this.args.showstats || false;
     this.fullscreen = false;
 
@@ -262,12 +263,10 @@ elation.component.add("engine.systems.render.view", function() {
         break;
       case 'fxaa':
         pass = new THREE.ShaderPass( THREE.FXAAShader );
-        //pass.uniforms[ 'resolution' ].value.set( 1 / this.container.offsetWidth, 1 / this.container.offsetHeight);
         pass.uniforms[ 'resolution' ].value = this.sizevecinverse;
         break;
       case 'ssao':
         pass = new THREE.ShaderPass( THREE.SSAOShader );
-        //pass.uniforms[ 'size' ].value.set( this.container.offsetWidth, this.container.offsetHeight);
         pass.uniforms[ 'size' ].value = this.sizevec;
         pass.uniforms[ 'tDepth' ].value = this.depthTarget;
         pass.uniforms[ 'cameraNear' ].value = this.actualcamera.near;
@@ -291,9 +290,13 @@ elation.component.add("engine.systems.render.view", function() {
   this.toggleFullscreen = function(fullscreen) {
     if (typeof fullscreen == 'undefined') {
       fullscreen = !this.fullscreen;
+    } else if (typeof fullscreen.data != 'undefined') {
+      fullscreen = fullscreen.data;
     }
+    
     if (fullscreen) {
-      var c = this.container;
+      //var c = this.container;
+      var c = document.body;
       c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
       if (typeof c.requestFullscreen == 'function') {
         c.requestFullscreen();
@@ -304,8 +307,8 @@ elation.component.add("engine.systems.render.view", function() {
         document.exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen || document.mozExitFullScreen;
         document.exitFullscreen();
       }
-
     }
+    this.fullscreen = fullscreen;
   }
   this.updateCameras = (function() {
     // Closure scratch variables
@@ -340,7 +343,7 @@ elation.component.add("engine.systems.render.view", function() {
   this.render = function(delta) {
     if (this.scene && this.camera) {
       this.updateCameras();
-      if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1]) {
+      if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1] || this.scale != this.scale_old) {
         this.setrendersize(this.size[0], this.size[1]);
       }
 
@@ -393,6 +396,7 @@ elation.component.add("engine.systems.render.view", function() {
     elation.events.fire({type: 'render_view_postrender', element: this});
     this.size_old[0] = this.size[0];
     this.size_old[1] = this.size[1];
+    this.scale_old = this.scale;
 //this.camera.rotation.y += Math.PI/32 * delta;
   }
   this.updateRenderStats = function() {
@@ -529,23 +533,31 @@ elation.component.add("engine.systems.render.view", function() {
     return false;
   }
   this.getsize = function() {
-    this.size = [this.container.offsetWidth, this.container.offsetHeight];
+    //this.size = [this.container.offsetWidth, this.container.offsetHeight];
+    var s = elation.html.dimensions(this.container);
+    this.size = [s.w, s.h];
     this.setrendersize(this.size[0], this.size[1]);
     return this.size;
   }
   this.setrendersize = function(width, height) {
-    this.sizevec.set(width, height);
-    this.sizevecinverse.set(1/width, 1/height);
-    this.rendersystem.renderer.setSize(width, height);  
+    var scale = this.scale / 100,
+        invscale = 100 / this.scale,
+        scaledwidth = width * scale,
+        scaledheight = height * scale;
+    this.rendersystem.renderer.domElement.style.transformOrigin = '0 0';
+    this.rendersystem.renderer.domElement.style.transform = 'scale3d(' + [invscale, invscale, invscale].join(',') + ')';
+    this.sizevec.set(scaledwidth, scaledheight);
+    this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
+    this.rendersystem.renderer.setSize(scaledwidth, scaledheight);  
     if (this.rendersystem.cssrenderer) {
       this.rendersystem.cssrenderer.setSize(width, height);  
     }
-    this.composer.setSize(width, height);
+    this.composer.setSize(scaledwidth, scaledheight);
     if (this.pickingcomposer) {
-      this.pickingcomposer.setSize(width, height);
+      this.pickingcomposer.setSize(scaledwidth, scaledheight);
     }
     if (this.effects['FXAA']) {
-      this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / width, 1 / height);
+      this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / scaledwidth, 1 / scaledheight);
     }
     if (this.effects['SSAO']) {
       this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
@@ -561,6 +573,9 @@ elation.component.add("engine.systems.render.view", function() {
       this.actualcamera.aspect = width / height;
       this.actualcamera.updateProjectionMatrix();
     }
+  }
+  this.setscale = function(scale) {
+    this.scale = scale;
   }
   this.system_attach = function(ev) {
     console.log('INIT: view (' + this.id + ')');
@@ -808,7 +823,9 @@ elation.component.add("engine.systems.render.view", function() {
     //var oldframebuffer = this.glcontext.bindFramebuffer();
 
     this.rendersystem.renderer.setRenderTarget( this.pickingcomposer.output );
-    this.glcontext.readPixels(x, this.container.offsetHeight - y - 0, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
+    var s = elation.html.dimensions(this.container);
+    var scale = this.scale / 100;
+    this.glcontext.readPixels((x + s.left) * scale, (this.container.offsetHeight - (y + s.top)) * scale, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
     this.rendersystem.renderer.setRenderTarget( null );
     
     var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
@@ -818,7 +835,6 @@ elation.component.add("engine.systems.render.view", function() {
     }
 
     if (pickid > 0) {
-      //console.log('plip', [x, y], pickid, [x, this.container.offsetHeight - y], this.pickingbuffer);
       if (this.pickingobject !== this.pickingobjects[pickid]) {
         pickedthing = this.getParentThing(this.pickingobjects[pickid]);
         if (this.pickingobject) {
