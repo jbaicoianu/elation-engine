@@ -16,6 +16,7 @@ elation.require([
   "engine.things.generic",
   "utils.math"
 ], function() {
+  elation.requireCSS('engine.engine');
   elation.extend("engine.main", function(name) {
     this.started = false;
     this.running = false;

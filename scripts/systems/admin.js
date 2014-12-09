@@ -21,6 +21,7 @@ elation.require([
   "ui.label",
   "ui.label",
 ], function() {
+  elation.requireCSS('engine.systems.admin');
 
   elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
   elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{/children}');
