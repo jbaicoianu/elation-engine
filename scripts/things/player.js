@@ -125,10 +125,12 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       //this.gravityForce.update(new THREE.Vector3(0,-9.8 * this.properties.mass,0));
       this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.enablePointerLock(true);
+      this.engine.systems.render.views.main.picking = false;
     }
     this.disable = function() {
       this.engine.systems.controls.deactivateContext('player');
       this.engine.systems.controls.enablePointerLock(false);
+      this.engine.systems.render.views.main.picking = true;
       if (this.objects.dynamics) {
         this.moveForce.update(this.moveVector.set(0,0,0));
         //this.gravityForce.update(new THREE.Vector3(0,0,0));
