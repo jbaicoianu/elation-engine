@@ -352,7 +352,7 @@ elation.component.add("engine.systems.render.view", function() {
       elation.events.fire({type: 'render_view_prerender', element: this});
 
       var dims = elation.html.dimensions(this.container);
-      if (this.pickingactive) {
+      if (this.picking && this.pickingactive) {
         //if (this.pickingdebug || this.picknum++ % 3 == 0 || delta > 0.05) {
           this.updatePickingTarget();
         //}
@@ -811,7 +811,7 @@ elation.component.add("engine.systems.render.view", function() {
 
   }
   this.updatePickingObject = function() {
-    if (this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2])) {
+    if (this.picking && this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2])) {
       var dims = elation.html.dimensions(this.container);
       this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
       this.lastmousepos[0] = this.mousepos[0];
