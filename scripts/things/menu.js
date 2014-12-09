@@ -40,6 +40,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         'text':            { type: 'string' },
         'font':            { type: 'string', default: 'helvetiker' },
         'size':            { type: 'float', default: 1.0 },
+        'lineheight':      { type: 'float', default: 1.4 },
         'color':           { type: 'color', default: 0xcccccc },
         'hovercolor':      { type: 'color', default: 0xffffcc },
         'disabledcolor':   { type: 'color', default: 0x111111 },
@@ -51,18 +52,19 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     }
     this.createChildren = function() {
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
+
+      // background plane
+      var boxgeo = new THREE.PlaneGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
+      var mat = new THREE.MeshBasicMaterial({color: this.properties.color, opacity: .1, transparent: true});
+      var mesh = new THREE.Mesh(boxgeo, mat);
+      mesh.position.z = -this.properties.size;
+      this.objects['3d'].add(mesh);
       this.label = this.spawn('label', null, {
         text: this.properties.text, 
         font: this.properties.font, 
         size: this.properties.size, 
         color: color
       });
-      var bbox = this.label.objects['3d'].geometry.boundingBox;
-      var boxgeo = new THREE.PlaneGeometry(this.properties.size * 10, this.properties.size * 1.4);
-      var mat = new THREE.MeshBasicMaterial({color: this.properties.color, opacity: .1, transparent: true});
-      var mesh = new THREE.Mesh(boxgeo, mat);
-      mesh.position.z = this.properties.size;
-      this.objects['3d'].add(mesh);
       elation.events.add(this.label, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
     this.mouseover = function(ev) {
