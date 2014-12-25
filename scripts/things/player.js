@@ -1,6 +1,6 @@
 elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'], function() {
   elation.component.add('engine.things.player', function() {
-    this.targetrange = 1.5;
+    this.targetrange = 1.8;
     this.postinit = function() {
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
@@ -149,6 +149,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
         this.camera.objects.dynamics.angular.set(0,0,0);
         this.camera.objects.dynamics.updateState();
       }
+      this.hideUseDialog();
     }
     this.refresh = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
@@ -220,12 +221,13 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
       if (!target && this.target) {
         // deselect current target
         elation.events.fire({type: 'thing_use_blur', element: this.target, data: this});
+        this.target = target;
         this.hideUseDialog();
       } else if (target && !this.target) {
         elation.events.fire({type: 'thing_use_focus', element: target, data: this});
+        this.target = target;
         this.showUseDialog('play', target.properties.gamename); // FIXME - hardcoded for arcade games...
       }
-      this.target = target;
     }
     this.handleUse = function(ev) {
       if (ev.value == 1) {
@@ -233,7 +235,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
       }
     }
     this.activateUseTarget = function() {
-      if (this.target) {
+      if (this.target && this.target.properties.working) {
         elation.events.fire({type: 'thing_use_activate', element: this.target, data: this});
         this.disable(); // FIXME - temporary
       }
@@ -270,7 +272,14 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
       if (typeof noun == 'undefined') noun = '';
 
       this.usedialog.show();
-      this.usedialog.setcontent('Press E/Button 1 to ' + verb + ' ' + noun);
+      var content = 'Press E or click to ' + verb + ' ' + noun;
+
+      // FIXME - hack for arcade games
+      if (this.target && !this.target.properties.working) {
+        content = 'Sorry, ' + this.target.properties.gamename + ' is temporarily out of order!';
+      }
+
+      this.usedialog.setcontent(content);
     }
     this.hideUseDialog = function() {
       if (this.usedialog) {
