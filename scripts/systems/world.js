@@ -346,5 +346,20 @@ elation.require([
         }
       }
     }
+
+    // Convenience functions for querying objects from world
+    this.getThingsByTag = function(tag) {
+      var things = [];
+      for (var k in this.children) {
+        this.children[k].getChildrenByTag(tag, things);
+      }
+      return things;
+    }
+    this.getThingsByType = function(type) {
+    }
+    this.getThingByObject = function(obj) {
+    }
+    this.getThingById = function(id) {
+    }
   });
 });
