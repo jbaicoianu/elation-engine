@@ -1,5 +1,6 @@
-elation.require(['ui.progressbar', 'engine.things.ball'], function() {
+elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'], function() {
   elation.component.add('engine.things.player', function() {
+    this.targetrange = 1.5;
     this.postinit = function() {
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
@@ -13,9 +14,10 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
         'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
-        'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
-        'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
+        //'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
+        //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
+        'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
+        //'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
       // Separate HMD context so it can remain active when player controls are disabled
@@ -29,7 +31,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       this.runMultiplier = 2.5;
       this.turnSpeed = 2;
       this.moveFriction = 10;
-      this.engine.systems.controls.activateContext('player');
+      //this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.activateContext('playerhmd');
       this.charging = false;
       this.usegravity = true;
@@ -37,7 +39,10 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       this.lights = [];
       this.lightnum = 0;
 
+      this.target = false;
+
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
+      elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
     }
     this.createObjectDOM = function() {
       this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
@@ -66,12 +71,14 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
   //console.log('pew!', velocity);
         var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity }, true);
 
+/*
         if (!this.lights[this.lightnum]) {
           this.lights[this.lightnum] = foo.spawn('light', null, { radius: 60, intensity: 1, color: 0xffffff});
         } else {
           this.lights[this.lightnum].reparent(foo);
         }
         this.lightnum = (this.lightnum + 1) % 3;
+*/
         foo.addTag('enemy');
         this.charging = false;
       }
@@ -115,6 +122,7 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
       this.frictionForce = this.objects.dynamics.addForce("friction", this.moveFriction);
       //this.gravityForce = this.objects.dynamics.addForce("gravity", new THREE.Vector3(0,0,0));
       this.moveForce = this.objects.dynamics.addForce("static", {});
+      this.objects.dynamics.restitution = .4;
       this.objects.dynamics.setCollider('sphere', {radius: .25});
       this.camera = this.spawn('camera', null, { position: [0,0,0], mass: 0.1 } );
     }
@@ -189,11 +197,85 @@ elation.require(['ui.progressbar', 'engine.things.ball'], function() {
             this.camera.refresh();
           }
         }
+
         elation.events.fire({type: 'thing_change', element: this});
       }
     })();
     this.updateControls = function() {
       this.refresh();
+    }
+    this.handleTargeting = function() {
+      var targetinfo = this.getUsableTarget();
+      if (targetinfo) {
+        var target = this.getThingByObject(targetinfo.object);
+
+        if (target !== this.target) {
+          this.setUseTarget(target);
+        }
+      } else if (this.target != false || this.distanceTo(this.target) > this.targetrange) {
+        this.setUseTarget(false);
+      }
+    }
+    this.setUseTarget = function(target) {
+      if (!target && this.target) {
+        // deselect current target
+        elation.events.fire({type: 'thing_use_blur', element: this.target, data: this});
+        this.hideUseDialog();
+      } else if (target && !this.target) {
+        elation.events.fire({type: 'thing_use_focus', element: target, data: this});
+        this.showUseDialog('play', target.properties.gamename); // FIXME - hardcoded for arcade games...
+      }
+      this.target = target;
+    }
+    this.handleUse = function(ev) {
+      if (ev.value == 1) {
+        this.activateUseTarget();
+      }
+    }
+    this.activateUseTarget = function() {
+      if (this.target) {
+        elation.events.fire({type: 'thing_use_activate', element: this.target, data: this});
+        this.disable(); // FIXME - temporary
+      }
+    }
+    this.getUsableTarget = (function() {
+      // closure scratch variables
+      var _pos = new THREE.Vector3(),
+          _dir = new THREE.Vector3(),
+          _caster = new THREE.Raycaster(_pos, _dir, .01, this.targetrange);
+      return function() {
+        if (!this.camera) return; // FIXME - hack to make sure we don't try to execute if our camera isn't initialized
+        var things = this.engine.getThingsByTag('usable');
+
+        if (things.length > 0) {
+          var objects = things.map(function(t) { return t.objects['3d']; });
+          // Get my position and direction in world space
+          var pos = this.camera.localToWorld(_pos.set(0,0,0));
+          var dir = this.camera.localToWorld(_dir.set(0,0,-1)).sub(pos).normalize(); 
+
+          var intersects = _caster.intersectObjects(objects, true);
+          if (intersects.length > 0) {
+            return intersects[0];
+          }
+        }
+        return false;
+      }
+    }.bind(this))();
+
+    this.showUseDialog = function(verb, noun) {
+      if (!this.usedialog) {
+        this.usedialog = elation.ui.window({append: document.body, bottom: true, center: true});
+      }
+      if (typeof verb == 'undefined') verb = 'use';
+      if (typeof noun == 'undefined') noun = '';
+
+      this.usedialog.show();
+      this.usedialog.setcontent('Press E/Button 1 to ' + verb + ' ' + noun);
+    }
+    this.hideUseDialog = function() {
+      if (this.usedialog) {
+        this.usedialog.hide();
+      }
     }
   }, elation.engine.things.generic);
 });
