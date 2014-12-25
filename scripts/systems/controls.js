@@ -155,13 +155,22 @@ elation.extend("engine.systems.controls", function(args) {
     this.addCommands(context, commands);
     this.addBindings(context, bindings);
     this.contextstates[context] = states;
-    console.log("\t- added control context: " + context);
+    console.log("[controls] added control context: " + context);
+
+    // FIXME - context state object should be a JS class, with reset() as a member function
+    states._reset = function() {
+      for (var k in this) {
+        if (typeof this[k] != 'function') {
+          this[k] = 0;
+        }
+      }
+    }.bind(states);
 
     return states;
   }
   this.activateContext = function(context, target) {
     if (this.activecontexts.indexOf(context) == -1) {
-      console.log('\t- activate control context ' + context);
+      console.log('[controls] activate control context ' + context);
       this.activecontexts.unshift(context);
     }
     if (target) {
@@ -171,7 +180,7 @@ elation.extend("engine.systems.controls", function(args) {
   this.deactivateContext = function(context) {
     var i = this.activecontexts.indexOf(context);
     if (i != -1) {
-      console.log('Deactivate control context ' + context);
+      console.log('[controls] deactivate control context ' + context);
       this.activecontexts.splice(i, 1);
       if (this.contexttargets[context]) {
         delete this.contexttargets[context];
