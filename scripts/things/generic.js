@@ -971,4 +971,37 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
   this.getPartsByType = function(type) {
     return this.parttypes[type] || [];
   }
+  this.getThingByObject = function(obj) {
+    while (obj) {
+      if (obj.userData.thing) return obj.userData.thing;
+      obj = obj.parent;
+    }
+    return null;
+  }
+  this.getObjectsByTag = function(tag) {
+  }
+  this.getChildrenByTag = function(tag, collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      if (this.children[k].hasTag(tag)) {
+        collection.push(this.children[k]);
+      }
+      this.children[k].getChildrenByTag(tag, collection);
+    }
+    return collection;
+  }
+  this.distanceTo = (function() {
+    // closure scratch variables
+    var _v1 = new THREE.Vector3(),
+        _v2 = new THREE.Vector3();
+    return function(obj) {
+      var mypos = this.localToWorld(_v1.set(0,0,0));
+      if (obj && obj.localToWorld) {
+        return mypos.distanceTo(obj.localToWorld(_v2.set(0,0,0)));
+      } else if (obj instanceof THREE.Vector3) {
+        return mypos.distanceTo(obj);
+      }
+      return Infinity;
+    } 
+  });
 });
