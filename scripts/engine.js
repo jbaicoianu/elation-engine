@@ -1,22 +1,21 @@
-elation.extend("engine", {
-  instances: {},
+elation.require([
+  "engine.external.three.three",
+  "engine.parts",
+  "engine.materials",
+  "engine.geometries",
+  "engine.things.generic",
+  "utils.math"
+], function() {
+  elation.requireCSS('engine.engine');
 
-  create: function(name, systems, callback) {
+  elation.extend("engine.instances", {});
+  elation.extend("engine.create", function(name, systems, callback) {
     var engine = new elation.engine.main(name);
     elation.events.add(engine.systems, 'engine_systems_added', function() { callback(engine); })
     engine.systems.add(systems);
     this.instances[name] = engine;
     return engine;
-  }
-});
-elation.require([
-  "engine.external.three.three",
-  "engine.parts",
-  "engine.materials",
-  "engine.things.generic",
-  "utils.math"
-], function() {
-  elation.requireCSS('engine.engine');
+  });
   elation.extend("engine.main", function(name) {
     this.started = false;
     this.running = false;
@@ -69,6 +68,21 @@ elation.require([
     this.frame = function(fn) {
       this.requestAnimationFrame.call(window, fn);
     }
+
+    // Convenience functions for querying objects from world
+    this.getThingsByTag = function(tag) {
+      return this.systems.world.getThingsByTag(tag);
+    }
+    this.getThingsByType = function(type) {
+      return this.systems.world.getThingsByType(type);
+    }
+    this.getThingByObject = function(obj) {
+      return this.systems.world.getThingsByObject(object);
+    }
+    this.getThingById = function(id) {
+      return this.systems.world.getThingsById(id);
+    }
+
     this.init();
   });
   elation.extend("engine.systems", function(args) {
