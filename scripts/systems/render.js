@@ -1,4 +1,5 @@
 elation.require([
+  "engine.external.three.three",
   "engine.external.three.stats",
   "engine.external.threex.renderstats",
   "engine.external.three.render.CSS3DRenderer",
@@ -188,9 +189,9 @@ elation.require([
 
         this.pickingdebug = false;
 
-        this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
+        //this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
         //this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
-        this.engine.systems.controls.activateContext('view');
+        //this.engine.systems.controls.activateContext('view');
       }
     }
     this.createRenderPath = function(passes, target) {
