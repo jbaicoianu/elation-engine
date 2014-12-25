@@ -5,6 +5,13 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         items: { type: 'object' },
         labelcfg: { type: 'object', default: {} }
       });
+      this.controlstate = this.engine.systems.controls.addContext('menu', {
+        'menu_up': ['keyboard_up', elation.bind(this, this.updateControls)],
+        'menu_down': ['keyboard_down,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+        'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
+      });
+      this.selected = false;
+      this.menuitems = [];
     }
     this.createObject3D = function() {
       var obj = new THREE.Object3D();
@@ -30,6 +37,96 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         itemcfg.position = [0, (fullheight / 2) - (k * size * lineheight), 0];
 
         var l = this.spawn('menuitem', null, itemcfg);
+        this.menuitems.push(l);
+        elation.events.add(l, 'menuitem_select', elation.bind(this, this.updateselected));
+        elation.events.add(l, 'menuitem_deselect', elation.bind(this, this.updateselected));
+      }
+    }
+    this.updateselected = function(ev) {
+      if (ev.type == 'menuitem_select') {
+        this.selected = ev.target;
+      } else {
+        this.selected = false;
+      }
+    }
+    this.updateControls = function(ev) {
+      if (Math.abs(ev.value) == 1) {
+        // FIXME - this is hacky.  if ev.value is 1, we then look at what actions are active, and act on all of them
+        if (this.controlstate.menu_up == 1 || this.controlstate.menu_down == -1) {
+          this.selectprevious();
+        }
+        if (this.controlstate.menu_down == 1 || this.controlstate.menu_up == -1) {
+          this.selectnext();
+        }
+        if (this.controlstate.activate == 1) {
+          this.selected.activate();
+        }
+      }
+    }
+    this.enable = function() {
+      this.controlstate._reset();
+      this.engine.systems.controls.activateContext('menu');
+    }
+    this.disable = function() {
+      this.controlstate._reset();
+      this.engine.systems.controls.deactivateContext('menu');
+    }
+    this.selectfirst = function() {
+      if (this.selected) {
+        this.selected.deselect();
+      }
+    
+      for (var i = 0; i < this.menuitems.length; i++) {
+        var item = this.menuitems[i];
+        if (!item.properties.disabled) {
+          item.select();
+          break;
+        }
+      }
+    }
+    this.selectlast = function() {
+      if (this.selected) {
+        this.selected.deselect();
+      }
+      for (var i = 0; i < this.menuitems.length; i++) {
+        var item = this.menuitems[this.menuitems.length - i - 1];
+console.log(i, this.menuitems.length, item);
+        if (!item.properties.disabled) {
+          item.select();
+          break;
+        }
+      }
+    }
+    this.selectnext = function() {
+      if (!this.selected) {
+        this.selectfirst();
+      } else {
+        var idx = this.menuitems.indexOf(this.selected);
+        this.selected.deselect();
+        for (var i = 0; i < this.menuitems.length; i++) {
+          var newitem = this.menuitems[(idx + i + 1) % this.menuitems.length];
+          if (!newitem.properties.disabled) {
+            newitem.select();
+            break;
+          }
+        }
+      }
+    }
+    this.selectprevious = function() {
+      if (!this.selected) {
+        this.selectlast();
+      } else {
+        var idx = this.menuitems.indexOf(this.selected);
+        this.selected.deselect();
+        for (var i = 1; i < this.menuitems.length; i++) {
+          var newidx = idx - i;
+          if (newidx < 0) newidx = this.menuitems.length - 1;
+          var newitem = this.menuitems[newidx];
+          if (!newitem.properties.disabled) {
+            newitem.select();
+            break;
+          }
+        }
       }
     }
   }, elation.engine.things.generic);
@@ -67,7 +164,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       });
       elation.events.add(this.label, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
-    this.mouseover = function(ev) {
+    this.select = function() {
       //this.material.depthTest = false;
       //this.material.transparent = true;
       //this.material.depthWrite = false;
@@ -76,17 +173,31 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       this.label.material.emissive.setHex(color);
       this.label.refresh();
       this.refresh();
+      elation.events.fire({type: 'menuitem_select', element: this});
     }
-    this.mouseout = function(ev) {
+    this.deselect = function() {
       this.label.material.color.setHex((this.properties.disabled ? this.properties.disabledcolor : this.properties.color));
       this.label.material.emissive.setHex(0x000000);
       this.label.refresh();
       this.refresh();
+      elation.events.fire({type: 'menuitem_deselect', element: this});
+    }
+    this.activate = function() {
+      if (this.properties.callback && typeof this.properties.callback == 'function') {
+        this.properties.callback();
+        return true;
+      }
+      return false;
+    }
+    this.mouseover = function(ev) {
+      this.select();
+    }
+    this.mouseout = function(ev) {
+      this.deselect();
     }
     this.click = function(ev) {
-      if (this.properties.callback && typeof this.properties.callback == 'function') {
+      if (this.activate()) {
         ev.stopPropagation();
-        this.properties.callback();
       }
     }
   }, elation.engine.things.generic);
