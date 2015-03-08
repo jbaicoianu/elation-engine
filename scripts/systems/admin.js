@@ -41,7 +41,7 @@ elation.require([
     this.system_attach = function(ev) {
       console.log('INIT: admin');
 
-      elation.html.addclass(this.container, "engine_admin");
+      //elation.html.addclass(this.container, "engine_admin");
       this.world = this.engine.systems.world;
 
       //this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {engine: this.engine});
