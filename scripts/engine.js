@@ -56,13 +56,14 @@ elation.require([
 
     // simple requestAnimationFrame wrapper
     this.requestAnimationFrame = (function() {
+        var window = window || {};
         return  window.requestAnimationFrame       || 
                 window.webkitRequestAnimationFrame || 
                 window.mozRequestAnimationFrame    || 
                 window.oRequestAnimationFrame      || 
                 window.msRequestAnimationFrame     || 
                 function( callback ){
-                  window.setTimeout(callback, 1000 / 60);
+                  setTimeout(callback, 1000 / 60);
                 };
       })();
     this.frame = function(fn) {
