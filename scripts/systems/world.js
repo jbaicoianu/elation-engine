@@ -22,11 +22,10 @@ elation.require([
       this.loaded = false;
       this.loading = false;
 
-
-      if (document.location.hash) {
+      if (ENV_IS_BROWSER && document.location.hash) {
         this.parseDocumentHash();
-      }
       elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
+      }
     }
 
     this.engine_start = function(ev) {
@@ -139,11 +138,13 @@ elation.require([
         //this.spawn("sector", "default");
         this.createDefaultScene();
       }
-      var dochash = "world.load=" + name;
-      if (this.engine.systems.physics.timescale == 0) {
-        dochash += "&world.paused=1";
+      if (ENV_IS_BROWSER) {
+        var dochash = "world.load=" + name;
+        if (this.engine.systems.physics.timescale == 0) {
+          dochash += "&world.paused=1";
+        }
+        document.location.hash = dochash;
       }
-      document.location.hash = dochash;
     }
     this.listLocalOverrides = function() {
       var overrides = [];

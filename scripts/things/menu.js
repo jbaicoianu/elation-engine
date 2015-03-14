@@ -5,11 +5,13 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         items: { type: 'object' },
         labelcfg: { type: 'object', default: {} }
       });
-      this.controlstate = this.engine.systems.controls.addContext('menu', {
-        'menu_up': ['keyboard_up', elation.bind(this, this.updateControls)],
-        'menu_down': ['keyboard_down,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
-        'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
-      });
+      if (this.engine.systems.controls) {
+        this.controlstate = this.engine.systems.controls.addContext('menu', {
+          'menu_up': ['keyboard_up', elation.bind(this, this.updateControls)],
+          'menu_down': ['keyboard_down,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+          'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
+        });
+      }
       this.selected = false;
       this.menuitems = [];
     }
@@ -66,12 +68,16 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       }
     }
     this.enable = function() {
-      this.controlstate._reset();
-      this.engine.systems.controls.activateContext('menu');
+      if (this.controlstate) {
+        this.controlstate._reset();
+        this.engine.systems.controls.activateContext('menu');
+      }
     }
     this.disable = function() {
-      this.controlstate._reset();
-      this.engine.systems.controls.deactivateContext('menu');
+      if (this.controlstate) {
+        this.controlstate._reset();
+        this.engine.systems.controls.deactivateContext('menu');
+      }
     }
     this.selectfirst = function() {
       if (this.selected) {

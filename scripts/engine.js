@@ -1,11 +1,20 @@
-elation.require([
-  "engine.external.three.three",
+var deps = [ 
   "engine.parts",
   "engine.materials",
   "engine.geometries",
   "engine.things.generic",
-  "utils.math"
-], function() {
+  "utils.math" ];
+
+if (ENV_IS_BROWSER) {
+  deps.push("engine.external.three.three")
+}
+
+else if (ENV_IS_NODE) {
+  deps.push("engine.external.three.nodethree")
+}
+
+
+elation.require(deps, function() {
   elation.requireCSS('engine.engine');
 
   elation.extend("engine.instances", {});
@@ -24,7 +33,8 @@ elation.require([
     this.init = function() {
       this.systems = new elation.engine.systems(this);
       // shutdown cleanly if the user leaves the page
-      elation.events.add(window, "unload", elation.bind(this, this.stop)); 
+      // TODO
+      // elation.events.add(window, "unload", elation.bind(this, this.stop)); 
     }
     this.start = function() {
       this.started = this.running = true;
@@ -52,6 +62,7 @@ elation.require([
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
       elation.events.fire({type: "engine_frame", element: this, data: evdata});
+      console.log('did a frame', this.systems.world.children.vrcade);
       this.lastupdate = ts;
     }
 
@@ -75,6 +86,7 @@ elation.require([
         }
       })();
     this.frame = function(fn) {
+      var window = window || {};
       this.requestAnimationFrame.call(window, fn);
     }
 

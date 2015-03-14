@@ -269,10 +269,12 @@ elation.component.add("engine.things.generic", function() {
     this.refresh();
   }
   this.initDOM = function() {
-    this.objects['dom'] = this.createObjectDOM();
-    elation.html.addclass(this.container, "space.thing");
-    elation.html.addclass(this.container, "space.things." + this.type);
-    //this.updateDOM();
+    if (ENV_IS_BROWSER) {
+      this.objects['dom'] = this.createObjectDOM();
+      elation.html.addclass(this.container, "space.thing");
+      elation.html.addclass(this.container, "space.things." + this.type);
+      //this.updateDOM();
+    }
   }
   this.initPhysics = function() {
     if (this.properties.physical) {
@@ -281,7 +283,7 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.createObject3D = function() {
-    if (this.properties.exists === false) return;
+    if (this.properties.exists === false || !ENV_IS_BROWSER) return;
     var object = null, geometry = null, material = null;
 
     if (this.properties.render) {
@@ -410,7 +412,7 @@ elation.component.add("engine.things.generic", function() {
     return false;
   }
   this.remove = function(thing) {
-    if (this.children[thing.id]) {
+    if (thing && this.children[thing.id]) {
       if (this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].remove(thing.objects['3d']);
       }

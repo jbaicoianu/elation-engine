@@ -2,29 +2,32 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
   elation.component.add('engine.things.player', function() {
     this.targetrange = 1.8;
     this.postinit = function() {
-      this.controlstate = this.engine.systems.controls.addContext('player', {
-        'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
-        'move_backward': ['keyboard_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
-        'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
-        'move_right': ['keyboard_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
-        'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
-        'turn_right': ['keyboard_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
-        'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
-        'look_down': ['keyboard_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
-        'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
-        'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
-        //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
-        //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
-        'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
-        //'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
-        'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
-      });
-      // Separate HMD context so it can remain active when player controls are disabled
-      this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
-        'hmd': ['hmd_0', elation.bind(this, this.refresh)],
-        //'orientation': ['orientation', elation.bind(this, this.refresh)],
-      });
+     if (this.engine.systems.controls) {
+        this.controlstate = this.engine.systems.controls.addContext('player', {
+          'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
+          'move_backward': ['keyboard_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+          'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
+          'move_right': ['keyboard_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
+          'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
+          'turn_right': ['keyboard_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+          'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
+          'look_down': ['keyboard_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
+          'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
+          'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
+          //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
+          //'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
+          //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
+          'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
+          //'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
+          'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
+        });
+        // Separate HMD context so it can remain active when player controls are disabled
+        this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
+          'hmd': ['hmd_0', elation.bind(this, this.refresh)],
+        });
+        //this.engine.systems.controls.activateContext('player');
+        this.engine.systems.controls.activateContext('playerhmd');
+      }
       this.moveVector = new THREE.Vector3();
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
@@ -32,8 +35,6 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
       this.runMultiplier = 2.5;
       this.turnSpeed = 2;
       this.moveFriction = 10;
-      //this.engine.systems.controls.activateContext('player');
-      this.engine.systems.controls.activateContext('playerhmd');
       this.charging = false;
       this.usegravity = true;
 
@@ -55,7 +56,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
       if (this.charging !== false) {
         var charge = this.getCharge();
         this.strengthmeter.set(charge);
-      } else if (this.strengthmeter.value != 0) {
+      } else if (this.strengthmeter && this.strengthmeter.value != 0) {
         this.strengthmeter.set(0);
       }
     }
@@ -132,14 +133,22 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
     }
     this.enable = function() {
       //this.gravityForce.update(new THREE.Vector3(0,-9.8 * this.properties.mass,0));
-      this.engine.systems.controls.activateContext('player');
-      this.engine.systems.controls.enablePointerLock(true);
-      this.engine.systems.render.views.main.picking = false;
+      if (this.engine.systems.controls) {
+        this.engine.systems.controls.activateContext('player');
+        this.engine.systems.controls.enablePointerLock(true);
+      }
+      if (this.engine.systems.render) {
+        this.engine.systems.render.views.main.picking = false;
+      }
     }
     this.disable = function() {
-      this.engine.systems.controls.deactivateContext('player');
-      this.engine.systems.controls.enablePointerLock(false);
-      this.engine.systems.render.views.main.picking = true;
+      if (this.engine.systems.controls) {
+        this.engine.systems.controls.deactivateContext('player');
+        this.engine.systems.controls.enablePointerLock(false);
+      }
+      if (this.engine.systems.render) {
+        this.engine.systems.render.views.main.picking = true;
+      }
       if (this.objects.dynamics) {
         this.moveForce.update(this.moveVector.set(0,0,0));
         //this.gravityForce.update(new THREE.Vector3(0,0,0));
@@ -155,7 +164,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
     this.refresh = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
       return function() {
-        if (this.camera) {
+        if (this.camera && this.controlstate) {
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
           this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
 

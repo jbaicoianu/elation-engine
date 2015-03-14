@@ -1,0 +1,19 @@
+## DNT config file
+## see https://github.com/rvagg/dnt
+
+NODE_VERSIONS="\
+  master   \
+  v0.11.12 \
+  v0.10.26 \
+  v0.8.22  \
+"
+OUTPUT_PREFIX="canvas-"
+TEST_CMD="\
+  sudo apt-get install -y libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev && \
+  cd /dnt/ &&                                                    \
+  npm install node-gyp &&                                        \
+  npm install &&                                                 \
+  node_modules/.bin/node-gyp --nodedir /usr/src/node/ rebuild && \
+  npm test;                          \
+"
+LOG_OK_CMD="sed -r 's/^\s+[0-9]+ passing \([0-9]+ms\)$/ok/' | tail -2 | head -1"
