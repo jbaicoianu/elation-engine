@@ -851,7 +851,7 @@ elation.component.add("engine.things.generic", function() {
 console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray(), angle, this.properties.orientation.toArray());
     }
   }
-  this.serialize = function() {
+  this.serialize = function(serializeAll) {
     var ret = {
       name: this.name,
       parentname: this.parentname,
@@ -900,7 +900,13 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
 
     for (var k in this.children) {
       if (this.children[k].properties) {
-        if (this.children[k].properties.persist) {
+        if (!serializeAll) {
+          if (this.children[k].properties.persist) {
+            ret.things[k] = this.children[k].serialize();
+            numthings++;
+          }
+        }
+        else {
           ret.things[k] = this.children[k].serialize();
           numthings++;
         }

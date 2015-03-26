@@ -1,10 +1,11 @@
 elation.require(['utils.template'], function() {
   elation.requireCSS('engine.materials');
-
-  // elation.template.add('engine.materials.chunk', '<div class="engine_materials_chunk style_box"><h1>{chunkname}</h1><div class="engine_materials_chunk_uniforms style_box"><h2>uniforms</h2> <ul> {#uniforms} <li><h4>{name}</h4> ({type})</li> {/uniforms} </ul></div> <div class="engine_materials_chunk_vertex style_box"><h2>vertex</h2><p>{chunk.vertex_pars}</p><p>{chunk.vertex}</p></div>  <div class="engine_materials_chunk_fragment style_box"><h2>fragment</h2><p>{chunk.fragment_pars}</p><p>{chunk.fragment}</p></div></div>');
-  // elation.template.add('engine.materials.chunk.uniforms', '<h3>{chunkname}</h3><ul class="engine_materials_chunk_uniform"> {#uniforms} <li><h4>{name}</h4> <input value="{value}"> ({type})</li> {/uniforms} </ul>');
-  // elation.template.add('engine.materials.chunk.vertex', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="vertex" {?params}elation:args.params=1{/params} class="engine_materials_chunk_vertex">{content}</p>');
-  // elation.template.add('engine.materials.chunk.fragment', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="fragment" {?params}elation:args.params=1{/params} class="engine_materials_chunk_fragment">{content}</p>');
+  if (ENV_IS_BROWSER) {
+    elation.template.add('engine.materials.chunk', '<div class="engine_materials_chunk style_box"><h1>{chunkname}</h1><div class="engine_materials_chunk_uniforms style_box"><h2>uniforms</h2> <ul> {#uniforms} <li><h4>{name}</h4> ({type})</li> {/uniforms} </ul></div> <div class="engine_materials_chunk_vertex style_box"><h2>vertex</h2><p>{chunk.vertex_pars}</p><p>{chunk.vertex}</p></div>  <div class="engine_materials_chunk_fragment style_box"><h2>fragment</h2><p>{chunk.fragment_pars}</p><p>{chunk.fragment}</p></div></div>');
+    elation.template.add('engine.materials.chunk.uniforms', '<h3>{chunkname}</h3><ul class="engine_materials_chunk_uniform"> {#uniforms} <li><h4>{name}</h4> <input value="{value}"> ({type})</li> {/uniforms} </ul>');
+    elation.template.add('engine.materials.chunk.vertex', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="vertex" {?params}elation:args.params=1{/params} class="engine_materials_chunk_vertex">{content}</p>');
+    elation.template.add('engine.materials.chunk.fragment', '<h3>{chunkname}</h3><p elation:component="engine.materials.editor" elation:args.chunkname="{chunkname}" elation:args.chunktype="fragment" {?params}elation:args.params=1{/params} class="engine_materials_chunk_fragment">{content}</p>');
+  }
 
   elation.extend("engine.materials", new function() {
 
@@ -420,7 +421,8 @@ elation.require(['utils.template'], function() {
       this.changetimer = setTimeout(elation.bind(this, this.change), this.changetimeout);
     }
   });
-
-  // elation.engine.materials.add('uvtest', new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1])}));
+  if (ENV_IS_BROWSER) {
+    elation.engine.materials.add('uvtest', new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1])}));
+  }
   elation.engine.materials.add('normal', new THREE.MeshNormalMaterial());
 });

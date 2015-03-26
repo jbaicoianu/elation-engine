@@ -284,10 +284,10 @@ elation.require([
       }
       return currentobj;
     }
-    this.serialize = function() {
+    this.serialize = function(serializeAll) {
       var ret = {};
       for (var k in this.children) {
-        ret[k] = this.children[k].serialize();
+        ret[k] = this.children[k].serialize(serializeAll);
       }
       return ret[k]; // FIXME - dumb
     }

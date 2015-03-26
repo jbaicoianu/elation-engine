@@ -62,7 +62,7 @@ elation.require(deps, function() {
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
       elation.events.fire({type: "engine_frame", element: this, data: evdata});
-      console.log('did a frame', this.systems.world.children.vrcade);
+      // console.log('did a frame', this.systems.world.children.vrcade);
       this.lastupdate = ts;
     }
 
@@ -86,7 +86,6 @@ elation.require(deps, function() {
         }
       })();
     this.frame = function(fn) {
-      var window = window || {};
       this.requestAnimationFrame.call(window, fn);
     }
 

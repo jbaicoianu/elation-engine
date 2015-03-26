@@ -15,7 +15,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
           'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
           'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
           //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-          //'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
+          'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
           //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
           'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
           //'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
