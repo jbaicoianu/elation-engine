@@ -123,8 +123,8 @@ elation.extend("engine.systems.controls", function(args) {
 
   this.initcontrols = function() {
     if (!this.container) this.container = window;
-    elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll", this);
-    elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
+    elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll,touchstart,touchmove,touchend,gesturestart,gesturechange,gestureend", this);
+    elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected,deviceorientation,devicemotion", this);
     elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
     elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
 
@@ -401,7 +401,9 @@ elation.extend("engine.systems.controls", function(args) {
   this.requestPointerLock = function() {
     if (this.pointerLockEnabled && !this.pointerLockActive) {
       var domel = this.engine.systems.render.renderer.domElement;
-      domel.requestPointerLock = domel.requestPointerLock || domel.mozRequestPointerLock || domel.webkitRequestPointerLock;
+      if (!domel.requestPointerLock) {
+        domel.requestPointerLock = domel.requestPointerLock || domel.mozRequestPointerLock || domel.webkitRequestPointerLock;
+      }
       domel.requestPointerLock();
     }
   }
@@ -445,10 +447,16 @@ elation.extend("engine.systems.controls", function(args) {
         height = this.container.offsetHeight || this.container.innerHeight;
     var scaleX = this.settings.mouse.sensitivity * (this.settings.mouse.invertX ? -1 : 1),
         scaleY = this.settings.mouse.sensitivity * (this.settings.mouse.invertY ? -1 : 1),
-        deltas = [
-      scaleX * (elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX) / height),
-      scaleY * (elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY) / height)
-    ];
+        movementX = elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX),
+        movementY = elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY);
+
+    // FIXME - works around a chrome bug where pointer lock returns massive values on focus
+    if (Math.abs(movementY) == window.screenY && Math.abs(movementX) - 5 >= window.screenX) return [0, 0];
+
+    var deltas = [
+          scaleX * movementX / width,
+          scaleY * movementY / height
+        ];
     return deltas;
   }
   this.getKeyboardModifiers = function(ev) {
@@ -473,7 +481,6 @@ elation.extend("engine.systems.controls", function(args) {
   this.mousemove = function(ev) {
     var mpos = this.getMousePosition(ev);
     var deltas = this.getMouseDelta(ev);
-
     var status = {mouse_pos: false, mouse_delta: false, mouse_x: false, mouse_y: false};
     if (!this.state["mouse_pos"]) {
       status["mouse_pos"] = true;
@@ -594,6 +601,84 @@ elation.extend("engine.systems.controls", function(args) {
       this.changes.push(keyname);
     }
   }
+
+  this.touchstart = function(ev) {
+    var newev = {
+      button: 0,
+      type: 'mousedown',
+      screenX: ev.touches[0].screenX,
+      screenY: ev.touches[0].screenY,
+      pageX: ev.touches[0].pageX,
+      pageY: ev.touches[0].pageY,
+      clientX: ev.touches[0].clientX,
+      clientY: ev.touches[0].clientY,
+    };
+    this.lasttouchpos = [newev.clientX, newev.clientY];
+    this.mousedown(newev);
+    ev.preventDefault();
+  }
+  this.touchmove = function(ev) {
+    if (ev.touches.length == 1) {
+      var newev = {
+        type: 'mousemove',
+        screenX: ev.touches[0].screenX,
+        screenY: ev.touches[0].screenY,
+        pageX: ev.touches[0].pageX,
+        pageY: ev.touches[0].pageY,
+        clientX: ev.touches[0].clientX,
+        clientY: ev.touches[0].clientY,
+      };
+      newev.movementX = (this.lasttouchpos[0] - newev.clientX) / devicePixelRatio;
+      newev.movementY = (this.lasttouchpos[1] - newev.clientY) / devicePixelRatio;
+      this.lasttouchpos = [newev.clientX, newev.clientY];
+      this.mousemove(newev);
+    } else {
+      ev.preventDefault();
+    }
+  }
+  this.touchend = function(ev) {
+    var newev = {
+      button: 0,
+      type: 'mouseup',
+/*
+      screenX: ev.touches[0].screenX,
+      screenY: ev.touches[0].screenY,
+      pageX: ev.touches[0].pageX,
+      pageY: ev.touches[0].pageY,
+      clientX: ev.touches[0].clientX,
+      clientY: ev.touches[0].clientY,
+*/
+    };
+    this.mouseup(newev);
+  }
+  this.gesturestart = function(ev) {
+    console.log('do a gesture', ev);
+    ev.preventDefault();
+  }
+  this.gesturechange = function(ev) {
+    console.log('change a gesture', ev);
+  }
+  this.gestureend = function(ev) {
+    console.log('end a gesture', ev);
+  }
+  this.deviceorientation = function(ev) {
+    console.log('deviceorientation:', [ev.alpha, ev.beta, ev.gamma]);
+    var deg2rad = Math.PI/180;
+
+    var radval = [ev.alpha * deg2rad, ev.beta * deg2rad, ev.gamma * deg2rad, window.orientation * deg2rad];
+
+    this.state['orientation'] = {
+      alpha: radval[0],
+      beta : radval[1] * Math.sin(radval[3]) + radval[2] * Math.cos(radval[3]),
+      gamma: radval[2] * Math.sin(radval[3]) + radval[1] * Math.cos(radval[3])
+    };
+    this.changes.push('orientation');
+  }
+  this.devicemotion = function(ev) {
+    //console.log('devicemotion:', ev.acceleration, ev.rotationRate);
+  }
+
+  /* Gamepad handlers */
   this.webkitGamepadconnected = function(ev) {
     this.gamepadconnected(ev);
   }
