@@ -249,9 +249,9 @@ elation.component.add("engine.things.generic", function() {
     }
     this.objects['3d'] = this.createObject3D();
     if (this.objects['3d']) {
-      this.objects['3d'].position = this.properties.position;
-      this.objects['3d'].quaternion = this.properties.orientation;
-      this.objects['3d'].scale = this.properties.scale;
+      this.objects['3d'].bindPosition(this.properties.position);
+      this.objects['3d'].bindQuaternion(this.properties.orientation);
+      this.objects['3d'].bindScale(this.properties.scale);
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
     }
@@ -515,9 +515,9 @@ elation.component.add("engine.things.generic", function() {
     var parent = this.objects['3d'].parent;
     parent.remove(this.objects['3d']);
     this.objects['3d'] = new THREE.Object3D();
-    this.objects['3d'].position = this.properties.position;
-    this.objects['3d'].quaternion = this.properties.orientation;
-    this.objects['3d'].scale = this.properties.scale;
+    this.objects['3d'].bindPosition(this.properties.position);
+    this.objects['3d'].bindQuaternion(this.properties.orientation);
+    this.objects['3d'].bindScale(this.properties.scale);
     this.objects['3d'].userData.thing = this;
 
     while (scenedata.scene.children.length > 0) {
@@ -585,9 +585,9 @@ elation.component.add("engine.things.generic", function() {
     var parent = this.objects['3d'].parent;
     parent.remove(this.objects['3d']);
     this.objects['3d'] = new THREE.Object3D();
-    this.objects['3d'].position = this.properties.position;
-    this.objects['3d'].quaternion = this.properties.orientation;
-    this.objects['3d'].scale = this.properties.scale;
+    this.objects['3d'].bindPosition(this.properties.position);
+    this.objects['3d'].bindQuaternion(this.properties.orientation);
+    this.objects['3d'].bindScale(this.properties.scale);
     this.objects['3d'].userData.thing = this;
 
     // Correct coordinate space from various modelling programs
@@ -740,7 +740,7 @@ elation.component.add("engine.things.generic", function() {
         var m = n.material;
         for (var mapidx = 0; mapidx < mapnames.length; mapidx++) {
           var tex = m[mapnames[mapidx]];
-          if (tex && !unique[tex.image.src]) {
+          if (tex && tex.image && !unique[tex.image.src]) {
             unique[tex.image.src] = true;
             ret.push(tex);
           }

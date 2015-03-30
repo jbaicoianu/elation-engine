@@ -151,7 +151,7 @@ console.log(i, this.menuitems.length, item);
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
 
       // background plane
-      var boxgeo = new THREE.PlaneGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
+      var boxgeo = new THREE.PlaneBufferGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
       var mat = new THREE.MeshBasicMaterial({color: this.properties.color, opacity: .1, transparent: true});
       var mesh = new THREE.Mesh(boxgeo, mat);
       mesh.position.z = -this.properties.size;
