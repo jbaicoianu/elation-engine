@@ -40,6 +40,7 @@ elation.require([
 
     this.run = function(ts) {
       // recursively request another frame until we're no longer running
+      if (!ts) ts = new Date().getTime();
       if (this.running) {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
         this.frame(this.boundfunc);
