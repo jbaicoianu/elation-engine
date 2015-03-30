@@ -234,6 +234,17 @@ elation.require([
       this.load(scenedef);
 
     }
+    this.loadSceneFromURL = function(url, callback) {
+      elation.net.get(url, null, { onload: elation.bind(this, this.handleSceneLoad, callback) });  
+    }
+    this.handleSceneLoad = function(callback, ev) {
+      console.log(ev);
+      var response = ev.target.response;
+      var data = JSON.parse(response);
+      for (var i = 0; i < data.length; i++) {
+        this.load(data[i]);
+      }
+    }
     this.spawn = function(type, name, spawnargs, parent, autoload) {
       if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
       if (!spawnargs) spawnargs = {};
