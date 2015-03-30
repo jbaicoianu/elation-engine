@@ -42,7 +42,7 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true});
+      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0xffffff, 0);
@@ -105,6 +105,8 @@ elation.require([
       this.scale = 100;
       this.showstats = this.args.showstats || false;
       this.fullscreen = false;
+      this.renderpasses = {};
+
 
       // Used by various render pass shaders
       this.sizevec = new THREE.Vector2();
@@ -159,7 +161,8 @@ elation.require([
       this.depthMaterial.blending = THREE.NoBlending;
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
-      this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
+      //this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
+      this.composer = this.createRenderPath([this.rendermode]);
       if (this.showstats) {
         elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
       }
@@ -203,10 +206,16 @@ elation.require([
       var renderToScreen = false;
       for (var i = 0; i < passes.length; i++) {
         var pass = this.createRenderPass(passes[i]);
+console.log('NEW PASS:', i, target, passes[i], pass);
         if (pass) {
           //if (i == 0) pass.clear = true;
           composer.addPass(pass);
           renderToScreen = renderToScreen || pass.renderToScreen;
+
+          // Only store pass data for the main path
+          if (!target) {
+            this.renderpasses[passes[i]] = pass;
+          }
         }
       }
       if (!target && !renderToScreen) {
@@ -280,9 +289,18 @@ elation.require([
     this.setRenderMode = function(mode) {
       // Supported values: 'default', 'oculus'
 
-      var pass = this.createRenderPass(mode);
-      this.composer.passes[0] = pass;
-      this.pickingcomposer.passes[0] = pass;
+      var lastpass = this.renderpasses[this.rendermode];
+      var pass = this.renderpasses[mode];
+      if (!pass) {
+        pass = this.createRenderPass(mode);
+        this.renderpasses[mode] = pass;
+      }
+
+      var passidx = this.composer.passes.indexOf(lastpass);
+console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, lastpass, pass, this.renderpasses);
+
+      this.composer.passes[passidx] = pass;
+      this.pickingcomposer.passes[passidx] = pass;
       pass.camera = this.actualcamera;
 
       this.rendermode = mode;
@@ -567,6 +585,10 @@ elation.require([
         this.effects['SSAO'].uniforms[ 'size' ].value.set( width, height);
         this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
       }
+      if (this.skycamera) {
+        this.skycamera.aspect = width / height;
+        this.skycamera.updateProjectionMatrix();
+      }
       if (this.camera) {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
@@ -660,24 +682,26 @@ elation.require([
           if (fired[i].cancelBubble) ev.stopPropagation();
         }
       }
-      ev.preventDefault();
+      if (ev && ev.preventDefault) {
+        ev.preventDefault();
+      }
     }
+/*
     this.touchstart = function(ev) {
+      this.toggleFullscreen(true);
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
-      this.mousedown();
+      this.updatePickingObject();
+      this.mousedown(ev.touches[0]);
     }
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
-      this.mousemove();
-    }
-    this.touchmove = function(ev) {
-      this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
-      this.mousemove();
+      this.mousemove(ev.touches[0]);
     }
     this.touchend = function(ev) {
-      this.mouseup();
+      this.mouseup(ev);
       this.click();
     }
+*/
     this.keydown = function(ev) {
       for (var k in this.keystates) {
         this.keystates[k] = ev[k];
@@ -889,7 +913,8 @@ elation.require([
         var projector = new THREE.Projector();
         projector.unprojectVector(mouse3d, viewport.camera);
 
-        var ray = new THREE.Raycaster(viewport.camera.position, mouse3d.sub(viewport.camera.position).normalize());
+        var worldpos = viewport.camera.position.clone().applyMatrix4(viewport.camera.matrixWorld);
+        var ray = new THREE.Raycaster(worldpos, mouse3d.sub(worldpos).normalize());
         var intersects = ray.intersectObject(mesh);
         if (intersects.length > 0) {
           this.intersection = intersects[0];

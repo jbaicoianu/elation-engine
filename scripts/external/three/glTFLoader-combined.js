@@ -1418,6 +1418,7 @@ THREE.glTFLoader.prototype.load = function( url, callback ) {
 
         		var light = null;
         		var type = description.type;
+console.log('HANDLELIGHT', type, description[type]);
         		if (type && description[type])
         		{
         			var lparams = description[type];
@@ -1433,9 +1434,16 @@ THREE.glTFLoader.prototype.load = function( url, callback ) {
             				light = new THREE.PointLight(color);
             			break;
             			
-            			case "spot " :
+            			case "spot" :
             				light = new THREE.SpotLight(color);
     						light.position.set(0, 0, 1);
+light.castShadow = true;
+light.shadowCameraVisible = true;
+light.shadowCameraNear = .5;
+light.shadowCameraFar = 100;
+light.shadowCameraFov = 120;
+light.shadowCameraWidth = 2048;
+light.shadowCameraHeight = 2048;
             			break;
             			
             			case "ambient" : 
@@ -1444,6 +1452,7 @@ THREE.glTFLoader.prototype.load = function( url, callback ) {
             		}
         		}
 
+console.log('do light!', light);
         		if (light)
         		{
                 	this.resources.setEntry(entryID, light, description);	
@@ -2121,6 +2130,7 @@ THREE.GLTFLoaderUtils = Object.create(Object, {
                 delegate.handleError(THREE.GLTFLoaderUtils.XMLHTTPREQUEST_STATUS_ERROR, xhr.status);
             }, false );
             xhr.send(null);
+            return xhr;
         }
     },
 
@@ -2171,7 +2181,7 @@ THREE.GLTFLoaderUtils = Object.create(Object, {
                 request.delegate.handleError(errorCode, info);
             }
 
-            this._loadStream(request.path, request.type, processResourceDelegate);
+            return this._loadStream(request.path, request.type, processResourceDelegate);
         }
     },
 
@@ -2208,7 +2218,7 @@ THREE.GLTFLoaderUtils = Object.create(Object, {
             var byteOffset = wrappedBufferView.byteOffset + bufferView.description.byteOffset;
             var range = [byteOffset , (this._elementSizeForGLType(wrappedBufferView.type) * wrappedBufferView.count) + byteOffset];
 
-            this._handleRequest({   "id" : wrappedBufferView.id,
+            return this._handleRequest({   "id" : wrappedBufferView.id,
                                     "range" : range,
                                     "type" : buffer.description.type,
                                     "path" : buffer.description.path,
@@ -2239,7 +2249,7 @@ THREE.GLTFLoaderUtils = Object.create(Object, {
     		request.delegate = delegate;
     		request.ctx = ctx;
 
-            this._handleRequest({   "id" : request.id,
+            return this._handleRequest({   "id" : request.id,
                 "path" : request.path,
                 "range" : [0],
                 "type" : "text",
