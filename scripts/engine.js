@@ -57,15 +57,22 @@ elation.require([
 
     // simple requestAnimationFrame wrapper
     this.requestAnimationFrame = (function() {
-        var window = window || {};
-        return  window.requestAnimationFrame       || 
-                window.webkitRequestAnimationFrame || 
-                window.mozRequestAnimationFrame    || 
-                window.oRequestAnimationFrame      || 
-                window.msRequestAnimationFrame     || 
-                function( callback ){
-                  setTimeout(callback, 1000 / 60);
-                };
+        if (typeof window !== 'undefined') {
+          // Browsers
+          return  window.requestAnimationFrame       || 
+                  window.webkitRequestAnimationFrame || 
+                  window.mozRequestAnimationFrame    || 
+                  window.oRequestAnimationFrame      || 
+                  window.msRequestAnimationFrame     || 
+                  function( callback ) {
+                    setTimeout(callback, 1000 / 60);
+                  };
+        } else {
+          // NodeJS
+          return function( callback ) {
+            setTimeout(callback, 1000 / 60);
+          };
+        }
       })();
     this.frame = function(fn) {
       this.requestAnimationFrame.call(window, fn);
