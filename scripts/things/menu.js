@@ -15,9 +15,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     }
     this.createObject3D = function() {
       var obj = new THREE.Object3D();
+/*
       var light = new THREE.PointLight(0xffffff, 1, 100);
       light.position.set(-.1,0,1);
       obj.add(light);
+*/
       return obj;
     }
     this.createChildren = function() {
