@@ -6,11 +6,17 @@ elation.require(["physics.cyclone"], function() {
     this.debugwindows = {};
     this.debugvis = {};
     this.debugthings = {};
+    this.async = true;
+    this.asyncframerate = 200;
 
     this.system_attach = function(ev) {
       console.log('INIT: physics');
       this.system = new elation.physics.system({autostart: false});
-      //this.initstats();
+
+      // Only show second framerate gauge if physics system is decoupled from framerate
+      if (this.async) {
+        this.initstats();
+      }
     }
     this.engine_start = function(ev) {
       //console.log("PHYSICS: starting");
@@ -19,18 +25,21 @@ elation.require(["physics.cyclone"], function() {
       if (this.interval) {
         clearInterval(this.interval);
       }
-  /*
-      this.interval = setInterval(elation.bind(this, function() {
-        var now = new Date().getTime();
-          this.system.step(this.timescale * (now - this.lasttime) / 1000);
-          if (this.stats) this.stats.update();
-        this.lasttime = now;
-      }), 1000/1000);
-  */
+      if (this.async) {
+        this.interval = setInterval(elation.bind(this, function() {
+          var now = new Date().getTime();
+            //this.system.step(this.timescale * (now - this.lasttime) / 1000);
+            //if (this.stats) this.stats.update();
+          this.step((now - this.lasttime) / 1000);
+          this.lasttime = now;
+        }), 1000/this.asyncframerate);
+      }
     }
     this.engine_frame = function(ev) {
       //console.log("FRAME: physics");
-      this.step(ev.data.delta);
+      if (!this.async) {
+        this.step(ev.data.delta);
+      }
     }
     this.engine_stop = function(ev) {
       console.log('SHUTDOWN: physics');
@@ -45,7 +54,7 @@ elation.require(["physics.cyclone"], function() {
       this.stats.domElement.style.top = '0px';
       this.stats.domElement.style.zIndex = 100;
       document.body.appendChild(this.stats.domElement);
-      this.stats.domElement.style.left = this.stats.domElement.offsetWidth + 'px';
+      this.stats.domElement.style.right = this.stats.domElement.offsetWidth + 'px';
       this.stats.domElement.childNodes[0].childNodes[0].style.color = '#900';
       this.stats.domElement.childNodes[0].childNodes[1].style.backgroundColor = '#900';
     }
