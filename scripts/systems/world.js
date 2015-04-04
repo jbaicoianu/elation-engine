@@ -244,6 +244,7 @@ elation.require([
       for (var i = 0; i < data.length; i++) {
         this.load(data[i]);
       }
+      if (callback) { setTimeout(callback, 0); }
     }
     this.spawn = function(type, name, spawnargs, parent, autoload) {
       if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
@@ -362,6 +363,9 @@ elation.require([
     this.getThingsByTag = function(tag) {
       var things = [];
       for (var k in this.children) {
+        if (this.children[k].hasTag(tag)) {
+          things.push(this.children[k]);
+        }
         this.children[k].getChildrenByTag(tag, things);
       }
       return things;
