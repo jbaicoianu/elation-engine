@@ -282,23 +282,33 @@ elation.component.add("engine.things.generic", function() {
   }
   this.createObject3D = function() {
     if (this.properties.exists === false) return;
+    var object = null, geometry = null, material = null;
 
     if (this.properties.render) {
       if (this.properties.render.scene) {
         this.loadJSONScene(this.properties.render.scene, this.properties.render.texturepath);
-      }
-      if (this.properties.render.mesh) {
+      } else if (this.properties.render.mesh) {
         this.loadJSON(this.properties.render.mesh, this.properties.render.texturepath);
-      }
-      if (this.properties.render.collada) {
+      } else if (this.properties.render.collada) {
         this.loadCollada(this.properties.render.collada);
-      }
-      if (this.properties.render.gltf) {
+      } else if (this.properties.render.gltf) {
         this.loadglTF(this.properties.render.gltf);
+      } else if (this.properties.render.meshname) {
+        object = new THREE.Object3D();
+        setTimeout(elation.bind(this, function() {
+          var subobj = elation.engine.geometries.getMesh(this.properties.render.meshname).clone();
+          subobj.rotation.x = -Math.PI/2;
+          subobj.rotation.z = Math.PI;
+          this.extractEntities(subobj);
+          this.objects['3d'].add(subobj);
+
+          this.colliders = this.extractColliders(subobj);
+          var textures = this.extractTextures(subobj, true);
+          this.loadTextures(textures);
+        }), 0);
       }
     }
 
-    var geometry = null, material = null;
     var geomparams = elation.utils.arrayget(this.properties, "generic.geometry") || {};
     switch (geomparams.type) {
       case 'sphere':
@@ -360,7 +370,9 @@ elation.component.add("engine.things.generic", function() {
       //console.log('made placeholder thing', geometry, material);
     }
 
-    var object = (geometry && material ? new THREE.Mesh(geometry, material) : new THREE.Object3D());
+    if (!object) {
+      object = (geometry && material ? new THREE.Mesh(geometry, material) : new THREE.Object3D());
+    }
     if (geometry && material) {
       if (geomparams.flipSided) material.side = THREE.BackSide;
       if (geomparams.doubleSided) material.side = THREE.DoubleSide;
@@ -737,12 +749,23 @@ elation.component.add("engine.things.generic", function() {
     var mapnames = ['map', 'lightMap', 'bumpMap', 'normalMap', 'specularMap', 'envMap'];
     object.traverse(function(n) {
       if (n instanceof THREE.Mesh) {
-        var m = n.material;
-        for (var mapidx = 0; mapidx < mapnames.length; mapidx++) {
-          var tex = m[mapnames[mapidx]];
-          if (tex && tex.image && !unique[tex.image.src]) {
-            unique[tex.image.src] = true;
-            ret.push(tex);
+        var materials = [n.material];
+        if (n.material instanceof THREE.MeshFaceMaterial) {
+          materials = n.material.materials;
+        }
+        
+        for (var materialidx = 0; materialidx < materials.length; materialidx++) {
+          var m = materials[materialidx];
+          for (var mapidx = 0; mapidx < mapnames.length; mapidx++) {
+            var tex = m[mapnames[mapidx]];
+            if (tex) {
+              if (tex.image && !unique[tex.image.src]) {
+                unique[tex.image.src] = true;
+                ret.push(tex);
+              } else if (!tex.image) {
+                ret.push(tex);
+              }
+            }
           }
         }
       }
@@ -752,7 +775,7 @@ elation.component.add("engine.things.generic", function() {
   this.loadTextures = function(textures) {
     this.pendingtextures = 0;
     for (var i = 0; i < textures.length; i++) {
-      if (!textures[i].image.complete) {
+      if (textures[i].image && !textures[i].image.complete) {
         elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: textures[i].image } });
         this.pendingtextures++;
         elation.events.add(textures[i].image, 'load', elation.bind(this, this.textureLoadComplete));
