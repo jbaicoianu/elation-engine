@@ -14,7 +14,7 @@ elation.require(["physics.cyclone"], function() {
       this.system = new elation.physics.system({autostart: false});
 
       // Only show second framerate gauge if physics system is decoupled from framerate
-      if (this.async) {
+      if (this.async && ENV_IS_BROWSER) {
         this.initstats();
       }
     }
