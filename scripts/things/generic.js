@@ -416,7 +416,7 @@ elation.component.add("engine.things.generic", function() {
       if (this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].remove(thing.objects['3d']);
       }
-      if (thing.container.parentNode) {
+      if (thing.container && thing.container.parentNode) {
         thing.container.parentNode.removeChild(thing.container);
       }
       if (thing.objects['dynamics'] && thing.objects['dynamics'].parent) {

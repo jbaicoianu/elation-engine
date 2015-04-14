@@ -3,16 +3,16 @@ var deps = [
   "engine.materials",
   "engine.geometries",
   "engine.things.generic",
-  "utils.math" ];
+  "utils.math",
+];
 
 if (ENV_IS_BROWSER) {
-  deps.push("engine.external.three.three")
+  deps.push("engine.external.three.three");
 }
 
 else if (ENV_IS_NODE) {
-  deps.push("engine.external.three.nodethree")
+  deps.push("engine.external.three.nodethree");
 }
-
 
 elation.require(deps, function() {
   elation.requireCSS('engine.engine');

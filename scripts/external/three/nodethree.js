@@ -1,4 +1,4 @@
-var Canvas = require('./canvas');
+var Canvas = require('canvas');
 
 var self = {};
 
@@ -28595,7 +28595,7 @@ THREE.FontUtils = {
 	divisions : 10,
 
 	getFace : function() {
-
+		console.log('THREE: ',this.faces)
 		return this.faces[ this.face ][ this.weight ][ this.style ];
 
 	},
