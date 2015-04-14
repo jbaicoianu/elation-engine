@@ -285,7 +285,6 @@ elation.component.add("engine.things.generic", function() {
   this.createObject3D = function() {
     if (this.properties.exists === false || !ENV_IS_BROWSER) return;
     var object = null, geometry = null, material = null;
-
     if (this.properties.render) {
       if (this.properties.render.scene) {
         this.loadJSONScene(this.properties.render.scene, this.properties.render.texturepath);

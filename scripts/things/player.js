@@ -3,7 +3,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
     this.targetrange = 1.8;
     this.postinit = function() {
      if (this.engine.systems.controls) {
-        this.controlstate = this.engine.systems.controls.addContext('player', {
+       this.controlstate = this.engine.systems.controls.addContext('player', {
           'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
           'move_backward': ['keyboard_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
           'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
