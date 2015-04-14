@@ -86,6 +86,7 @@ elation.require(deps, function() {
         }
       })();
     this.frame = function(fn) {
+      if (ENV_IS_NODE) var window;
       this.requestAnimationFrame.call(window, fn);
     }
 
