@@ -71,8 +71,7 @@ elation.require(['engine.things.generic', 'ui.progressbar', 'engine.things.ball'
         camdir.multiplyScalar(velocity);
         camdir.add(this.objects.dynamics.velocity);
   //console.log('pew!', velocity);
-        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity }, true);
-
+        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 10, gravity: this.usegravity, player_id: this.properties.player_id }, true);
 /*
         if (!this.lights[this.lightnum]) {
           this.lights[this.lightnum] = foo.spawn('light', null, { radius: 60, intensity: 1, color: 0xffffff});

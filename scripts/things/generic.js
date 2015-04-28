@@ -47,7 +47,8 @@ elation.component.add("engine.things.generic", function() {
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
       'render.materialname': { type: 'string', comment: 'Material library name' },
-      'render.texturepath': { type: 'string', comment: 'Texture location' }
+      'render.texturepath': { type: 'string', comment: 'Texture location' },
+      'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' }
     });
     this.defineEvents({
       'thing_create': [],
@@ -406,7 +407,7 @@ elation.component.add("engine.things.generic", function() {
       elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       return true;
     } else {
-      console.log("Couldn't add ", thing, " already exists in ", this);
+      console.log("Couldn't add ", thing.name, " already exists in ", this.name);
     }
     return false;
   }
@@ -424,7 +425,7 @@ elation.component.add("engine.things.generic", function() {
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
     } else {
-      console.log("Couldn't remove ", thing, " doesn't exist in ", this);
+      console.log("Couldn't remove ", thing.name, " doesn't exist in ", this.name);
     }
   }
   this.reparent = function(newparent) {
@@ -887,6 +888,7 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
             var ref = propval;
             propval = [ ref.type, ref.id ];
             break;
+
         }
         if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
           //elation.utils.arrayset(ret.properties, k, propval);

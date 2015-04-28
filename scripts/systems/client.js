@@ -7,14 +7,14 @@ elation.extend("engine.systems.client", function(args) {
   this.lastUpdate = Date.now();
   this.lastMessage = null;
   var UPDATE_INTERVAL = 25; // ms
-  var MAX_EXTRAP_TIME = 200; // ms
+  var MAX_EXTRAP_TIME = 100; // ms
   
   this.system_attach = function(ev) {
     console.log('INIT: networking client');
     this.world = this.engine.systems.world;
     console.log('this.world:', this.world);
     this.connection = new elation.engine.systems.client.connection({
-      transport: 'webrtc',
+      transport: 'websocket',
       host: 'dev.brandonhinshaw.us',
       port: '9001'
     });
@@ -24,14 +24,33 @@ elation.extend("engine.systems.client", function(args) {
   };
   
   this.onNewThing = function(ev) {
-    console.log('new thing', ev.data.thing);
+    // console.log('new thing', ev.data.thing);
     var thing = ev.data.thing;
-    console.log('hastag:',thing.hasTag('local_sync'))
     if (thing.hasTag('local_sync')) {
-      console.log('local sync');
-      elation.events.add(thing, 'thing_change', elation.bind(this, this.onThingChange));
+      console.log(ev.data);
+      if (thing.type != 'vrcadeplayer') {
+        var msgdata = {
+          type: 'add_thing',
+          data: { thing: thing.serialize() }
+        };
+        console.info('sending add_thing to server:', msgdata);
+        this.send(msgdata);
+      }
+      else {
+        elation.events.add(thing, 'thing_change', elation.bind(this, this.onThingChange));
+      }
+      thing.removeTag('local_sync');
+      
     }
+    // FIXME
   };
+  
+  this.sendNewThing = function() {
+    var msg = {
+      type: 'new_thing',
+      data: 'test' 
+    };
+  }
   
   this.onThingChange = function(ev) {
     var thing = ev.target;
@@ -52,6 +71,7 @@ elation.extend("engine.systems.client", function(args) {
           }
         };
         this.send(msgdata); 
+        this.lastUpdate = Date.now();
       }
     }
   };
@@ -135,7 +155,7 @@ elation.extend('engine.systems.client.connection', function(opts) {
 });
 
 elation.extend('engine.systems.client.websocket', function(opts) {
-  this.address = 'ws://' + opts.address + opts.port;
+  this.address = 'ws://' + opts.host + ':' + opts.port;
   
   this.init = function() {
     this.connect();
@@ -143,7 +163,7 @@ elation.extend('engine.systems.client.websocket', function(opts) {
   
   this.connect = function() {
     if (!this.websocket) {
-      this.websocket = new WebSocket(this.address);
+      this.websocket = new WebSocket(this.address, 'arraybuffer');
       elation.events.add(this.websocket, "open", elation.bind(this, this.onOpen));
       elation.events.add(this.websocket, "message", elation.bind(this, this.onMessage));
       elation.events.add(this.websocket, "close", elation.bind(this, this.onClose));
@@ -158,7 +178,7 @@ elation.extend('engine.systems.client.websocket', function(opts) {
   };
 
   this.send = function(data) {
-    this.websocket.send(data);
+    this.websocket.send(JSON.stringify(data));
   };
   
   this.onOpen = function(ev) {
@@ -175,6 +195,7 @@ elation.extend('engine.systems.client.websocket', function(opts) {
     this.websocket = null;
   };
   
+  this.init();
 });
 
 elation.extend('engine.systems.client.webrtc', function(socketOpts) {

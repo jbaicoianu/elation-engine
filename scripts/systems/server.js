@@ -3,16 +3,19 @@ elation.extend("engine.systems.server", function(args) {
   var wrtc = require('wrtc');
   this.clients = {};
   this.transport = 'webrtc';
+  var UPDATE_RATE = 40; // ms
+  this.lastUpdate = null; //ms
   
   this.system_attach = function(ev) {
     console.log('INIT: networking server');
     this.world = this.engine.systems.world;
-    this.webrtc = new elation.engine.systems.server.webrtc;
+    // FIXME - hardcoded ws/wrtc setup, should be in a config
+    this.server = new elation.engine.systems.server.websocket;
     
     var events = [
-      [this.webrtc, 'client_disconnected', this.onClientConnect],
-      [this.webrtc, 'client_connected', this.onClientConnect],
-      [this.world, 'world_thing_remove', this.onThingRemove],
+      [this.server, 'client_disconnected', this.onClientDisconnect],
+      [this.server, 'client_connected', this.onClientConnect],
+      // [this.world, 'world_thing_remove', this.onThingRemove],
       [this.world, 'world_thing_add', this.onThingAdd],
       // [this.world, 'world_thing_change', this.onThingChange]
     ];
@@ -35,7 +38,7 @@ elation.extend("engine.systems.server", function(args) {
   };
  
   this.engine_frame = function() {
-
+    this.sendChanges();
   };
 
   this.sendToAll = function(data) {
@@ -48,7 +51,7 @@ elation.extend("engine.systems.server", function(args) {
 
   this.onClientConnect = function(ev) {
     var client = new elation.engine.systems.server.client({
-      transport: 'webrtc',
+      transport: 'websocket',
       id: ev.data.id,
       socket: ev.data.channel
     });
@@ -56,6 +59,7 @@ elation.extend("engine.systems.server", function(args) {
     elation.events.add(client, 'received_id', elation.bind(this, this.sendWorldData));
     elation.events.add(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     elation.events.add(client, 'thing_changed', elation.bind(this, this.onRemoteThingChange));
+    elation.events.add(client, 'new_thing', elation.bind(this, this.onNewThing));
     console.log('client connected', client.id);
     client.send({ type: 'id_token', data: client.id });
   };
@@ -63,7 +67,11 @@ elation.extend("engine.systems.server", function(args) {
   this.handleNewPlayer = function(ev) {
     // console.log(ev);
     elation.events.fire({type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing}});
-  }
+  };
+  
+  this.handleNewThing = function(ev) {
+    elation.events.fire({type: 'add_thing', data: {thing: ev.data.data.thing}});
+  };
   
   this.sendWorldData = function(evt) {
     // console.log('got id', evt);
@@ -73,28 +81,52 @@ elation.extend("engine.systems.server", function(args) {
   
   this.onThingAdd = function(ev) {
     console.log('thing add', ev.data.thing.name);
-    this.sendToAll({ type: 'thing_added', data: ev.data.thing.serialize() });
-  };
-  
-  this.onThingRemove = function(ev) {
-    console.log('thing remove', ev.data.thing.name);
-    this.sendToAll({ type:'thing_removed', data: ev.data.thing.name });
-  };
-  
-  this.onThingChange = function(ev) {
-    // console.log('world thing changed', ev.target.serialize());
-    var msg = { type: 'thing_changed', data: ev.target.serialize() };
-    if (this.clients.hasOwnProperty(ev.target.name)) {
+    var client_id = ev.data.thing.properties.player_id;
+    
+    var msg = { type: 'thing_added', data: ev.data.thing.serialize() };
+    if (this.clients.hasOwnProperty(client_id)) {
       for (var client in this.clients) {
-        if (this.clients.hasOwnProperty(client) && client != ev.target.name) {
-          // console.log('sending msg to', client, 'about change in', ev.target.name);
-          this.clients[client].send(msg);
-        } 
+        if (this.clients.hasOwnProperty(client_id) && client != client_id ) {
+          this.clients[client].send(msg); 
+        }
       }
     }
     else {
-      // console.log('sending to all');
       this.sendToAll(msg);
+    }
+  };
+  
+  this.onThingRemove = function(ev) {
+    // console.log('thing remove', ev.data.thing.name);
+    // this.sendToAll({ type:'thing_removed', data: ev.data.thing.name });
+  };
+  
+  this.onThingChange = function(ev) {
+    var thing = ev.target || ev.element;
+    if (!thing.hasTag('thing_changed')) {
+      thing.addTag('thing_changed');
+    }
+  };
+  
+  this.sendChanges = function() {
+    if (Date.now() - this.lastUpdate > UPDATE_RATE) {
+      var changed = this.world.getThingsByTag('thing_changed');
+      for (var i = 0; i < changed.length; i++) {
+        var thing = changed[i];
+        thing.removeTag('thing_changed');
+        var msgdata = {
+          type: 'thing_changed', data: thing.serialize() 
+        };
+        if (this.clients.hasOwnProperty(thing.properties.player_id)) {
+          for (var client in this.clients) {
+            if (this.clients.hasOwnProperty(client) && client != thing.properties.player_id) {
+              this.clients[client].send(msgdata);
+            }
+          }
+        }
+        else { this.sendToAll(msgdata); }
+      }
+    this.lastUpdate = Date.now(); 
     }
   }
   
@@ -109,8 +141,8 @@ elation.extend("engine.systems.server", function(args) {
   this.onClientDisconnect = function(ev) {
     // console.log(ev);
     var client = this.clients[ev.data];
-    elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
-    elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
+    // elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
+    // elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     this.removeClient(ev.data);
     elation.events.fire({type: 'destroy_player', data: ev.data});
     console.log('Client disconnected, num clients:', Object.keys(this.clients).length); 
@@ -123,36 +155,81 @@ elation.extend("engine.systems.server.client", function(args) {
    * This object represents a client connection
    * 
    */
+   
   this.transport = args.transport;
   this.id = args.id;
   this.socket = args.socket;
   this.lastMessage = null;
   
-  this.send = function(data) {
-    if (this.socket.readyState == 'open') {
-      // console.log('sent a msg');
-      data.timestamp = Date.now();
-      this.socket.send(JSON.stringify(data));
-    }
-  };
+  this.transport = args.transport;
   
-  this.socket.onmessage = function(evt) {
-    var msgdata = JSON.parse(evt.data);
-    var timestamp = msgdata.timestamp;
-    if (!this.lastMessage) this.lastMessage = timestamp;
-    if (timestamp >= this.lastMessage) {
-      // only fire an event if the message is newer than the last received msg
-      var evdata = {
-        type: msgdata.type,
-        data: { id: this.id, data: msgdata.data }
+  //FIXME - make this a proper polymorphic object
+  if (this.transport == 'webrtc') {
+   this.send = function(data) {
+      if (this.socket.readyState == 'open') {
+        // console.log('sent a msg');
+        data.timestamp = Date.now();
+        this.socket.send(JSON.stringify(data));
+      }
+    };
+    
+    this.socket.onmessage = function(evt) {
+      var msgdata = JSON.parse(evt.data);
+      var timestamp = msgdata.timestamp;
+      if (!this.lastMessage) this.lastMessage = timestamp;
+      if (timestamp >= this.lastMessage) {
+        // only fire an event if the message is newer than the last received msg
+        var evdata = {
+          type: msgdata.type,
+          data: { id: this.id, data: msgdata.data }
+        };
+        elation.events.fire(evdata);
+        this.lastMessage = timestamp;
+      } else { console.log('discarded a message'); }
+    };
+  }
+  if (this.transport == 'websocket') {
+    this.send = function(data) {
+      try {
+        data.timestamp = Date.now();
+        this.socket.send(JSON.stringify(data));
+      }
+      catch(e) { console.log(e) }
+    };
+    this.socket.on('message', function(msg, flags) {
+      var msgdata = JSON.parse(msg);
+      var timestamp = msgdata.timestamp;
+      if (!this.lastMessage) this.lastMessage = timestamp;
+      if (timestamp >= this.lastMessage) {
+        // only fire an event if the message is newer than the last received msg
+        var evdata = {
+          type: msgdata.type,
+          data: { id: this.id, data: msgdata.data }
+        };
+        elation.events.fire(evdata);
+        this.lastMessage = timestamp;
       };
-      elation.events.fire(evdata);
-      this.lastMessage = timestamp;
-    } else { console.log('discarded a message'); }
-  };
-  
+    });
+  }
 });
 
+
+
+// FIXME - servers should take args for port/etc
+elation.extend("engine.systems.server.websocket", function() {
+  var wsServer = require('ws').Server,
+      wss = new wsServer({ port: 9001 });  
+      
+  wss.on('connection', function(ws) {
+    console.log('websocket conn');
+    var id = Date.now();
+    elation.events.fire({ type: 'client_connected', data: {id: id, channel: ws}});
+    ws.on('close', function() {
+      elation.events.fire({type: 'client_disconnected', data: id});
+    });
+  });
+  
+})
 elation.extend("engine.systems.server.webrtc", function() {
   var http = require('http');
   var webrtc = require('wrtc');
