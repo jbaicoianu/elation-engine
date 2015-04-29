@@ -11,12 +11,14 @@ elation.extend("engine.systems.server", function(args) {
     this.world = this.engine.systems.world;
     // FIXME - hardcoded ws/wrtc setup, should be in a config
     this.server = new elation.engine.systems.server.websocket;
+    this.adminServer = new elation.engine.systems.server.adminserver;
     
     var events = [
       [this.server, 'client_disconnected', this.onClientDisconnect],
       [this.server, 'client_connected', this.onClientConnect],
-      // [this.world, 'world_thing_remove', this.onThingRemove],
       [this.world, 'world_thing_add', this.onThingAdd],
+      [this.adminServer, 'admin_client_connected', this.onAdminClientConnect],
+      // [this.world, 'world_thing_remove', this.onThingRemove],
       // [this.world, 'world_thing_change', this.onThingChange]
     ];
     
@@ -24,6 +26,29 @@ elation.extend("engine.systems.server", function(args) {
       this.addEvent(events[i])  
     };
   };
+  
+  this.serialize_clients = function() {
+    var obj = {};
+    for (var client in this.clients) {
+      if (this.clients.hasOwnProperty(client)) {
+          obj[client] = {
+            id: this.clients[client].id
+          }
+      }
+    }
+    return obj;
+  }
+  
+  this.onAdminClientConnect = function(ev) {
+    ev.data.channel.send(JSON.stringify(this.serialize_world()));
+    var playermsg = {
+      type: 'player_data',
+      data: this.serialize_clients()
+    };
+    
+
+    ev.data.channel.send(JSON.stringify(playermsg));
+  }
   
   this.addEvent = function(args) {
     elation.events.add(args[0], args[1], elation.bind(this, args[2]));
@@ -219,13 +244,28 @@ elation.extend("engine.systems.server.client", function(args) {
 elation.extend("engine.systems.server.websocket", function() {
   var wsServer = require('ws').Server,
       wss = new wsServer({ port: 9001 });  
-      
+  console.log('websocket server running on 9001')
   wss.on('connection', function(ws) {
-    console.log('websocket conn');
+    console.log('game server websocket conn');
     var id = Date.now();
     elation.events.fire({ type: 'client_connected', data: {id: id, channel: ws}});
     ws.on('close', function() {
       elation.events.fire({type: 'client_disconnected', data: id});
+    });
+  });
+  
+})
+
+elation.extend("engine.systems.server.adminserver", function() {
+  var wsServer = require('ws').Server,
+      wss = new wsServer({ port: 9002 });  
+  console.log('admin server running on 9002');
+  wss.on('connection', function(ws) {
+    console.log('admin server websocket conn');
+    var id = Date.now();
+    elation.events.fire({ type: 'admin_client_connected', data: {id: id, channel: ws}});
+    ws.on('close', function() {
+      elation.events.fire({type: 'admin_client_disconnected', data: id});
     });
   });
   
