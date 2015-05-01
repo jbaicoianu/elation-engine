@@ -158,11 +158,15 @@ elation.require(['utils.template'], function() {
     }
     this.assembleChunks = function(type, chunks) {
       var chunk = ["", ""];
+      chunk[0] = THREE.ShaderChunk['common'];
 
       for (var i = 0; i < chunks.length; i++) {
         var chunkname = chunks[i];
         var chunkpart = ["", ""];
         if (this.shaderchunks[chunkname]) {
+          if (this.shaderchunks[chunkname]['common_pars']) {
+            chunkpart[0] += this.shaderchunks[chunkname]['common_pars'] + "\n";
+          }
           if (this.shaderchunks[chunkname][type + '_pars']) {
             chunkpart[0] += this.shaderchunks[chunkname][type + '_pars'] + "\n";
           }
