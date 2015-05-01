@@ -152,12 +152,14 @@ elation.require([], function() {
       this.meshes[name].add(data.scene);
       //data.scene.rotation.x = -Math.PI/2;
       //data.scene.rotation.z = Math.PI;
+/*
       data.scene.traverse(function(n) {
         if (n instanceof THREE.Mesh) {
           var geo = new THREE.BufferGeometry().fromGeometry(n.geometry);
           n.geometry = geo;
         }
       });
+*/
       elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
     }
     this.getMesh = function(name) {
