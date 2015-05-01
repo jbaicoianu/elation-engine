@@ -555,8 +555,13 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
       var s = elation.html.dimensions(this.container);
-      this.size = [s.w, s.h];
-      this.setrendersize(this.size[0], this.size[1]);
+      var domel = this.rendersystem.renderer.domElement;
+      if (s.w != domel.width || s.h != domel.height) {
+        this.size = [s.w, s.h];
+        this.setrendersize(this.size[0], this.size[1]);
+      }
+      this.rendersystem.setdirty();
+
       return this.size;
     }
     this.setrendersize = function(width, height) {
@@ -616,7 +621,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.resize = function(ev) {
       this.getsize();
-      this.rendersystem.setdirty();
     }
     this.mouseover = function(ev) {
       if (!this.pickingactive) {
