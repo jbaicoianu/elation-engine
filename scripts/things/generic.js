@@ -481,6 +481,7 @@ elation.component.add("engine.things.generic", function() {
         }
       }
       elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
+      elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
     }
   }
   this.removeDynamics = function() {
