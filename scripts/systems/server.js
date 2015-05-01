@@ -2,7 +2,8 @@ elation.extend("engine.systems.server", function(args) {
   elation.implement(this, elation.engine.systems.system);
   var wrtc = require('wrtc');
   this.clients = {};
-  this.transport = 'webrtc';
+  this.adminClients = [];
+  this.transport = 'websocket';
   var UPDATE_RATE = 40; // ms
   this.lastUpdate = null; //ms
   
@@ -23,8 +24,8 @@ elation.extend("engine.systems.server", function(args) {
     ];
     
     for (var i = 0; i < events.length; i++) {
-      this.addEvent(events[i])  
-    };
+      this.addEvent(events[i]);  
+    }
   };
   
   this.serialize_clients = function() {
@@ -33,22 +34,20 @@ elation.extend("engine.systems.server", function(args) {
       if (this.clients.hasOwnProperty(client)) {
           obj[client] = {
             id: this.clients[client].id
-          }
+          };
       }
     }
     return obj;
-  }
+  };
   
   this.onAdminClientConnect = function(ev) {
     ev.data.channel.send(JSON.stringify(this.serialize_world()));
-    var playermsg = {
-      type: 'player_data',
-      data: this.serialize_clients()
-    };
-    
-
-    ev.data.channel.send(JSON.stringify(playermsg));
-  }
+    // var playermsg = {
+    //   type: 'player_data',
+    //   data: this.serialize_clients()
+    // };
+    this.adminClients.push(ev.data.channel);
+  };
   
   this.addEvent = function(args) {
     elation.events.add(args[0], args[1], elation.bind(this, args[2]));
@@ -72,7 +71,7 @@ elation.extend("engine.systems.server", function(args) {
         this.clients[client].send(data);
       }
     }
-  }
+  };
 
   this.onClientConnect = function(ev) {
     var client = new elation.engine.systems.server.client({
@@ -85,12 +84,12 @@ elation.extend("engine.systems.server", function(args) {
     elation.events.add(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     elation.events.add(client, 'thing_changed', elation.bind(this, this.onRemoteThingChange));
     elation.events.add(client, 'new_thing', elation.bind(this, this.onNewThing));
+    elation.events.add(client, 'socket_message_sent', elation.bind(this, this.onSocketSend));
     console.log('client connected', client.id);
     client.send({ type: 'id_token', data: client.id });
   };
   
   this.handleNewPlayer = function(ev) {
-    // console.log(ev);
     elation.events.fire({type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing}});
   };
   
@@ -99,15 +98,14 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.sendWorldData = function(evt) {
-    // console.log('got id', evt);
     var client = this.clients[evt.data.data];
     client.send(this.serialize_world());
   };
   
   this.onThingAdd = function(ev) {
     console.log('thing add', ev.data.thing.name);
+    // elation.events.add(ev.data.thing, 'thing_change', this.onThingChange);
     var client_id = ev.data.thing.properties.player_id;
-    
     var msg = { type: 'thing_added', data: ev.data.thing.serialize() };
     if (this.clients.hasOwnProperty(client_id)) {
       for (var client in this.clients) {
@@ -122,12 +120,12 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.onThingRemove = function(ev) {
-    // console.log('thing remove', ev.data.thing.name);
-    // this.sendToAll({ type:'thing_removed', data: ev.data.thing.name });
+    // TODO
   };
   
   this.onThingChange = function(ev) {
     var thing = ev.target || ev.element;
+    // console.log('THING CHANGE', thing.type, thing.name, 'pos: ', thing.properties.position);
     if (!thing.hasTag('thing_changed')) {
       thing.addTag('thing_changed');
     }
@@ -153,11 +151,11 @@ elation.extend("engine.systems.server", function(args) {
       }
     this.lastUpdate = Date.now(); 
     }
-  }
+  };
   
   this.onRemoteThingChange = function(ev) {
     elation.events.fire('remote_thing_change', ev.data);
-  }
+  };
   
   this.removeClient = function(id) {
     delete this.clients[id];
@@ -166,12 +164,23 @@ elation.extend("engine.systems.server", function(args) {
   this.onClientDisconnect = function(ev) {
     // console.log(ev);
     var client = this.clients[ev.data];
-    // elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
-    // elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
+    elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
+    elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     this.removeClient(ev.data);
     elation.events.fire({type: 'destroy_player', data: ev.data});
     console.log('Client disconnected, num clients:', Object.keys(this.clients).length); 
   };
+ 
+ this.onSocketSend = function(ev) {
+   var msg = {
+     type: ev.type,
+     data: ev.data
+   };
+  // console.log('sent message',msg);
+   this.adminServer.wss.clients.forEach(function(client){
+     client.send(JSON.stringify(msg));
+   });
+ };
  
 });
 
@@ -215,9 +224,11 @@ elation.extend("engine.systems.server.client", function(args) {
   }
   if (this.transport == 'websocket') {
     this.send = function(data) {
+      // console.log('foo');
       try {
         data.timestamp = Date.now();
         this.socket.send(JSON.stringify(data));
+        elation.events.fire({type: 'socket_message_sent', data:{type: data.type, data: data.data, client_id: this.id, timestamp: data.timestamp}});
       }
       catch(e) { console.log(e) }
     };
@@ -257,10 +268,11 @@ elation.extend("engine.systems.server.websocket", function() {
 })
 
 elation.extend("engine.systems.server.adminserver", function() {
-  var wsServer = require('ws').Server,
-      wss = new wsServer({ port: 9002 });  
+  var wsServer = require('ws').Server;
+  //FIXME - port hardcoded
+  this.wss = new wsServer({ port: 9002 });  
   console.log('admin server running on 9002');
-  wss.on('connection', function(ws) {
+  this.wss.on('connection', function(ws) {
     console.log('admin server websocket conn');
     var id = Date.now();
     elation.events.fire({ type: 'admin_client_connected', data: {id: id, channel: ws}});

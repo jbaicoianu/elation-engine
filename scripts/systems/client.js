@@ -7,7 +7,7 @@ elation.extend("engine.systems.client", function(args) {
   this.lastUpdate = Date.now();
   this.lastMessage = null;
   var UPDATE_INTERVAL = 25; // ms
-  var MAX_EXTRAP_TIME = 100; // ms
+  var MAX_EXTRAP_TIME = 200; // ms
   
   this.system_attach = function(ev) {
     console.log('INIT: networking client');
