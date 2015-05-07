@@ -33,6 +33,7 @@ elation.require(['utils.template'], function() {
       elation.events.fire({element: this, type: 'engine_material_add', data: { name: materialname, material: this.materiallibrary[materialname] } });
     }
     this.getTexture = function(url, repeat, mirrored) {
+      if (ENV_IS_NODE) return;
       if (!this.texturecache[url]) {
         if (url.match(/^data:/)) {
           var img = document.createElement('IMG');
