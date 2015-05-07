@@ -305,8 +305,10 @@ elation.component.add("engine.things.generic", function() {
           this.objects['3d'].add(subobj);
 
           this.colliders = this.extractColliders(subobj);
-          var textures = this.extractTextures(subobj, true);
-          this.loadTextures(textures);
+          if (ENV_IS_BROWSER){
+            var textures = this.extractTextures(subobj, true);
+            this.loadTextures(textures);
+          }
         }), 0);
       }
     }
