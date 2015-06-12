@@ -345,7 +345,7 @@ elation.require([
     }
     this.setFogExp = function(exp, color) {
       if (!color) color = 0xffffff;
-      this.scene['world-3d'].fog = new THREE.FogExp2(color, amount);
+      this.scene['world-3d'].fog = new THREE.FogExp2(color, exp);
     }
     this.parseDocumentHash = function() {
       var parsedurl = elation.utils.parseURL(document.location.hash);
