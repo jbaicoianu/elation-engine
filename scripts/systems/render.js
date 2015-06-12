@@ -45,9 +45,14 @@ elation.require([
       this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
-      this.renderer.setClearColor(0xffffff, 0);
+      this.renderer.setClearColor(0xffffff, 1);
       this.renderer.shadowMapEnabled = true;
       this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
+
+      this.renderer.gammaInput = true;
+      this.renderer.gammaOutput = true;
+      this.renderer.gammaFactor = 2.2;
+
       this.lastframetime = 0;
 
       elation.events.add(this.engine.systems.world, 'world_change,world_thing_add,world_thing_remove,world_thing_change', this);
