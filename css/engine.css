@@ -12,8 +12,7 @@ body {
   position: relative;
 }
 .engine_view_fullsize {
-  position: absolute;
-  min-height: 120px;
+  position: fixed;
   overflow: hidden;
   z-index: 1;
   top: 0;
