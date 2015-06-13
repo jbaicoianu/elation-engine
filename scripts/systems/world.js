@@ -371,6 +371,16 @@ elation.require([
       }
       return things;
     }
+    this.getThingsByPlayer = function(player) {
+      var things = [];
+      for (var k in this.children) {
+        if (this.children[k].getPlayer() == player) {
+          things.push(this.children[k]);
+        }
+        this.children[k].getChildrenByPlayer(player, things);
+      }
+      return things;
+    }
     this.getThingsByType = function(type) {
     }
     this.getThingByObject = function(obj) {
