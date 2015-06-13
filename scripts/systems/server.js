@@ -152,11 +152,11 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.onClientDisconnect = function(ev) {
-    var client = this.clients[ev.data];
+    var client = this.clients[ev.data.id];
     elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
     elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
-    this.removeClient(ev.data);
-    elation.events.fire({type: 'destroy_player', data: ev.data});
+    this.removeClient(ev.data.id);
+    elation.events.fire({type: 'player_disconnect', data: ev.data});
     console.log('Client disconnected, num clients:', Object.keys(this.clients).length); 
   };
  
@@ -249,7 +249,7 @@ elation.extend("engine.systems.server.websocket", function() {
     var id = Date.now();
     elation.events.fire({ type: 'client_connected', data: {id: id, channel: ws}});
     ws.on('close', function() {
-      elation.events.fire({type: 'client_disconnected', data: id});
+      elation.events.fire({type: 'client_disconnected', data: {id: id}});
     });
   });
   

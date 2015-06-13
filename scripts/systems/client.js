@@ -20,11 +20,10 @@ elation.extend("engine.systems.client", function(args) {
     });
     elation.events.add(this.connection.socket, 'new_message', elation.bind(this, this.onNewMessage));
     elation.events.add(this.world, 'world_thing_add', elation.bind(this, this.onNewThing));
-    // elation.events.add(this.world, 'world_thing_remove', this.handleRemovedThing.bind(this))
+    // elation.events.add(this.world, 'world_thing_remove', elation.bind(this, this.onThingRemove));
   };
   
   this.onNewThing = function(ev) {
-    // console.log('new thing', ev.data.thing);
     var thing = ev.data.thing;
     if (thing.hasTag('local_sync')) {
       console.log(ev.data);
