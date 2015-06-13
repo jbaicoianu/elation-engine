@@ -21,6 +21,18 @@ elation.component.add("engine.things.generic", function() {
     this.parttypes = {};
     this.children = {};
     this.tags = [];
+    
+    this.tmpvec = new THREE.Vector3();
+    
+    this.interp = {
+      rate: 20,
+      lastTime: 0,
+      time: 0,
+      endpoint: new THREE.Vector3(),
+      spline: [],
+      active: false,
+      fn: this.applyInterp
+    };
 
     elation.events.add(this, 'thing_create', this);
     this.defineActions({
@@ -240,6 +252,46 @@ elation.component.add("engine.things.generic", function() {
       }
     }
   }
+  this.setProperties = function(properties, interpolate) {
+    for (var prop in properties) {
+      if (prop == 'position' && interpolate == true )
+      {
+          if ( this.tmpvec.fromArray(properties[prop]).distanceToSquared(this.get('position')) > 1 )
+          {
+            // call interpolate function 
+            // TODO: fix magic number 0.001
+            this.interpolateTo(properties[prop]);
+          }
+      }
+      else {
+        this.set(prop, properties[prop], false);
+      }
+    }
+    this.refresh();
+  }
+  
+  this.interpolateTo = function(newPos) {
+    this.interp.time = 0;
+    this.interp.endpoint.fromArray(newPos);
+    this.interp.spline = new THREE.SplineCurve3([this.get('position'), this.interp.endpoint]).getPoints(10);
+    // console.log(this.interp.spline);
+    elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.applyInterp));
+  }
+  
+  this.applyInterp = function(ev) {
+    this.interp.time += ev.data.delta * this.engine.systems.physics.timescale;
+    if (this.interp.time >= this.interp.rate) {
+      elation.events.remove(this, 'engine_frame', elation.bind(this, this.applyInterp));
+      return;
+    }
+    console.log("DEBUG: interpolating, time:", this.interp.time);
+    if (this.interp.time - this.interp.lastTime >= 2) 
+    {
+    this.set('position', this.interp.spline[Math.floor((this.interp.time * 10) / this.interp.rate)], false);
+    this.refresh();
+    }
+  };
+  
   this.get = function(property, defval) {
     if (typeof defval == 'undefined') defval = null;
     return elation.utils.arrayget(this.properties, property, defval);
@@ -982,6 +1034,10 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     }
     return false;
   }
+  this.getPlayer = function() {
+    console.log('player id:', this.get('player_id'));
+    return this.get('player_id');
+  }
   this.addPart = function(name, part) {
     if (this.parts[name] === undefined) {
       this.parts[name] = part;
@@ -1014,6 +1070,16 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     return null;
   }
   this.getObjectsByTag = function(tag) {
+  }
+  this.getChildrenByPlayer = function(player, collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      if (this.children[k].getPlayer() == player) {
+        collection.push(this.children[k]);
+      }
+      this.children[k].getChildrenByPlayer(player, collection);
+    }
+    return collection;
   }
   this.getChildrenByTag = function(tag, collection) {
     if (typeof collection == 'undefined') collection = [];
