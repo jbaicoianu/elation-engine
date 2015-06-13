@@ -10,7 +10,6 @@ elation.extend("engine.systems.server", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: networking server');
     this.world = this.engine.systems.world;
-    // FIXME - hardcoded ws/wrtc setup, should be in a config
     this.server = new elation.engine.systems.server.websocket;
     this.adminServer = new elation.engine.systems.server.adminserver;
     
@@ -19,8 +18,8 @@ elation.extend("engine.systems.server", function(args) {
       [this.server, 'client_connected', this.onClientConnect],
       [this.world, 'world_thing_add', this.onThingAdd],
       [this.adminServer, 'admin_client_connected', this.onAdminClientConnect],
-      // [this.world, 'world_thing_remove', this.onThingRemove],
-      // [this.world, 'world_thing_change', this.onThingChange]
+      [this.world, 'world_thing_remove', this.onThingRemove],
+      // [this.world, 'thing_change', this.onThingChange]
     ];
     
     for (var i = 0; i < events.length; i++) {
@@ -42,10 +41,6 @@ elation.extend("engine.systems.server", function(args) {
   
   this.onAdminClientConnect = function(ev) {
     ev.data.channel.send(JSON.stringify(this.serialize_world()));
-    // var playermsg = {
-    //   type: 'player_data',
-    //   data: this.serialize_clients()
-    // };
     this.adminClients.push(ev.data.channel);
   };
   
@@ -102,30 +97,35 @@ elation.extend("engine.systems.server", function(args) {
     client.send(this.serialize_world());
   };
   
-  this.onThingAdd = function(ev) {
-    console.log('thing add', ev.data.thing.name);
-    // elation.events.add(ev.data.thing, 'thing_change', this.onThingChange);
-    var client_id = ev.data.thing.properties.player_id;
-    var msg = { type: 'thing_added', data: ev.data.thing.serialize() };
+  this.sendThingState = function(thing, state) {
+    // states: 'thing_changed', 'thing_added', 'thing_removed'
+    var client_id = thing.properties.player_id;
+    var msg = { type: state, data: thing.serialize() };
     if (this.clients.hasOwnProperty(client_id)) {
       for (var client in this.clients) {
-        if (this.clients.hasOwnProperty(client_id) && client != client_id ) {
-          this.clients[client].send(msg); 
+        if (this.clients.hasOwnProperty(client_id) && client != client_id) {
+          this.clients[client].send(msg);
         }
       }
     }
     else {
       this.sendToAll(msg);
     }
+  }
+  this.onThingAdd = function(ev) {
+    // bind thing remove here?
+    console.log('thing add', ev.data.thing.name);
+    this.sendThingState(ev.data.thing, 'thing_added');
   };
   
   this.onThingRemove = function(ev) {
     // TODO
+    console.log('thing remove', ev.data.thing.name);
+    this.sendThingState(ev.data.thing, 'thing_removed');
   };
   
   this.onThingChange = function(ev) {
     var thing = ev.target || ev.element;
-    // console.log('THING CHANGE', thing.type, thing.name, 'pos: ', thing.properties.position);
     if (!thing.hasTag('thing_changed')) {
       thing.addTag('thing_changed');
     }
@@ -137,19 +137,9 @@ elation.extend("engine.systems.server", function(args) {
       for (var i = 0; i < changed.length; i++) {
         var thing = changed[i];
         thing.removeTag('thing_changed');
-        var msgdata = {
-          type: 'thing_changed', data: thing.serialize() 
-        };
-        if (this.clients.hasOwnProperty(thing.properties.player_id)) {
-          for (var client in this.clients) {
-            if (this.clients.hasOwnProperty(client) && client != thing.properties.player_id) {
-              this.clients[client].send(msgdata);
-            }
-          }
-        }
-        else { this.sendToAll(msgdata); }
+        this.sendThingState(thing, 'thing_changed');
+        this.lastUpdate = Date.now(); 
       }
-    this.lastUpdate = Date.now(); 
     }
   };
   
@@ -162,7 +152,6 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.onClientDisconnect = function(ev) {
-    // console.log(ev);
     var client = this.clients[ev.data];
     elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
     elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
@@ -176,7 +165,6 @@ elation.extend("engine.systems.server", function(args) {
      type: ev.type,
      data: ev.data
    };
-  // console.log('sent message',msg);
    this.adminServer.wss.clients.forEach(function(client){
      client.send(JSON.stringify(msg));
    });
@@ -288,7 +276,6 @@ elation.extend("engine.systems.server.webrtc", function() {
   var ws = require('ws');
   var net = require('net');
   
-  // var args = require('minimist')(process.argv.slice(2));
   var MAX_REQUEST_LENGTH = 1024;
   var pc = null,
       offer = null,
@@ -413,7 +400,6 @@ elation.extend("engine.systems.server.webrtc", function() {
         };
   
         pc.onicecandidate = function(candidate) {
-          // console.log('onicecandidate', candidate);
           ws.send(JSON.stringify(
             {'type': 'ice',
              'sdp': {'candidate': candidate.candidate, 'sdpMid': candidate.sdpMid, 'sdpMLineIndex': candidate.sdpMLineIndex}
