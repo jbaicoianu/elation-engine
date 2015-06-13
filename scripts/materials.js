@@ -42,12 +42,17 @@ elation.require(['utils.template'], function() {
           this.texturecache[url].needsUpdate = true;
           this.texturecache[url].sourceFile = url;
         } else if (url.match(/\.dds$/)) {
+          /*
           var ddsloader = new THREE.DDSLoader();
           this.texturecache[url] = ddsloader.load(url);
           //this.texturecache[url].flipY = false;
+          */
         } else {
           this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
           //elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: this.texturecache[url].image } });
+        }
+        if (!this.texturecache[url]) {
+          this.texturecache[url] = elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1]);
         }
         this.texturecache[url].anisotropy = 16;
         elation.events.add(this.texturecache[url], 'update', function(ev) { 
@@ -160,11 +165,15 @@ elation.require(['utils.template'], function() {
     }
     this.assembleChunks = function(type, chunks) {
       var chunk = ["", ""];
+      chunk[0] = THREE.ShaderChunk['common'];
 
       for (var i = 0; i < chunks.length; i++) {
         var chunkname = chunks[i];
         var chunkpart = ["", ""];
         if (this.shaderchunks[chunkname]) {
+          if (this.shaderchunks[chunkname]['common_pars']) {
+            chunkpart[0] += this.shaderchunks[chunkname]['common_pars'] + "\n";
+          }
           if (this.shaderchunks[chunkname][type + '_pars']) {
             chunkpart[0] += this.shaderchunks[chunkname][type + '_pars'] + "\n";
           }

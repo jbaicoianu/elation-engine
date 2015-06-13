@@ -45,9 +45,14 @@ elation.require([
       this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
-      this.renderer.setClearColor(0xffffff, 0);
+      this.renderer.setClearColor(0xffffff, 1);
       this.renderer.shadowMapEnabled = true;
       this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
+
+      this.renderer.gammaInput = true;
+      this.renderer.gammaOutput = true;
+      this.renderer.gammaFactor = 2.2;
+
       this.lastframetime = 0;
 
       elation.events.add(this.engine.systems.world, 'world_change,world_thing_add,world_thing_remove,world_thing_change', this);
@@ -555,8 +560,13 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
       var s = elation.html.dimensions(this.container);
-      this.size = [s.w, s.h];
-      this.setrendersize(this.size[0], this.size[1]);
+      var domel = this.rendersystem.renderer.domElement;
+      if (s.w != domel.width || s.h != domel.height) {
+        this.size = [s.w, s.h];
+        this.setrendersize(this.size[0], this.size[1]);
+      }
+      this.rendersystem.setdirty();
+
       return this.size;
     }
     this.setrendersize = function(width, height) {
@@ -616,7 +626,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.resize = function(ev) {
       this.getsize();
-      this.rendersystem.setdirty();
     }
     this.mouseover = function(ev) {
       if (!this.pickingactive) {

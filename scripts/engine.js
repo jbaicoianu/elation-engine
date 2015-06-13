@@ -8,6 +8,7 @@ var deps = [
 
 if (ENV_IS_BROWSER) {
   deps.push("engine.external.three.three");
+  deps.push("ui.panel");
 }
 
 else if (ENV_IS_NODE) {
@@ -153,6 +154,104 @@ elation.require(deps, function() {
       if (typeof this[ev.type] == 'function') {
         this[ev.type](ev);
       }
+    }
+  });
+  elation.component.add("engine.configuration", function() {
+    this.init = function() {
+      this.engine = this.args.engine;
+      this.view = this.args.view;
+      this.create();
+      this.addclass('engine_configuration');
+    }
+    this.create = function() {
+        /* Control Settings */
+        var controlpanel = elation.engine.systems.controls.config({
+          controlsystem: this.engine.systems.controls
+        });
+
+        /* Video Settings */
+        var videopanel = elation.ui.panel({
+          orientation: 'vertical'
+        });
+        var oculus = elation.ui.toggle({
+          label: 'Oculus Rift',
+          append: videopanel,
+          events: { toggle: elation.bind(this, this.toggleVR) }
+        });
+        var fullscreen = elation.ui.toggle({
+          label: 'Fullscreen',
+          append: videopanel,
+          events: { toggle: elation.bind(this, this.toggleFullscreen) }
+        });
+        this.view.scale = 100;
+        var scale = elation.ui.slider({
+          append: videopanel,
+          min: 1,
+          max: 200,
+          snap: 1,
+          handles: [
+            {
+              name: 'handle_one_scale',
+              value: this.view.scale,
+              labelprefix: 'View scale:',
+              bindvar: [this.view, 'scale']
+            }
+          ],
+          events: { ui_slider_change: elation.bind(this.view.rendersystem, this.view.rendersystem.setdirty) }
+        });
+        var configtabs = elation.ui.tabbedcontent({
+          append: this,
+          items: {
+            controls: { label: 'Controls', content: controlpanel },
+            video: { label: 'Video', content: videopanel },
+            audio: { label: 'Audio', disabled: true },
+            network: { label: 'Network', disabled: true },
+          }
+        });
+    }
+    this.toggleFullscreen = function() {
+      var view = this.view;
+      if (view) {
+        view.toggleFullscreen();
+      }
+    }
+    this.toggleVR = function() {
+      var view = this.view;
+      if (view) {
+        var mode = (view.rendermode == 'default' ? 'oculus' : 'default');
+        view.setRenderMode(mode);
+      }
+    }
+    this.calibrateVR = function() {
+      if (this.engine.systems.controls) {
+        this.engine.systems.controls.calibrateHMDs();
+      }
+    }
+  }, elation.ui.panel);
+
+  elation.component.add('engine.client', function() {
+
+    this.init = function() {
+      this.name = this.args.name || 'default';
+
+      this.engine = elation.engine.create(this.name, ["physics", "sound", "ai", "world", "render", "controls"], elation.bind(this, this.startEngine));
+    }
+    this.initWorld = function() {
+      // Virtual stub - inherit from elation.engine.client, then override this for your app
+    }
+    this.startEngine = function(engine) {
+      this.world = this.engine.systems.world; // shortcut
+
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: true } );
+
+      this.initWorld();
+
+
+      //this.gameobj = this.engine.systems.world.children.vrcade;
+      //this.gameobj.setview(this.view);
+      //elation.events.add(this.loader, 'ui_loader_finish', elation.bind(this.gameobj, this.gameobj.handleLoaderFinished));
+
+      engine.start();
     }
   });
 });

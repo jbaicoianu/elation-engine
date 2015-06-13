@@ -13,11 +13,35 @@ body {
 }
 .engine_view_fullsize {
   position: absolute;
-  min-height: 0;
+  min-height: 120px;
   overflow: hidden;
   z-index: 1;
   top: 0;
   bottom: 0;
   left: 0;
   right: 0;
+}
+.ui_window .ui_window_content.engine_configuration {
+  width: 60em;
+  padding: 1em 3em;
+}
+.engine_configuration .ui_tabs>ul>li {
+  border: 0px solid black;
+  border-radius: 0;
+  background: black;
+  padding: .3em;
+  width: 25%;
+  text-align: center;
+  font-size: 1.4em;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+.engine_configuration .ui_tabs>ul>li.state_selected {
+  background: white;
+  color: black;
+}
+.engine_configuration label {
+  width: 10em;
+  display: inline-block;
 }
