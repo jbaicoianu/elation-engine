@@ -559,7 +559,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
-      var s = elation.html.dimensions(this.container);
+      var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : elation.html.dimensions(this.container));
       var domel = this.rendersystem.renderer.domElement;
       if (s.w != domel.width || s.h != domel.height) {
         this.size = [s.w, s.h];

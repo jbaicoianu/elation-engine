@@ -1,0 +1,155 @@
+.controls_gamepadviewer {
+  width: 365px;
+  height: 250px;
+  position: relative;
+  background: url(http://www.html5rocks.com/en/tutorials/doodles/gamepad/gamepad-tester/images/gamepad-body.png);
+  background-size: cover;
+}
+.controls_gamepad_button {
+  border: 1px solid black;
+  border-radius: 10px;
+  background: #999;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  display: inline-block;
+  vertical-align: middle;
+  color: black;
+  position: absolute;
+  line-height: 20px;
+  box-shadow: 0 0 5px rgba(0,0,0,.8);
+}
+.controls_gamepad_button.controls_gamepad_button_shoulder {
+  width: 60px;
+  height: 15px;
+  line-height: 15px;
+}
+.controls_gamepad_button.state_pressed {
+  box-shadow: 0 0 5px rgba(0,255,0,1);
+  background: #393;
+  border-color: #0f0;
+}
+
+.controls_gamepadviewer .controls_gamepad_stick {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  z-index: 10;
+}
+.controls_gamepadviewer .controls_gamepad_stick canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  display: none;
+}
+.controls_gamepadviewer .controls_gamepad_stick.state_debug canvas {
+  display: block;
+}
+.controls_gamepadviewer .controls_gamepad_stick .controls_gamepad_stick_end {
+  background: url(http://www.html5rocks.com/en/tutorials/doodles/gamepad/gamepad-tester/images/stick.png);
+  width: 50px;
+  height: 50px;
+  background-size: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+}
+.controls_gamepadviewer .controls_gamepad_stick_left {
+  left: 102px;
+  top: 118px;
+}
+.controls_gamepadviewer .controls_gamepad_stick_right {
+  left: 207px;
+  top: 118px;
+}
+.controls_gamepadviewer .controls_gamepad_button_1 {
+  left: 280px;
+  top: 103px;
+}
+.controls_gamepadviewer .controls_gamepad_button_2 {
+  left: 301px;
+  top: 82px;
+}
+.controls_gamepadviewer .controls_gamepad_button_3 {
+  left: 259px;
+  top: 82px;
+}
+.controls_gamepadviewer .controls_gamepad_button_4 {
+  left: 280px;
+  top: 61px;
+}
+.controls_gamepadviewer .controls_gamepad_button_5 {
+  left: 43px;
+  top: 20px;
+}
+.controls_gamepadviewer .controls_gamepad_button_6 {
+  left: 262px;
+  top: 20px;
+}
+.controls_gamepadviewer .controls_gamepad_button_7 {
+  left: 43px;
+  top: 2px;
+}
+.controls_gamepadviewer .controls_gamepad_button_8 {
+  left: 262px;
+  top: 2px;
+}
+
+.controls_gamepadviewer .controls_gamepad_button_9 {
+  left: 146px;
+  top: 81px;
+}
+.controls_gamepadviewer .controls_gamepad_button_10 {
+  left: 198px;
+  top: 81px;
+}
+
+.controls_gamepadviewer .controls_gamepad_button_11 {
+  /*
+  left: 120px;
+  top: 137px;
+  */
+  left: 14px;
+  top: 14px;
+  z-index: 10;
+}
+.controls_gamepadviewer .controls_gamepad_button_12 {
+  /*
+  left: 225px;
+  top: 137px;
+  */
+  left: 14px;
+  top: 14px;
+  z-index: 10;
+}
+
+.controls_gamepadviewer .controls_gamepad_button_13 {
+  left: 63px;
+  top: 61px;
+}
+.controls_gamepadviewer .controls_gamepad_button_14 {
+  left: 63px;
+  top: 104px;
+}
+.controls_gamepadviewer .controls_gamepad_button_15 {
+  left: 43px;
+  top: 82px;
+}
+.controls_gamepadviewer .controls_gamepad_button_16 {
+  left: 84px;
+  top: 82px;
+}
+.controls_mouse,
+.controls_gamepad,
+.controls_keyboard {
+  width: 60%;
+  border: 1px solid #ccc;
+  background: rgba(255,255,255,.2);
+  box-sizing: border-box;
+  padding: .5em;
+}
+.controls_mouse_sensitivity {
+  width: 50%;
+}
