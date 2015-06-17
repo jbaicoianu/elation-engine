@@ -113,7 +113,9 @@ elation.require([
           systems[name] = this[name] = new elation.engine.systems[name](args);
           this[name].attach(this._engine);
         }
-        elation.events.fire({element: this, type: 'engine_systems_added'});
+        setTimeout(elation.bind(this, function() {
+          elation.events.fire({element: this, type: 'engine_systems_added'});
+        }), 0);
       }));
       return systems;
     }
