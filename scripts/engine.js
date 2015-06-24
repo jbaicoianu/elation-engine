@@ -233,17 +233,15 @@ elation.require(deps, function() {
 
     this.init = function() {
       this.name = this.args.name || 'default';
-
       this.engine = elation.engine.create(this.name, ["physics", "sound", "ai", "world", "render", "controls"], elation.bind(this, this.startEngine));
     }
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
     }
     this.startEngine = function(engine) {
-      this.engine = engine;
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: true } );
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: document.body }), { fullsize: 1, picking: true, engine: this.name, showstats: true } );
 
       this.initWorld();
 
@@ -261,18 +259,15 @@ elation.require(deps, function() {
       this.name = this.args.name || 'default';
       this.engine = elation.engine.create(this.name, ['physics', 'world', 'server'], elation.bind(this, this.startEngine));
     }
-    
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.server, then override this for your app
     }
-
     this.startEngine = function(engine) {
       this.engine = engine;
       this.world = this.engine.systems.world; // shortcut
       this.initWorld();
       engine.start();
     }
-
    });
   
 });
