@@ -2,6 +2,7 @@ elation.require([
   //"engine.external.three.ColladaLoader",
   //"engine.external.three.JSONLoader"
   //"engine.external.three.glTFLoader-combined"
+  "engine.things.trigger"
 ]);
 
 elation.component.add("engine.things.generic", function() {
@@ -18,6 +19,7 @@ elation.component.add("engine.things.generic", function() {
     this.properties = {};
     this.objects = {};
     this.parts = {};
+    this.triggers = {};
     this.parttypes = {};
     this.children = {};
     this.tags = [];
@@ -724,16 +726,24 @@ elation.component.add("engine.things.generic", function() {
   }
   this.extractColliders = function(obj) {
     var meshes = [];
-    obj.traverse(function(n) { if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(/^_collider-/)) { n.geometry.computeBoundingBox(); n.geometry.computeBoundingSphere(); meshes.push(n); } });
+    if (!obj) obj = this.objects['3d'];
 
-    /*
-    var collidermat = new THREE.MeshPhongMaterial({color: 0xaaaa00, opacity: .5, transparent: true});
-    var new3d = new THREE.Object3D();
-    */
+    obj.traverse(function(n) { 
+      if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(/^_(collider|trigger)-/)) { 
+        n.geometry.computeBoundingBox(); 
+        n.geometry.computeBoundingSphere(); 
+        meshes.push(n); 
+      } 
+    });
+
     var root = new elation.physics.rigidbody({ orientation: obj.quaternion });
 
     for (var i = 0; i < meshes.length; i++) {
-      var type = meshes[i].material.name.replace('_collider-', '');
+      var re = new RegExp(/^_(collider|trigger)-(.*)$/),
+          m = meshes[i].material.name.match(re),
+          type = m[1],
+          shape = m[2];
+
       var rigid = new elation.physics.rigidbody();
       var min = meshes[i].geometry.boundingBox.min,
           max = meshes[i].geometry.boundingBox.max;
@@ -755,16 +765,11 @@ elation.component.add("engine.things.generic", function() {
 
       rigid.orientation.copy(meshes[i].parent.quaternion);
 
-      if (type == 'box') {
+      if (shape == 'box') {
         rigid.setCollider('box', {min: min, max: max});
-        /*
-        var collidermesh = new THREE.Mesh(new THREE.BoxGeometry(max.x - min.x, max.y - min.y, max.z - min.z), collidergeomat);
-        collidermesh.position.copy(meshes[i].parent.position);
-        collidermesh.quaternion.copy(meshes[i].parent.quaternion);
-        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
-        new3d.add(collidermesh);
-        */
-      } else if (type == 'cylinder') {
+      } else if (shape == 'sphere') {
+        rigid.setCollider('sphere', {radius: Math.max(max.x, max.y, max.z)});
+      } else if (shape == 'cylinder') {
         var radius = Math.max(max.x - min.x, max.y - min.y) / 2,
             height = max.z - min.z;
         rigid.setCollider('cylinder', {radius: radius, height: height});
@@ -772,21 +777,39 @@ elation.component.add("engine.things.generic", function() {
         // FIXME - rotate everything by 90 degrees on x axis to match default orientation
         var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
         rigid.orientation.multiply(rot);
-
-        /*
-        var collidermesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height), buggermat);
-        collidermesh.position.copy(meshes[i].parent.position);
-        collidermesh.quaternion.copy(meshes[i].parent.quaternion);
-        collidermesh.quaternion.multiply(rot);
-        collidermesh.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
-        new3d.add(collidermesh);
-        */
       }
 
-      //console.log('add collider:', rigid, rigid.position.toArray(), rigid.orientation.toArray());
-      root.add(rigid);
+      if (type == 'collider') {
+        //console.log('add collider:', rigid, rigid.position.toArray(), rigid.orientation.toArray());
+        root.add(rigid);
+      } else if (type == 'trigger') {
+        var triggername = meshes[i].parent.name;
 
+        var size = new THREE.Vector3().subVectors(max, min);
+/*
+        size.x /= this.properties.scale.x;
+        size.y /= this.properties.scale.y;
+        size.z /= this.properties.scale.z;
+*/
+
+        var quat = new THREE.Quaternion().multiplyQuaternions(obj.quaternion, rigid.orientation); 
+        var pos = rigid.position.clone().applyQuaternion(quat);
+/*
+        pos.x /= this.properties.scale.x;
+        pos.y /= this.properties.scale.y;
+        pos.z /= this.properties.scale.z;
+*/
+
+        this.triggers[triggername] = this.spawn('trigger', 'trigger_' + this.name + '_' + triggername, {
+          position: pos, 
+          orientation: quat,
+          shape: shape,
+          size: size,
+          scale: new THREE.Vector3(1 / this.properties.scale.x, 1 / this.properties.scale.y, 1 / this.properties.scale.z)
+        });
+      }
       meshes[i].parent.remove(meshes[i]);
+
     }
     this.objects.dynamics.add(root);
 
@@ -819,6 +842,11 @@ elation.component.add("engine.things.generic", function() {
               if (tex.image && !unique[tex.image.src]) {
                 unique[tex.image.src] = true;
                 ret.push(tex);
+              } else if (!tex.image && tex.sourceFile != '') {  
+                if (!unique[tex.sourceFile]) {
+                  unique[tex.sourceFile] = true;
+                  ret.push(tex);
+                }
               } else if (!tex.image) {
                 ret.push(tex);
               }
@@ -832,10 +860,12 @@ elation.component.add("engine.things.generic", function() {
   this.loadTextures = function(textures) {
     this.pendingtextures = 0;
     for (var i = 0; i < textures.length; i++) {
-      if (textures[i].image && !textures[i].image.complete) {
-        elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: textures[i].image } });
-        this.pendingtextures++;
-        elation.events.add(textures[i].image, 'load', elation.bind(this, this.textureLoadComplete));
+      if (textures[i].image) {
+        if (!textures[i].image.complete) {
+          elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: textures[i].image } });
+          this.pendingtextures++;
+          elation.events.add(textures[i].image, 'load', elation.bind(this, this.textureLoadComplete));
+        }
       }
     }
 

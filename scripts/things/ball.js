@@ -7,20 +7,25 @@ elation.require(['engine.things.generic'], function() {
         gravity: { type: 'bool', default: true },
       });
       this.addTag('local_sync');
-      
+    
       if (this.properties.lifetime != 0) {
         this.age = 0;
         // elation.events.add(this.engine, 'engine_frame', elation.bind(this, function(ev) { this.age += ev.data.delta * this.engine.systems.physics.timescale; if (this.age > this.properties.lifetime) this.die(); }));
       } 
     }
+    
+    this.onFrame = function(ev) {
+      this.refresh();
+    }
+     
     this.createObject3D = function() {
       var geo = new THREE.SphereGeometry(this.properties.radius, 36, 18);
       var mat = new THREE.MeshPhongMaterial({
         color: 0xd74e2e, 
         emissive: 0x330000, 
-        // map: elation.engine.materials.getTexture('/media/space/textures/bball.jpg'), 
-        // bumpMap: elation.engine.materials.getTexture('/media/space/textures/bball-bump.png'), 
-        // bumpScale: .05
+        map: elation.engine.materials.getTexture('/media/space/textures/bball.jpg'), 
+        bumpMap: elation.engine.materials.getTexture('/media/space/textures/bball-bump.png'), 
+        bumpScale: .05
       });
       var obj = new THREE.Mesh(geo, mat);
       obj.castShadow = true;

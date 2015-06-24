@@ -36,7 +36,7 @@ elation.require(["physics.cyclone"], function() {
       }
     }
     this.engine_frame = function(ev) {
-      //console.log("FRAME: physics");
+      // console.log("FRAME: physics");
       if (!this.async) {
         this.step(ev.data.delta);
       }

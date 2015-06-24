@@ -2,12 +2,15 @@
 elation.require(['engine.things.generic'], function() {
   
 elation.component.add('engine.things.remoteplayer', function() {
+  this.postinit = function() {
+  };
+
   this.createObject3D = function() {
-    // var geo = new THREE.SphereGeometry(1);
-    var geo = new THREE.BoxGeometry(1, 1, 1);
-    var mat = new THREE.MeshPhongMaterial({color: 0x00ff00});
-    return new THREE.Mesh(geo, mat);
-  }  
+    var geo = new THREE.BoxGeometry(1, 1, 1),
+        mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
+        mesh = new THREE.Mesh(geo, mat);
+    return mesh;
+  }; 
 }, elation.engine.things.generic);
 
 });
