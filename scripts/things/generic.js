@@ -360,7 +360,7 @@ elation.component.add("engine.things.generic", function() {
           this.extractEntities(subobj);
           this.objects['3d'].add(subobj);
 
-          this.colliders = this.extractColliders(subobj);
+          this.colliders = this.extractColliders(subobj, true);
           if (ENV_IS_BROWSER){
             var textures = this.extractTextures(subobj, true);
             this.loadTextures(textures);
