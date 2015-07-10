@@ -135,7 +135,6 @@ elation.require([
         var world = JSON.parse(localStorage[key]);
         this.load(world);
       } else {
-        //this.spawn("sector", "default");
         this.createDefaultScene();
       }
       if (ENV_IS_BROWSER) {
@@ -224,10 +223,6 @@ elation.require([
               position: [ -20, 50, 25 ],
               persist: true
             }
-          },
-          bob: {
-            type: 'builder',
-            name: 'bob'
           }
         }
       };
@@ -363,11 +358,13 @@ elation.require([
     // Convenience functions for querying objects from world
     this.getThingsByTag = function(tag) {
       var things = [];
-      for (var k in this.children) {
-        if (this.children[k].hasTag(tag)) {
-          things.push(this.children[k]);
+      var childnames = Object.keys(this.children);
+      for (var i = 0; i < childnames.length; i++) {
+        var childname = childnames[i];
+        if (this.children[childname].hasTag(tag)) {
+          things.push(this.children[childname]);
         }
-        this.children[k].getChildrenByTag(tag, things);
+        this.children[childname].getChildrenByTag(tag, things);
       }
       return things;
     }

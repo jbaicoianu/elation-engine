@@ -102,7 +102,7 @@ elation.require(deps, function() {
       return this.systems.world.getThingsByObject(object);
     }
     this.getThingById = function(id) {
-      return this.systems.world.getThingsById(id);
+      return this.systems.world.getThingById(id);
     }
 
     this.init();

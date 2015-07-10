@@ -10,7 +10,7 @@ elation.require(['engine.things.generic'], function() {
     
       if (this.properties.lifetime != 0) {
         this.age = 0;
-        // elation.events.add(this.engine, 'engine_frame', elation.bind(this, function(ev) { this.age += ev.data.delta * this.engine.systems.physics.timescale; if (this.age > this.properties.lifetime) this.die(); }));
+        elation.events.add(this.engine, 'engine_frame', this);
       } 
     }
     
@@ -39,5 +39,10 @@ elation.require(['engine.things.generic'], function() {
       }
       this.objects.dynamics.addForce('friction', .4);
     } 
+    this.engine_frame = function(ev) { 
+      this.age += ev.data.delta * this.engine.systems.physics.timescale;
+      if (this.age > this.properties.lifetime) 
+        this.die(); 
+    }
   }, elation.engine.things.generic);
 });

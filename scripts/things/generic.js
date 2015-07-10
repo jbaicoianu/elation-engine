@@ -36,7 +36,7 @@ elation.component.add("engine.things.generic", function() {
       fn: this.applyInterp
     };
 
-    elation.events.add(this, 'thing_create', this);
+    //elation.events.add(this, 'thing_create', this);
     this.defineActions({
       'spawn': this.spawn,
       'move': this.move
@@ -577,39 +577,18 @@ elation.component.add("engine.things.generic", function() {
     if (typeof texturepath == 'undefined') {
       texturepath = '/media/space/textures';
     }
-    var loader = new THREE.SceneLoader();
-    loader.load(url, elation.bind(this, this.processJSONScene), texturepath);
+    var loader = new THREE.ObjectLoader();
+    loader.load(url, elation.bind(this, this.processJSONScene, url));
   }
-  this.processJSONScene = function(scenedata) {
-    this.extractEntities(scenedata.scene);
-    //this.updateCollisionSize();
-    elation.events.fire({type: "thing_load", element: this, data: scenedata.scene});
-    //this.objects['3d'].add(scenedata.scene);
-    var parent = this.objects['3d'].parent;
-    parent.remove(this.objects['3d']);
-    this.objects['3d'] = new THREE.Object3D();
-    this.objects['3d'].bindPosition(this.properties.position);
-    this.objects['3d'].bindQuaternion(this.properties.orientation);
-    this.objects['3d'].bindScale(this.properties.scale);
-    this.objects['3d'].userData.thing = this;
+  this.processJSONScene = function(url, scene) {
+    this.extractEntities(scene);
+    this.objects['3d'].add(scene);
 
-    while (scenedata.scene.children.length > 0) {
-      var obj = scenedata.scene.children[0];
-      scenedata.scene.remove(obj);
-      this.objects['3d'].add(obj);
-    }
+    this.colliders = this.extractColliders(scene);
+    var textures = this.extractTextures(scene, true);
+    this.loadTextures(textures);
+    elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
 
-    //this.objects['3d'].quaternion.setFromEuler(scenedata.scene.rotation);
-
-    for (var k in this.parts) {
-      var part = this.parts[k];
-      if (part instanceof THREE.Mesh) {
-        part.castShadow = true;
-        part.receiveShadow = true;
-      }
-    }
-
-    parent.add(this.objects['3d']);
     this.refresh();
   }
   this.loadCollada = function(url) {
@@ -633,7 +612,7 @@ elation.component.add("engine.things.generic", function() {
 */
     this.objects['3d'].add(collada.scene);
 
-    this.colliders = this.extractColliders(collada.scene);
+    this.colliders = this.extractColliders(collada.scene, true);
     var textures = this.extractTextures(collada.scene, true);
     this.loadTextures(textures);
     elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
@@ -726,12 +705,13 @@ elation.component.add("engine.things.generic", function() {
     }
     //this.updateCollisionSize();
   }
-  this.extractColliders = function(obj) {
+  this.extractColliders = function(obj, useParentPosition) {
     var meshes = [];
     if (!obj) obj = this.objects['3d'];
+    var re = new RegExp(/^[_\*](collider|trigger)-(.*)$/);
 
     obj.traverse(function(n) { 
-      if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(/^_(collider|trigger)-/)) { 
+      if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(re)) { 
         n.geometry.computeBoundingBox(); 
         n.geometry.computeBoundingSphere(); 
         meshes.push(n); 
@@ -741,18 +721,24 @@ elation.component.add("engine.things.generic", function() {
     var root = new elation.physics.rigidbody({ orientation: obj.quaternion });
 
     for (var i = 0; i < meshes.length; i++) {
-      var re = new RegExp(/^_(collider|trigger)-(.*)$/),
-          m = meshes[i].material.name.match(re),
+      var m = meshes[i].material.name.match(re),
           type = m[1],
           shape = m[2];
 
       var rigid = new elation.physics.rigidbody();
       var min = meshes[i].geometry.boundingBox.min,
           max = meshes[i].geometry.boundingBox.max;
-//console.log('type is', type, min, max);
+      //console.log('type is', type, min, max);
 
-      rigid.position.copy(meshes[i].parent.position);
-      rigid.position.copy(meshes[i].parent.position);
+      var position = meshes[i].position,
+          orientation = meshes[i].quaternion;
+      if (useParentPosition) {
+        position = meshes[i].parent.position;
+        orientation = meshes[i].parent.quaternion;
+      }
+ 
+      rigid.position.copy(position);
+      rigid.orientation.copy(orientation);
 
       min.x *= this.properties.scale.x;
       min.y *= this.properties.scale.y;
@@ -764,8 +750,6 @@ elation.component.add("engine.things.generic", function() {
       rigid.position.x *= this.properties.scale.x;
       rigid.position.y *= this.properties.scale.y;
       rigid.position.z *= this.properties.scale.z;
-
-      rigid.orientation.copy(meshes[i].parent.quaternion);
 
       if (shape == 'box') {
         rigid.setCollider('box', {min: min, max: max});

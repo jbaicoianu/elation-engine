@@ -56,6 +56,7 @@ elation.require([
       this.lastframetime = 0;
 
       elation.events.add(this.engine.systems.world, 'world_change,world_thing_add,world_thing_remove,world_thing_change', this);
+
       // FIXME - globally-bound events are dirty, things should fire events when their properties change
       elation.events.add(null, 'physics_update,thing_drag_move,thing_rotate_move,engine_texture_load', elation.bind(this, this.setdirty));
     }
@@ -211,7 +212,7 @@ elation.require([
       var renderToScreen = false;
       for (var i = 0; i < passes.length; i++) {
         var pass = this.createRenderPass(passes[i]);
-console.log('NEW PASS:', i, target, passes[i], pass);
+        //console.log('NEW PASS:', i, target, passes[i], pass);
         if (pass) {
           //if (i == 0) pass.clear = true;
           composer.addPass(pass);
@@ -830,20 +831,20 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }));
       //this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
       this.pickingcomposer.render();
-  //this.pickingtarget.needsUpdate = true;
+      //this.pickingtarget.needsUpdate = true;
       if (this.pickingdebug) {
         //this.rendersystem.renderer.render(this.scene, this.camera);
       }
 
       // revert textures
-      for (var id in this.pickingobjects) {
+      var ids = Object.keys(this.pickingobjects);
+      for (var i = 0; i < ids.length; i++) {
+        var id = ids[i];
         if (this.realmaterials[id]) {
           this.pickingobjects[id].material = this.realmaterials[id];
         }
         this.pickingobjects[id].visible = this.realvisible[id];
       }
-
-
     }
     this.updatePickingObject = function() {
       if (this.picking && this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2])) {
@@ -868,7 +869,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (this.pickingobject) {
         pickedthing = oldpickedthing = this.getParentThing(this.pickingobject);
       }
-
       if (pickid > 0) {
         if (this.pickingobject !== this.pickingobjects[pickid]) {
           pickedthing = this.getParentThing(this.pickingobjects[pickid]);

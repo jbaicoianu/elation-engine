@@ -7,7 +7,7 @@ elation.require(["physics.cyclone"], function() {
     this.debugvis = {};
     this.debugthings = {};
     this.async = true;
-    this.asyncframerate = 200;
+    this.asyncframerate = 120;
 
     this.system_attach = function(ev) {
       console.log('INIT: physics');
