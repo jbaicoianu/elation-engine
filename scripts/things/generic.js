@@ -1,5 +1,5 @@
 elation.require([
-  //"engine.external.three.ColladaLoader",
+  // "engine.external.three.ColladaLoader",
   //"engine.external.three.JSONLoader"
   //"engine.external.three.glTFLoader-combined"
   "engine.things.trigger"
@@ -338,7 +338,9 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.createObject3D = function() {
-    if (this.properties.exists === false || !ENV_IS_BROWSER) return;
+    // if (this.properties.exists === false || !ENV_IS_BROWSER) return;
+    if (this.properties.exists === false) return;
+
     var object = null, geometry = null, material = null;
     if (this.properties.render) {
       if (this.properties.render.scene) {
