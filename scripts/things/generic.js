@@ -49,7 +49,8 @@ elation.component.add("engine.things.generic", function() {
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
       'render.materialname': { type: 'string', comment: 'Material library name' },
-      'render.texturepath': { type: 'string', comment: 'Texture location' }
+      'render.texturepath': { type: 'string', comment: 'Texture location' },
+      'tags': { type: 'string', comment: 'Default tags to add to this object' }
     });
     this.defineEvents({
       'thing_create': [],
@@ -248,6 +249,12 @@ elation.component.add("engine.things.generic", function() {
   this.init3D = function() {
     if (this.objects['3d']) {
       if (this.objects['3d'].parent) { this.objects['3d'].parent.remove(this.objects['3d']); }
+    }
+    if (this.properties.tags) {
+      var tags = this.properties.tags.split(',');
+      for (var i = 0; i < tags.length; i++) { 
+        this.addTag(tags[i].trim());
+      }
     }
     this.objects['3d'] = this.createObject3D();
     if (this.objects['3d']) {
