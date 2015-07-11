@@ -473,7 +473,9 @@ elation.require(['ui.base'], function() {
       return ret;
     }
     this.mousedown = function(ev) {
-      this.requestPointerLock();
+      if (ev.button === 0) {
+        this.requestPointerLock();
+      }
       var bindid = "mouse_button_" + ev.button;
       if (!this.state[bindid]) {
         this.state[bindid] = 1;
