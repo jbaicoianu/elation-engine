@@ -6,8 +6,8 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         labelcfg: { type: 'object', default: {} }
       });
       this.controlstate = this.engine.systems.controls.addContext('menu', {
-        'menu_up': ['keyboard_up', elation.bind(this, this.updateControls)],
-        'menu_down': ['keyboard_down,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+        'menu_up': ['keyboard_up,gamepad_0_button_12', elation.bind(this, this.updateControls)],
+        'menu_down': ['keyboard_down,gamepad_0_axis_1,gamepad_0_button_13', elation.bind(this, this.updateControls)],
         'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
       });
       this.selected = false;
@@ -52,15 +52,16 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       }
     }
     this.updateControls = function(ev) {
-      if (Math.abs(ev.value) == 1) {
+      var threshold = 0.999;
+      if (Math.abs(ev.value) >= threshold) {
         // FIXME - this is hacky.  if ev.value is 1, we then look at what actions are active, and act on all of them
-        if (this.controlstate.menu_up == 1 || this.controlstate.menu_down == -1) {
+        if (this.controlstate.menu_up >= threshold || this.controlstate.menu_down <= -threshold) {
           this.selectprevious();
         }
-        if (this.controlstate.menu_down == 1 || this.controlstate.menu_up == -1) {
+        if (this.controlstate.menu_down >= threshold || this.controlstate.menu_up <= -threshold) {
           this.selectnext();
         }
-        if (this.controlstate.activate == 1) {
+        if (this.controlstate.activate >= threshold && this.selected) {
           this.selected.activate();
         }
       }
