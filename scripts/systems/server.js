@@ -75,7 +75,7 @@ elation.extend("engine.systems.server", function(args) {
       socket: ev.data.channel
     });
     this.clients[ev.data.id] = client;
-    elation.events.add(client, 'received_id', elation.bind(this, this.sendWorldData));
+    elation.events.add(client, 'received_id', elation.bind(this, this.clientReceivedId));
     elation.events.add(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     elation.events.add(client, 'thing_changed', elation.bind(this, this.onRemoteThingChange));
     elation.events.add(client, 'new_thing', elation.bind(this, this.onNewThing));
@@ -85,7 +85,7 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.handleNewPlayer = function(ev) {
-    elation.events.fire({type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing}});
+    elation.events.fire({type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing, camera: ev.data.data.camera}});
   };
   
   this.handleNewThing = function(ev) {
@@ -96,6 +96,11 @@ elation.extend("engine.systems.server", function(args) {
     var client = this.clients[evt.data.data];
     client.send(this.serialize_world());
   };
+  
+  this.clientReceivedId = function(ev) {
+    // elation.events.fire(ev)
+    elation.events.fire({type: 'client_received_id', data: ev.data.data});
+  }
   
   this.sendThingState = function(thing, state) {
     // states: 'thing_changed', 'thing_added', 'thing_removed'
@@ -115,6 +120,7 @@ elation.extend("engine.systems.server", function(args) {
   this.onThingAdd = function(ev) {
     // bind thing remove here?
     console.log('thing add', ev.data.thing.name);
+    elation.events.add(ev.data.thing, 'thing_change', elation.bind(this, this.onThingChange));
     this.sendThingState(ev.data.thing, 'thing_added');
   };
   
