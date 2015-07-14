@@ -63,6 +63,7 @@ elation.component.add("engine.things.generic", function() {
       'render.materialname': { type: 'string', comment: 'Material library name' },
       'render.texturepath': { type: 'string', comment: 'Texture location' },
       'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' }
+      'tags': { type: 'string', comment: 'Default tags to add to this object' }
     });
     this.defineEvents({
       'thing_create': [],
@@ -301,6 +302,12 @@ elation.component.add("engine.things.generic", function() {
   this.init3D = function() {
     if (this.objects['3d']) {
       if (this.objects['3d'].parent) { this.objects['3d'].parent.remove(this.objects['3d']); }
+    }
+    if (this.properties.tags) {
+      var tags = this.properties.tags.split(',');
+      for (var i = 0; i < tags.length; i++) { 
+        this.addTag(tags[i].trim());
+      }
     }
     this.objects['3d'] = this.createObject3D();
     if (this.objects['3d']) {
