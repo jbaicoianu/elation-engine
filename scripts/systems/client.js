@@ -12,7 +12,6 @@ elation.extend("engine.systems.client", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: networking client');
     this.world = this.engine.systems.world;
-    console.log('this.world:', this.world);
     this.connection = new elation.engine.systems.client.connection({
       transport: 'websocket',
       host: 'dev.brandonhinshaw.us',
@@ -26,8 +25,10 @@ elation.extend("engine.systems.client", function(args) {
   this.onNewThing = function(ev) {
     var thing = ev.data.thing;
     if (thing.hasTag('local_sync')) {
-      console.log(ev.data);
-      if (thing.type != 'vrcadeplayer') {
+      console.log('local sync', thing.type);
+      if (thing.type != 'vrcadeplayer' && thing.type != 'camera' && thing.type != 'remoteplayer') {
+        var thingdata = thing.serialize();
+        thingdata.properties.tags = '';
         var msgdata = {
           type: 'add_thing',
           data: { thing: thing.serialize() }
@@ -36,20 +37,16 @@ elation.extend("engine.systems.client", function(args) {
         this.send(msgdata);
       }
       else {
-        elation.events.add(thing, 'thing_change', elation.bind(this, this.onThingChange));
+        if (thing.type != 'remoteplayer') {
+          console.log('adding thing_change listener for', thing.type);
+          elation.events.add(thing, 'thing_change', elation.bind(this, this.onThingChange));
+        }
       }
       thing.removeTag('local_sync');
       
     }
     // FIXME
   };
-  
-  this.sendNewThing = function() {
-    var msg = {
-      type: 'new_thing',
-      data: 'test' 
-    };
-  }
   
   this.onThingChange = function(ev) {
     var thing = ev.target;
@@ -85,6 +82,7 @@ elation.extend("engine.systems.client", function(args) {
           thing.set('velocity', [0, 0, 0], false);
           thing.set('acceleration', [0, 0, 0], false);
           thing.set('angular', [0, 0, 0], false);
+          thing.set('angularacceleration', [0, 0, 0], false);
           thing.refresh();
           thing.removeTag('extrapolating');
         }
@@ -98,7 +96,7 @@ elation.extend("engine.systems.client", function(args) {
     if (!this.lastMessage)  { this.lastMessage = timestamp; }
     if (timestamp >= this.lastMessage) {
     // console.log('new message', msg, typeof(msg));
-      var evdata = { type: msgdata.type, data: msgdata.data };
+      var evdata = { element: this, type: msgdata.type, data: msgdata.data };
       elation.events.fire(evdata);
     } else { console.log('discarded a message') }
   };
@@ -182,15 +180,15 @@ elation.extend('engine.systems.client.websocket', function(opts) {
   
   this.onOpen = function(ev) {
     this.connected = true;
-    elation.events.fire({type: 'socket_connected'});
+    elation.events.fire({element: this, type: 'socket_connected'});
   };
   
   this.onMessage = function(ev) {
-    elation.events.fire({type: 'new_message', data: ev.data});
+    elation.events.fire({element: this, type: 'new_message', data: ev.data});
   };
   
   this.onClose = function(ev) {
-    elation.events.fire({type: 'socket_closed'});
+    elation.events.fire({element: this, type: 'socket_closed'});
     this.websocket = null;
   };
   
@@ -247,7 +245,7 @@ elation.extend('engine.systems.client.webrtc', function(socketOpts) {
   
   function doComplete() {
     console.log('complete');
-    elation.events.fire({type: 'socket_connected'});
+    elation.events.fire({element: this, type: 'socket_connected'});
   }
   
   function doWaitforDataChannels() {
@@ -298,7 +296,7 @@ elation.extend('engine.systems.client.webrtc', function(socketOpts) {
         }
       }.bind(this);
       channel.onmessage = function(event) {
-        elation.events.fire({ type: 'new_message', data: event.data });
+        elation.events.fire({ element: this, type: 'new_message', data: event.data });
         // if('string' == typeof data) {
         //   console.log('onmessage:', data);
         // } else {
@@ -307,7 +305,7 @@ elation.extend('engine.systems.client.webrtc', function(socketOpts) {
       };
       channel.onclose = function(event) {
         console.info('onclose');
-        elation.events.fire({type:'socket_closed'});
+        elation.events.fire({element: this, type:'socket_closed'});
       };
       channel.onerror = doHandleError;
     });

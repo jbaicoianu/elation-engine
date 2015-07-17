@@ -69,6 +69,7 @@ elation.extend("engine.systems.server", function(args) {
   };
 
   this.onClientConnect = function(ev) {
+    console.log('onclientconnect');
     var client = new elation.engine.systems.server.client({
       transport: 'websocket',
       id: ev.data.id,
@@ -78,28 +79,31 @@ elation.extend("engine.systems.server", function(args) {
     elation.events.add(client, 'received_id', elation.bind(this, this.clientReceivedId));
     elation.events.add(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     elation.events.add(client, 'thing_changed', elation.bind(this, this.onRemoteThingChange));
-    elation.events.add(client, 'new_thing', elation.bind(this, this.onNewThing));
+    elation.events.add(client, 'add_thing', elation.bind(this, this.handleNewThing));
     elation.events.add(client, 'socket_message_sent', elation.bind(this, this.onSocketSend));
     console.log('client connected', client.id);
     client.send({ type: 'id_token', data: client.id });
+    console.log(Object.keys(this.clients));
   };
   
   this.handleNewPlayer = function(ev) {
-    elation.events.fire({type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing, camera: ev.data.data.camera}});
+    elation.events.fire({element: this, type: 'add_player', data: {id: ev.target.id, thing: ev.data.data.thing, camera: ev.data.data.camera}});
   };
   
   this.handleNewThing = function(ev) {
-    elation.events.fire({type: 'add_thing', data: {thing: ev.data.data.thing}});
+    console.log('thing properties', ev.data.data.thing.properties.tags)
+    elation.events.fire({element: this, type: 'add_thing', data: {thing: ev.data.data.thing}});
   };
   
   this.sendWorldData = function(evt) {
-    var client = this.clients[evt.data.data];
-    client.send(this.serialize_world());
+    // var client = this.clients[evt.data.data];
+    // client.send(this.serialize_world());
   };
   
   this.clientReceivedId = function(ev) {
     // elation.events.fire(ev)
-    elation.events.fire({type: 'client_received_id', data: ev.data.data});
+    console.log('got received_id from client')
+    elation.events.fire({element: this, type: 'client_received_id', data: ev.data.data});
   }
   
   this.sendThingState = function(thing, state) {
@@ -119,7 +123,8 @@ elation.extend("engine.systems.server", function(args) {
   }
   this.onThingAdd = function(ev) {
     // bind thing remove here?
-    console.log('thing add', ev.data.thing.name);
+    ev.data.thing.properties.tags = ''; // FIXME - local_sync should be moved from a tag to a property of its own, so we don't need to clear tags
+    console.log('thing add', ev.data.thing.name, 'tags:', ev.data.thing.properties.tags);
     elation.events.add(ev.data.thing, 'thing_change', elation.bind(this, this.onThingChange));
     this.sendThingState(ev.data.thing, 'thing_added');
   };
@@ -150,7 +155,7 @@ elation.extend("engine.systems.server", function(args) {
   };
   
   this.onRemoteThingChange = function(ev) {
-    elation.events.fire('remote_thing_change', ev.data);
+    elation.events.fire({element: this, type: 'remote_thing_change', data: ev.data});
   };
   
   this.removeClient = function(id) {
@@ -162,7 +167,7 @@ elation.extend("engine.systems.server", function(args) {
     elation.events.remove(client, 'received_id', elation.bind(this, this.sendWorldData));
     elation.events.remove(client, 'new_player', elation.bind(this, this.handleNewPlayer));
     this.removeClient(ev.data.id);
-    elation.events.fire({type: 'player_disconnect', data: ev.data});
+    elation.events.fire({element: this, type: 'player_disconnect', data: ev.data});
     console.log('Client disconnected, num clients:', Object.keys(this.clients).length); 
   };
  
@@ -202,19 +207,21 @@ elation.extend("engine.systems.server.client", function(args) {
     };
     
     this.socket.onmessage = function(evt) {
+      console.log('msg from client on systems.server.client');
       var msgdata = JSON.parse(evt.data);
       var timestamp = msgdata.timestamp;
       if (!this.lastMessage) this.lastMessage = timestamp;
       if (timestamp >= this.lastMessage) {
         // only fire an event if the message is newer than the last received msg
         var evdata = {
+          element: this,
           type: msgdata.type,
           data: { id: this.id, data: msgdata.data }
         };
         elation.events.fire(evdata);
         this.lastMessage = timestamp;
       } else { console.log('discarded a message'); }
-    };
+    }.bind(this);
   }
   if (this.transport == 'websocket') {
     this.send = function(data) {
@@ -222,7 +229,7 @@ elation.extend("engine.systems.server.client", function(args) {
       try {
         data.timestamp = Date.now();
         this.socket.send(JSON.stringify(data));
-        elation.events.fire({type: 'socket_message_sent', data:{type: data.type, data: data.data, client_id: this.id, timestamp: data.timestamp}});
+        elation.events.fire({element: this, type: 'socket_message_sent', data:{type: data.type, data: data.data, client_id: this.id, timestamp: data.timestamp}});
       }
       catch(e) { console.log(e) }
     };
@@ -233,13 +240,14 @@ elation.extend("engine.systems.server.client", function(args) {
       if (timestamp >= this.lastMessage) {
         // only fire an event if the message is newer than the last received msg
         var evdata = {
+          element: this,
           type: msgdata.type,
           data: { id: this.id, data: msgdata.data }
         };
         elation.events.fire(evdata);
         this.lastMessage = timestamp;
       };
-    });
+    }.bind(this));
   }
 });
 
@@ -253,11 +261,11 @@ elation.extend("engine.systems.server.websocket", function() {
   wss.on('connection', function(ws) {
     console.log('game server websocket conn');
     var id = Date.now();
-    elation.events.fire({ type: 'client_connected', data: {id: id, channel: ws}});
+    elation.events.fire({element: this, type: 'client_connected', data: {id: id, channel: ws}});
     ws.on('close', function() {
-      elation.events.fire({type: 'client_disconnected', data: {id: id}});
-    });
-  });
+      elation.events.fire({element: this, type: 'client_disconnected', data: {id: id}});
+    }.bind(this));
+  }.bind(this));
   
 })
 
@@ -269,10 +277,10 @@ elation.extend("engine.systems.server.adminserver", function() {
   this.wss.on('connection', function(ws) {
     console.log('admin server websocket conn');
     var id = Date.now();
-    elation.events.fire({ type: 'admin_client_connected', data: {id: id, channel: ws}});
+    elation.events.fire({element: this, type: 'admin_client_connected', data: {id: id, channel: ws}});
     ws.on('close', function() {
-      elation.events.fire({type: 'admin_client_disconnected', data: id});
-    });
+      elation.events.fire({element: this, type: 'admin_client_disconnected', data: id});
+    }.bind(this));
   });
   
 })
@@ -342,15 +350,16 @@ elation.extend("engine.systems.server.webrtc", function() {
         channel.onopen = function() {
           self.dataChannels.push(channel);
           self.pendingDataChannels.splice(self.pendingDataChannels.indexOf(channel), 1);
-          elation.events.fire({ type: 'client_connected', data: {id: id, channel: channel}});
+          elation.events.fire({element: this, type: 'client_connected', data: {id: id, channel: channel}});
           doComplete(self.dataChannels[self.dataChannels.indexOf(channel)]);
           // }
-        };
+        }.bind(this);
   
         channel.onmessage = function(evt) {
           var msgdata = JSON.parse(evt.data);
           console.log('onmessage:', evt.data);
           var evdata = {
+            element: this,
             type: msgdata.type,
             data: {
               id: id,
@@ -358,13 +367,13 @@ elation.extend("engine.systems.server.webrtc", function() {
             }
           }
           elation.events.fire(evdata);
-        };
+        }.bind(this);
   
         channel.onclose = function() {
           self.dataChannels.splice(self.dataChannels.indexOf(channel), 1);
-          elation.events.fire({type: 'client_disconnected', data: {id: id, channel: channel}})
+          elation.events.fire({element: this, type: 'client_disconnected', data: {id: id, channel: channel}})
           console.info('onclose');
-        };
+        }.bind(this);
   
         channel.onerror = doHandleError;
       };
