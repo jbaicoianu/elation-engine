@@ -335,6 +335,9 @@ elation.require([
         
       }
     }
+    this.setClearColor = function(color, opacity) {
+      this.engine.systems['render'].setclearcolor(color, opacity);
+    }
     this.setFog = function(near, far, color) {
       if (typeof color == 'undefined') color = 0xffffff;
       this.scene['world-3d'].fog = new THREE.Fog(color, near, far);

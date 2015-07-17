@@ -74,7 +74,7 @@
  **/
 elation.requireCSS('engine.systems.controls');
 
-elation.require(['ui.base'], function() {
+elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent'], function() {
   elation.extend("engine.systems.controls", function(args) {
     elation.implement(this, elation.engine.systems.system);
 
