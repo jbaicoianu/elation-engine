@@ -4,7 +4,8 @@
 
 var _reqs = [
     'engine.things.remoteplayer',
-    'engine.things.generic'
+    'engine.things.generic',
+    'engine.things.maskgenerator'
   ];
   
  elation.require(_reqs, function() {
@@ -14,10 +15,13 @@ var _reqs = [
     
     this.postinit = function() {
       // network events
-      elation.events.add(this.engine.systems.server, 'add_player', elation.bind(this, this.spawnRemotePlayer));
-      elation.events.add(this.engine.systems.server, 'remote_thing_change', elation.bind(this, this.remoteThingChange));
-      elation.events.add(this.engine.systems.server, 'add_thing', elation.bind(this, this.spawnNewThing));
-      elation.events.add(this.engine.systems.server, 'player_disconnect', elation.bind(this, this.onPlayerDisconnect));
+      this.server = this.engine.systems.server;
+      elation.events.add(this.server, 'add_player', elation.bind(this, this.spawnRemotePlayer));
+      elation.events.add(this.server, 'remote_thing_change', elation.bind(this, this.remoteThingChange));
+      elation.events.add(this.server, 'add_thing', elation.bind(this, this.spawnNewThing));
+      elation.events.add(this.server, 'player_disconnect', elation.bind(this, this.onPlayerDisconnect));
+      elation.events.add(this.server, 'client_received_id', elation.bind(this, this.sendWorldData));
+      
       this.things = [];
       this.world = this.engine.systems.world;
     };
@@ -30,11 +34,11 @@ var _reqs = [
       this.loadWorld();
     };
     
-    this.spawnRemotePlayer = function(ev) {
-      console.log('spawning new player');
-      var thing = ev.data.thing;
-      this.spawn('remoteplayer', ev.data.id, thing.properties);
-      elation.events.add(this.players[ev.data.id], 'thing_change', elation.bind(this.engine.systems.server, this.engine.systems.server.onThingChange));
+    this.spawnRemotePlayer = function(event) {
+      console.log(event.type, event.data.thing.properties.player_id)
+      var thing  = event.data.thing;
+      thing.properties.tags = '';
+      this.things[thing.name] = this.spawn('remoteplayer', event.data.id, thing.properties);
     };
     
     this.onPlayerDisconnect = function(ev) {
@@ -48,7 +52,8 @@ var _reqs = [
     };
     
     this.spawnNewThing = function(ev) {
-      var thing = ev.data.data.thing;
+      console.log(ev.type, ev.data.thing.type);
+      var thing = ev.data.thing;
       var newThing = this.spawn(thing.type, thing.name, thing.properties);
     };
     
@@ -66,7 +71,13 @@ var _reqs = [
         this.children[thing.name].refresh();
       }
     };
-
+    
+    this.sendWorldData = function(ev) {
+      console.log(ev.type, ev.data)
+      var client = this.server.clients[ev.data];
+      client.send(this.server.serialize_world());
+    }
+    
     this.loadWorld = function() {
       // Virtual
     };

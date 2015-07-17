@@ -4,15 +4,17 @@ var _reqs = [
     'engine.things.light',
     'engine.things.ball',
     'engine.things.remoteplayer',
-    'vrcade.vrcadeplayer',
-    'bball.testplane',
+    'engine.things.player',
+    'engine.things.testplane',
     'engine.external.three.tween',
+    'engine.things.maskgenerator'
   ];
 elation.require(_reqs, function() {
   elation.component.add('engine.things.shooter_client', function() {
-    this.player_id = null;
     this.lastUpdate = Date.now();
-    
+    this.player_id = null;
+    this.loaded = false;
+
     // this.init = function() {
     //   this.name = this.args.name || 'default';
     // }
@@ -42,16 +44,22 @@ elation.require(_reqs, function() {
     
     this.loadWorld = function(ev) {
       // load the world data sent by the server
+      if (this.loaded) return;
+      this.create_lights();
       var world = ev.data;
+      console.log("received world data", ev.data)
       for (var k in world.things) {
         var thing = world.things[k];
         this.spawn(thing.type, thing.name, thing.properties); 
       }
+      this.loaded = true;
     };
     
     this.setIdToken = function(ev) {
       // set the id sent by the server and acknowledge,
       // then create the player
+      if (this.player_id) return;
+      console.log("RECEIVED ID TOKEN", ev.data);
       this.player_id = ev.data;
       this.engine.systems.client.send({type: 'received_id', data: this.player_id});
       this.createPlayer();
@@ -59,11 +67,14 @@ elation.require(_reqs, function() {
 
     this.createPlayer = function() {
       // create the player and let the server know we have a new player obj
-      this.player = this.spawn('vrcadeplayer', this.player_id, { "position":[0,2.4,0], mass: 50, collidable: false, player_id: this.player_id });
-      this.player.addTag('local_sync');
+      this.player = this.spawn('vrcadeplayer', this.player_id, { "position":[0,2.4,0], mass: 50, collidable: false, player_id: this.player_id, tags: 'local_sync,player' });
       this.setview(this.view);
       this.startGame();
-      this.engine.systems.client.send({type: 'new_player', data: {id: this.player_id, thing: this.player.serialize()}});
+      var player = this.player.serialize(),
+          camera = this.player.camera.serialize();
+      player.properties.tags = camera.properties.tags = '';
+      console.log('serialized player', player);
+      this.engine.systems.client.send({type: 'new_player', data: {id: this.player_id, thing: this.player.serialize(), camera: this.player.camera.serialize()}});
     };
     
     this.sendPlayerChange = function() {
@@ -76,6 +87,8 @@ elation.require(_reqs, function() {
     this.createRemoteObject = function(ev) {
       // create a new thing sent by the server
       var thing = ev.data;
+      thing.properties.tags = '';
+      console.log('remote thing', thing.type, 'tags:', thing.properties.tags);
       this.children[thing.name] = this.spawn(thing.type, thing.name, thing.properties);
       console.log('spawned remote object', this.children[thing.name]);
     };
@@ -161,7 +174,57 @@ elation.require(_reqs, function() {
         this.engine.systems.controls.calibrateHMDs();
       }
     }
-    
+        this.create_lights = function() {
+      var lights = [];
+/*
+      lights.push(this.spawn('light', 'sun', {
+        "position":[50,30,-30],
+        "persist":false,
+        "type":"directional",
+        "intensity":0.6,
+        //"velocity":[0,0,0.05]
+      }));
+*/
+      /*
+      lights.push(this.spawn('light', 'sun2', {
+        "position":[-50,-30,-30],
+        "persist":false,
+        "type":"directional",
+        "intensity":0.2,
+        //"velocity":[0,0,0.05]
+      }));
+      */
+      lights.push(this.spawn('light', 'point01', {
+        "position":[-10,20,10],
+        "persist":false,
+        "type":"point",
+        "intensity": .4,
+        "color":0xffffff,
+      }));
+      lights.push(this.spawn('light', 'point02', {
+        "position":[20,10,32],
+        "persist":false,
+        "type":"point",
+        "intensity": .4,
+        "color":0xcccccc,
+      }));
+      lights.push(this.spawn('light', 'point03', {
+        "position":[0,10,-30],
+        "persist":false,
+        "type":"point",
+        "intensity": .4,
+        "color":0xcccccc,
+      }));
+      lights.push(this.spawn('light', 'ambient', {
+        "position":[0,0,0],
+        "persist":false,
+        "type":"ambient",
+        "color":0xffffff,
+      }));
+
+      return lights;
+    }
+
     this.startGame = function() {
       this.player.enable();
     }
