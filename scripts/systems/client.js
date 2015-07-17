@@ -26,7 +26,7 @@ elation.extend("engine.systems.client", function(args) {
     var thing = ev.data.thing;
     if (thing.hasTag('local_sync')) {
       console.log('local sync', thing.type);
-      if (thing.type != 'vrcadeplayer' && thing.type != 'camera' && thing.type != 'remoteplayer') {
+      if (thing.type != 'player' && thing.type != 'camera' && thing.type != 'remoteplayer' && thing.type !='vrcadeplayer') {
         var thingdata = thing.serialize();
         thingdata.properties.tags = '';
         var msgdata = {

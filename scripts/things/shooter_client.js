@@ -67,7 +67,7 @@ elation.require(_reqs, function() {
 
     this.createPlayer = function() {
       // create the player and let the server know we have a new player obj
-      this.player = this.spawn('vrcadeplayer', this.player_id, { "position":[0,2.4,0], mass: 50, collidable: false, player_id: this.player_id, tags: 'local_sync,player' });
+      this.player = this.spawn('player', this.player_id, { "position":[0,2.4,0], mass: 50, collidable: false, player_id: this.player_id, tags: 'local_sync,player' });
       this.setview(this.view);
       this.startGame();
       var player = this.player.serialize(),
