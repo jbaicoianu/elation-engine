@@ -10,13 +10,16 @@ elation.require([
   "engine.external.three.render.ShaderPass",
   "engine.external.three.render.MaskPass",
   "engine.external.three.render.CopyShader",
+  "engine.external.three.render.RecordingPass",
+
+  "engine.external.gifjs.gif",
   //"engine.external.three.render.SepiaShader",
   //"engine.external.three.render.BleachBypassShader",
   //"engine.external.three.render.FilmShader",
   //"engine.external.three.render.FilmPass",
   //"engine.external.three.render.ConvolutionShader",
   "engine.external.three.render.BloomPass",
-  //"engine.external.three.render.SSAOShader",
+  "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.fonts.helvetiker_regular",
   //"engine.external.three.fonts.drive-thru_regular",
@@ -45,7 +48,7 @@ elation.require([
       this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
-      this.renderer.setClearColor(0xffffff, 1);
+      this.renderer.setClearColor(0x000000, 1);
       this.renderer.shadowMapEnabled = true;
       this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
@@ -59,6 +62,11 @@ elation.require([
 
       // FIXME - globally-bound events are dirty, things should fire events when their properties change
       elation.events.add(null, 'physics_update,thing_drag_move,thing_rotate_move,engine_texture_load', elation.bind(this, this.setdirty));
+    }
+    this.setclearcolor = function(color, opacity) {
+      if (typeof color == 'undefined') color = 0xffffff;
+      if (typeof opacity == 'undefined') opacity = 1;
+      this.renderer.setClearColor(color, opacity);
     }
     this.setdirty = function() {
       this.dirty = true;
@@ -168,7 +176,8 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
-      this.composer = this.createRenderPath([this.rendermode]);
+      this.composer = this.createRenderPath([this.rendermode, 'recording']);
+      //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       if (this.showstats) {
         elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
       }
@@ -261,6 +270,10 @@ elation.require([
           break;
         case 'film':
           pass = new THREE.FilmPass( 0.35, .75, 2048, false );
+          break;
+        case 'recording':
+          pass = new THREE.RecordingPass();
+          this.recorder = pass;
           break;
         case 'sepia':
           pass = new THREE.ShaderPass( THREE.SepiaShader );
