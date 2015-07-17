@@ -6,18 +6,11 @@ elation.require(['engine.things.generic'], function() {
         lifetime: { type: 'float', default: 0 },
         gravity: { type: 'bool', default: true },
       });
-      this.addTag('local_sync');
-    
       if (this.properties.lifetime != 0) {
         this.age = 0;
         elation.events.add(this.engine, 'engine_frame', this);
       } 
     }
-    
-    this.onFrame = function(ev) {
-      this.refresh();
-    }
-     
     this.createObject3D = function() {
       var geo = new THREE.SphereGeometry(this.properties.radius, 36, 18);
       var mat = new THREE.MeshPhongMaterial({
