@@ -243,7 +243,7 @@ elation.require(deps, function() {
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: document.body }), { fullsize: 1, picking: true, engine: this.name, showstats: true } );
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: true } );
 
       this.initWorld();
 
