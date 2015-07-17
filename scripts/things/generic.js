@@ -62,7 +62,7 @@ elation.component.add("engine.things.generic", function() {
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
       'render.materialname': { type: 'string', comment: 'Material library name' },
       'render.texturepath': { type: 'string', comment: 'Texture location' },
-      'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' }
+      'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' },
       'tags': { type: 'string', comment: 'Default tags to add to this object' }
     });
     this.defineEvents({
