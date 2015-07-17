@@ -271,49 +271,51 @@ elation.require(deps, function() {
       this.engine.systems.controls.activateContext(this.name);
     }
     this.showMenu = function() {
-      if (!this.menu) {
-        this.menu = this.player.camera.spawn('menu', null, { 
-          position: [0,0,-2],
-          items: [
-            { 
-              text: 'Intro',
-              callback: elation.bind(this, this.startIntro),
-              disabled: true
-            },
-            { 
-              text: 'Play',
-              callback: elation.bind(this, this.startGame)
-            },
-            { 
-              text: 'Options', 
-              callback: elation.bind(this, this.configureOptions),
-            },
-            { 
-              text: 'About',
-              callback: elation.bind(this, this.showAbout),
-            },
-/*
-            { 
-              text: 'Quit',
-              disabled: true
+      if (this.player){
+        if (!this.menu) {
+          this.menu = this.player.camera.spawn('menu', null, { 
+            position: [0,0,-2],
+            items: [
+              { 
+                text: 'Intro',
+                callback: elation.bind(this, this.startIntro),
+                disabled: true
+              },
+              { 
+                text: 'Play',
+                callback: elation.bind(this, this.startGame)
+              },
+              { 
+                text: 'Options', 
+                callback: elation.bind(this, this.configureOptions),
+              },
+              { 
+                text: 'About',
+                callback: elation.bind(this, this.showAbout),
+              },
+  /*
+              { 
+                text: 'Quit',
+                disabled: true
+              }
+  */
+            ],
+            labelcfg: {
+              size: .1,
+              lineheight: 1.5,
+              color: 0x999999,
+              hovercolor: 0x003300,
+              disabledcolor: 0x000000,
+              disabledhovercolor: 0x330000,
             }
-*/
-          ],
-          labelcfg: {
-            size: .1,
-            lineheight: 1.5,
-            color: 0x999999,
-            hovercolor: 0x003300,
-            disabledcolor: 0x000000,
-            disabledhovercolor: 0x330000,
-          }
-        });
-      } else {
-        this.player.camera.add(this.menu);
+          });
+        } else {
+          this.player.camera.add(this.menu);
+        }
+        this.player.disable();
+        this.menu.enable();
+        this.menuShowing = true;
       }
-      this.player.disable();
-      this.menu.enable();
-      this.menuShowing = true;
     }
     this.hideMenu = function() {
       if (this.menu) {
