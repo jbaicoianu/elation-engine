@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var concat = require('concatenate-files'),
     fs     = require('fs');
 
