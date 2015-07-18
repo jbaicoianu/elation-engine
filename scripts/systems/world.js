@@ -22,11 +22,10 @@ elation.require([
       this.loaded = false;
       this.loading = false;
 
-
-      if (document.location.hash) {
+      if (ENV_IS_BROWSER && document.location.hash) {
         this.parseDocumentHash();
-      }
       elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
+      }
     }
 
     this.engine_start = function(ev) {
@@ -138,11 +137,13 @@ elation.require([
       } else {
         this.createDefaultScene();
       }
-      var dochash = "world.load=" + name;
-      if (this.engine.systems.physics.timescale == 0) {
-        dochash += "&world.paused=1";
+      if (ENV_IS_BROWSER) {
+        var dochash = "world.load=" + name;
+        if (this.engine.systems.physics.timescale == 0) {
+          dochash += "&world.paused=1";
+        }
+        document.location.hash = dochash;
       }
-      document.location.hash = dochash;
     }
     this.listLocalOverrides = function() {
       var overrides = [];
@@ -278,10 +279,10 @@ elation.require([
       }
       return currentobj;
     }
-    this.serialize = function() {
+    this.serialize = function(serializeAll) {
       var ret = {};
       for (var k in this.children) {
-        ret[k] = this.children[k].serialize();
+        ret[k] = this.children[k].serialize(serializeAll);
       }
       return ret[k]; // FIXME - dumb
     }
@@ -367,6 +368,16 @@ elation.require([
           things.push(this.children[childname]);
         }
         this.children[childname].getChildrenByTag(tag, things);
+      }
+      return things;
+    }
+    this.getThingsByPlayer = function(player) {
+      var things = [];
+      for (var k in this.children) {
+        if (this.children[k].getPlayer() == player) {
+          things.push(this.children[k]);
+        }
+        this.children[k].getChildrenByPlayer(player, things);
       }
       return things;
     }

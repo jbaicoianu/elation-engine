@@ -1,17 +1,27 @@
-elation.require([
-  "engine.external.three.three",
+var deps = [ 
   "engine.parts",
   "engine.materials",
   "engine.geometries",
   "engine.things.generic",
   "engine.things.menu",
   "utils.math",
-  "ui.panel",
-  "share.share",
-  "share.targets.imgur",
-  "share.targets.dropbox",
-  "share.targets.google",
-], function() {
+];
+
+if (ENV_IS_BROWSER) {
+  deps = deps.concat([
+    "share.targets.imgur",
+    "share.targets.dropbox",
+    "share.targets.google",
+    ])
+  deps.push("engine.external.three.three");
+  deps.push("ui.panel");
+}
+
+else if (ENV_IS_NODE) {
+  deps.push("engine.external.three.nodethree");
+}
+
+elation.require(deps, function() {
   elation.requireCSS('engine.engine');
 
   elation.extend("engine.instances", {});
@@ -30,7 +40,9 @@ elation.require([
     this.init = function() {
       this.systems = new elation.engine.systems(this);
       // shutdown cleanly if the user leaves the page
-      elation.events.add(window, "unload", elation.bind(this, this.stop)); 
+      var target = null;
+      if (ENV_IS_BROWSER) target = window
+      elation.events.add(target, "unload", elation.bind(this, this.stop)); 
     }
     this.start = function() {
       this.started = this.running = true;
@@ -81,6 +93,7 @@ elation.require([
         }
       })();
     this.frame = function(fn) {
+      if (ENV_IS_NODE) var window;
       this.requestAnimationFrame.call(window, fn);
     }
 
@@ -227,7 +240,6 @@ elation.require([
   elation.component.add('engine.client', function() {
     this.init = function() {
       this.name = this.args.name || 'default';
-
       this.engine = elation.engine.create(this.name, ["physics", "sound", "ai", "world", "render", "controls"], elation.bind(this, this.startEngine));
     }
     this.initWorld = function() {
@@ -259,49 +271,51 @@ elation.require([
       this.engine.systems.controls.activateContext(this.name);
     }
     this.showMenu = function() {
-      if (!this.menu) {
-        this.menu = this.player.camera.spawn('menu', null, { 
-          position: [0,0,-2],
-          items: [
-            { 
-              text: 'Intro',
-              callback: elation.bind(this, this.startIntro),
-              disabled: true
-            },
-            { 
-              text: 'Play',
-              callback: elation.bind(this, this.startGame)
-            },
-            { 
-              text: 'Options', 
-              callback: elation.bind(this, this.configureOptions),
-            },
-            { 
-              text: 'About',
-              callback: elation.bind(this, this.showAbout),
-            },
-/*
-            { 
-              text: 'Quit',
-              disabled: true
+      if (this.player){
+        if (!this.menu) {
+          this.menu = this.player.camera.spawn('menu', null, { 
+            position: [0,0,-2],
+            items: [
+              { 
+                text: 'Intro',
+                callback: elation.bind(this, this.startIntro),
+                disabled: true
+              },
+              { 
+                text: 'Play',
+                callback: elation.bind(this, this.startGame)
+              },
+              { 
+                text: 'Options', 
+                callback: elation.bind(this, this.configureOptions),
+              },
+              { 
+                text: 'About',
+                callback: elation.bind(this, this.showAbout),
+              },
+  /*
+              { 
+                text: 'Quit',
+                disabled: true
+              }
+  */
+            ],
+            labelcfg: {
+              size: .1,
+              lineheight: 1.5,
+              color: 0x999999,
+              hovercolor: 0x003300,
+              disabledcolor: 0x000000,
+              disabledhovercolor: 0x330000,
             }
-*/
-          ],
-          labelcfg: {
-            size: .1,
-            lineheight: 1.5,
-            color: 0x999999,
-            hovercolor: 0x003300,
-            disabledcolor: 0x000000,
-            disabledhovercolor: 0x330000,
-          }
-        });
-      } else {
-        this.player.camera.add(this.menu);
+          });
+        } else {
+          this.player.camera.add(this.menu);
+        }
+        this.player.disable();
+        this.menu.enable();
+        this.menuShowing = true;
       }
-      this.player.disable();
-      this.menu.enable();
-      this.menuShowing = true;
     }
     this.hideMenu = function() {
       if (this.menu) {
@@ -422,4 +436,21 @@ elation.require([
       return filename;
     }
   });
+  
+  elation.component.add('engine.server', function() {
+    this.init = function() {
+      this.name = this.args.name || 'default';
+      this.engine = elation.engine.create(this.name, ['physics', 'world', 'server'], elation.bind(this, this.startEngine));
+    }
+    this.initWorld = function() {
+      // Virtual stub - inherit from elation.engine.server, then override this for your app
+    }
+    this.startEngine = function(engine) {
+      this.engine = engine;
+      this.world = this.engine.systems.world; // shortcut
+      this.initWorld();
+      engine.start();
+    }
+   });
+  
 });

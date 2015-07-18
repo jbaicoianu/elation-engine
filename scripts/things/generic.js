@@ -1,5 +1,5 @@
 elation.require([
-  //"engine.external.three.ColladaLoader",
+  // "engine.external.three.ColladaLoader",
   //"engine.external.three.JSONLoader"
   //"engine.external.three.glTFLoader-combined"
   "engine.things.trigger"
@@ -23,6 +23,18 @@ elation.component.add("engine.things.generic", function() {
     this.parttypes = {};
     this.children = {};
     this.tags = [];
+    
+    this.tmpvec = new THREE.Vector3();
+    
+    this.interp = {
+      rate: 20,
+      lastTime: 0,
+      time: 0,
+      endpoint: new THREE.Vector3(),
+      spline: [],
+      active: false,
+      fn: this.applyInterp
+    };
 
     //elation.events.add(this, 'thing_create', this);
     this.defineActions({
@@ -50,6 +62,7 @@ elation.component.add("engine.things.generic", function() {
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
       'render.materialname': { type: 'string', comment: 'Material library name' },
       'render.texturepath': { type: 'string', comment: 'Texture location' },
+      'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' },
       'tags': { type: 'string', comment: 'Default tags to add to this object' }
     });
     this.defineEvents({
@@ -242,6 +255,46 @@ elation.component.add("engine.things.generic", function() {
       }
     }
   }
+  this.setProperties = function(properties, interpolate) {
+    for (var prop in properties) {
+      if (prop == 'position' && interpolate == true )
+      {
+          if ( this.tmpvec.fromArray(properties[prop]).distanceToSquared(this.get('position')) > 1 )
+          {
+            // call interpolate function 
+            // TODO: fix magic number 0.001
+            this.interpolateTo(properties[prop]);
+          }
+      }
+      else {
+        this.set(prop, properties[prop], false);
+      }
+    }
+    this.refresh();
+  }
+  
+  this.interpolateTo = function(newPos) {
+    this.interp.time = 0;
+    this.interp.endpoint.fromArray(newPos);
+    this.interp.spline = new THREE.SplineCurve3([this.get('position'), this.interp.endpoint]).getPoints(10);
+    // console.log(this.interp.spline);
+    elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.applyInterp));
+  }
+  
+  this.applyInterp = function(ev) {
+    this.interp.time += ev.data.delta * this.engine.systems.physics.timescale;
+    if (this.interp.time >= this.interp.rate) {
+      elation.events.remove(this, 'engine_frame', elation.bind(this, this.applyInterp));
+      return;
+    }
+    console.log("DEBUG: interpolating, time:", this.interp.time);
+    if (this.interp.time - this.interp.lastTime >= 2) 
+    {
+    this.set('position', this.interp.spline[Math.floor((this.interp.time * 10) / this.interp.rate)], false);
+    this.refresh();
+    }
+  };
+  
   this.get = function(property, defval) {
     if (typeof defval == 'undefined') defval = null;
     return elation.utils.arrayget(this.properties, property, defval);
@@ -278,10 +331,12 @@ elation.component.add("engine.things.generic", function() {
     this.refresh();
   }
   this.initDOM = function() {
-    this.objects['dom'] = this.createObjectDOM();
-    elation.html.addclass(this.container, "space.thing");
-    elation.html.addclass(this.container, "space.things." + this.type);
-    //this.updateDOM();
+    if (ENV_IS_BROWSER) {
+      this.objects['dom'] = this.createObjectDOM();
+      elation.html.addclass(this.container, "space.thing");
+      elation.html.addclass(this.container, "space.things." + this.type);
+      //this.updateDOM();
+    }
   }
   this.initPhysics = function() {
     if (this.properties.physical) {
@@ -290,9 +345,10 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.createObject3D = function() {
+    // if (this.properties.exists === false || !ENV_IS_BROWSER) return;
     if (this.properties.exists === false) return;
-    var object = null, geometry = null, material = null;
 
+    var object = null, geometry = null, material = null;
     if (this.properties.render) {
       if (this.properties.render.scene) {
         this.loadJSONScene(this.properties.render.scene, this.properties.render.texturepath);
@@ -312,8 +368,10 @@ elation.component.add("engine.things.generic", function() {
           this.objects['3d'].add(subobj);
 
           this.colliders = this.extractColliders(subobj, true);
-          var textures = this.extractTextures(subobj, true);
-          this.loadTextures(textures);
+          if (ENV_IS_BROWSER){
+            var textures = this.extractTextures(subobj, true);
+            this.loadTextures(textures);
+          }
         }), 0);
       }
     }
@@ -414,16 +472,16 @@ elation.component.add("engine.things.generic", function() {
       elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       return true;
     } else {
-      console.log("Couldn't add ", thing, " already exists in ", this);
+      console.log("Couldn't add ", thing.name, " already exists in ", this.name);
     }
     return false;
   }
   this.remove = function(thing) {
-    if (this.children[thing.id]) {
+    if (thing && this.children[thing.id]) {
       if (this.objects['3d'] && thing.objects['3d']) {
         this.objects['3d'].remove(thing.objects['3d']);
       }
-      if (thing.container.parentNode) {
+      if (thing.container && thing.container.parentNode) {
         thing.container.parentNode.removeChild(thing.container);
       }
       if (thing.objects['dynamics'] && thing.objects['dynamics'].parent) {
@@ -432,7 +490,7 @@ elation.component.add("engine.things.generic", function() {
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
     } else {
-      console.log("Couldn't remove ", thing, " doesn't exist in ", this);
+      console.log("Couldn't remove ", thing.name, " doesn't exist in ", this.name);
     }
   }
   this.reparent = function(newparent) {
@@ -488,6 +546,7 @@ elation.component.add("engine.things.generic", function() {
         }
       }
       elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
+      elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
     }
   }
   this.removeDynamics = function() {
@@ -870,7 +929,7 @@ elation.component.add("engine.things.generic", function() {
 console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray(), angle, this.properties.orientation.toArray());
     }
   }
-  this.serialize = function() {
+  this.serialize = function(serializeAll) {
     var ret = {
       name: this.name,
       parentname: this.parentname,
@@ -907,6 +966,7 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
             var ref = propval;
             propval = [ ref.type, ref.id ];
             break;
+
         }
         if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
           //elation.utils.arrayset(ret.properties, k, propval);
@@ -919,7 +979,13 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
 
     for (var k in this.children) {
       if (this.children[k].properties) {
-        if (this.children[k].properties.persist) {
+        if (!serializeAll) {
+          if (this.children[k].properties.persist) {
+            ret.things[k] = this.children[k].serialize();
+            numthings++;
+          }
+        }
+        else {
           ret.things[k] = this.children[k].serialize();
           numthings++;
         }
@@ -991,6 +1057,10 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     }
     return false;
   }
+  this.getPlayer = function() {
+    console.log('player id:', this.get('player_id'));
+    return this.get('player_id');
+  }
   this.addPart = function(name, part) {
     if (this.parts[name] === undefined) {
       this.parts[name] = part;
@@ -1023,6 +1093,16 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     return null;
   }
   this.getObjectsByTag = function(tag) {
+  }
+  this.getChildrenByPlayer = function(player, collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      if (this.children[k].getPlayer() == player) {
+        collection.push(this.children[k]);
+      }
+      this.children[k].getChildrenByPlayer(player, collection);
+    }
+    return collection;
   }
   this.getChildrenByTag = function(tag, collection) {
     if (typeof collection == 'undefined') collection = [];
