@@ -34,7 +34,7 @@ elation.require(['engine.things.generic'], function() {
           //this.lightobj.add(helper);
           break;
         case 'ambient':
-          this.lightobj = new THREE.AmbientLight(0x999999);
+          this.lightobj = new THREE.AmbientLight(this.properties.color);
           break;
       } 
 
