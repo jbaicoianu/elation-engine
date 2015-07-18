@@ -47,8 +47,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
 
       this.target = false;
 
-      this.addTag('player');
-
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
       elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
     }
@@ -77,7 +75,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         camdir.multiplyScalar(velocity);
         camdir.add(this.objects.dynamics.velocity);
   //console.log('pew!', velocity);
-        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity }, true);
+        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity, player_id: this.properties.player_id, tags: 'local_sync' }, true);
 
 /*
         if (!this.lights[this.lightnum]) {
@@ -145,7 +143,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
 
       // place camera at head height
-      this.camera = this.spawn('camera', null, { position: [0,this.properties.height * .8,0], mass: 0.1 } );
+      this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
     }
     this.getGroundHeight = function() {
