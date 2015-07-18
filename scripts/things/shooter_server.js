@@ -13,9 +13,14 @@ var _reqs = [
  elation.component.add('engine.things.shooter_server', function() {
     this.players = {};
     
+    this.initNetwork = function(args) {
+      this.server.start({ port: 9001 });
+    };
+    
     this.postinit = function() {
       // network events
       this.server = this.engine.systems.server;
+      this.initNetwork();
       elation.events.add(this.server, 'add_player', elation.bind(this, this.spawnRemotePlayer));
       elation.events.add(this.server, 'remote_thing_change', elation.bind(this, this.remoteThingChange));
       elation.events.add(this.server, 'add_thing', elation.bind(this, this.spawnNewThing));

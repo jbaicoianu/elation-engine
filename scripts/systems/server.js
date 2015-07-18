@@ -10,14 +10,18 @@ elation.extend("engine.systems.server", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: networking server');
     this.world = this.engine.systems.world;
-    this.server = new elation.engine.systems.server.websocket;
-    this.adminServer = new elation.engine.systems.server.adminserver;
+    // this.adminServer = new elation.engine.systems.server.adminserver;
     
+  };
+  
+  this.start = function(args) {
+    this.server = new elation.engine.systems.server.websocket;
+    this.server.start(args.port);
     var events = [
       [this.server, 'client_disconnected', this.onClientDisconnect],
       [this.server, 'client_connected', this.onClientConnect],
       [this.world, 'world_thing_add', this.onThingAdd],
-      [this.adminServer, 'admin_client_connected', this.onAdminClientConnect],
+      // [this.adminServer, 'admin_client_connected', this.onAdminClientConnect],
       [this.world, 'world_thing_remove', this.onThingRemove],
       // [this.world, 'thing_change', this.onThingChange]
     ];
@@ -255,17 +259,23 @@ elation.extend("engine.systems.server.client", function(args) {
 
 // FIXME - servers should take args for port/etc
 elation.extend("engine.systems.server.websocket", function() {
-  var wsServer = require('ws').Server,
-      wss = new wsServer({ port: 9001 });  
-  console.log('websocket server running on 9001')
-  wss.on('connection', function(ws) {
-    console.log('game server websocket conn');
-    var id = Date.now();
-    elation.events.fire({element: this, type: 'client_connected', data: {id: id, channel: ws}});
-    ws.on('close', function() {
-      elation.events.fire({element: this, type: 'client_disconnected', data: {id: id}});
+  var wsServer = require('ws').Server;
+  
+  this.start = function(port) {
+    if (wss) return;
+    
+    var wss = new wsServer({ port: port });  
+    console.log('websocket server running on', port);
+    
+    wss.on('connection', function(ws) {
+      console.log('game server websocket conn');
+      var id = Date.now();
+      elation.events.fire({element: this, type: 'client_connected', data: {id: id, channel: ws}});
+      ws.on('close', function() {
+        elation.events.fire({element: this, type: 'client_disconnected', data: {id: id}});
+      }.bind(this));
     }.bind(this));
-  }.bind(this));
+  }
   
 })
 

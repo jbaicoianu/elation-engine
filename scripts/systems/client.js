@@ -12,19 +12,14 @@ elation.extend("engine.systems.client", function(args) {
   this.system_attach = function(ev) {
     console.log('INIT: networking client');
     this.world = this.engine.systems.world;
-    // this.connection = new elation.engine.systems.client.connection({
-    //   transport: 'websocket',
-    //   host: 'dev.brandonhinshaw.us',
-    //   port: '9001'
-    // });
-    elation.events.add(this.connection.socket, 'new_message', elation.bind(this, this.onNewMessage));
-    elation.events.add(this.world, 'world_thing_add', elation.bind(this, this.onNewThing));
-    // elation.events.add(this.world, 'world_thing_remove', elation.bind(this, this.onThingRemove));
   };
   
   this.connect = function(args) {
     if (this.connection) return;
     this.connection = new elation.engine.systems.client.connection(args);
+    console.log(this.connection);
+    elation.events.add(this.connection.socket, 'new_message', elation.bind(this, this.onNewMessage));
+    elation.events.add(this.world, 'world_thing_add', elation.bind(this, this.onNewThing));
   }
   
   this.onNewThing = function(ev) {
