@@ -1,5 +1,5 @@
 
-elation.require(['engine.things.generic', 'vrcade.maskgenerator'], function() {
+elation.require(['engine.things.generic', 'engine.things.maskgenerator'], function() {
   
 elation.component.add('engine.things.remoteplayer', function() {
   this.postinit = function() {
