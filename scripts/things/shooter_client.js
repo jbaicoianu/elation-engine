@@ -18,9 +18,18 @@ elation.require(_reqs, function() {
     // this.init = function() {
     //   this.name = this.args.name || 'default';
     // }
-    
+    this.initNetwork = function() {
+      // virtual - override this to create your connection, e.g.
+      //
+      // this.engine.systems.client.connect({
+      //   transport: 'websocket',
+      //   host: 'dev.brandonhinshaw.us',
+      //   port: '9001'
+      // })
+    }
     this.postinit = function() {
       console.log('engine:', this.engine);
+      this.initNetwork();
       elation.events.add(this.engine.systems.client, 'world_data', elation.bind(this, this.loadWorld));
       elation.events.add(this.engine.systems.client, 'id_token', elation.bind(this, this.setIdToken));
       elation.events.add(this.engine.systems.client, 'thing_added', elation.bind(this, this.createRemoteObject));
