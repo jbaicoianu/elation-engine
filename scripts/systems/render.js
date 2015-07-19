@@ -662,8 +662,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
     }
     this.mousemove = function(ev) {
-      this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
-      this.cancelclick = true;
+      if (this.mousepos && this.mousepos[0] != ev.clientX || this.mousepos[1] != ev.clientY) {
+        this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
+        this.cancelclick = true;
+      }
     }
     this.dragover = function(ev) {
       if (!this.pickingactive) {
@@ -709,12 +711,19 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         ev.preventDefault();
       }
     }
-/*
     this.touchstart = function(ev) {
-      this.toggleFullscreen(true);
-      this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
-      this.updatePickingObject();
-      this.mousedown(ev.touches[0]);
+      if (!this.pickingactive) {
+        this.pickingactive = true;
+      }
+      this.cancelclick = false;
+      if (!this.fullscreen) {
+        this.toggleFullscreen(true);
+        this.cancelclick = true;
+      } else {
+        this.mousepos = [Math.round(ev.touches[0].clientX), Math.round(ev.touches[0].clientY), document.body.scrollTop];
+        this.updatePickingObject();
+        this.mousedown(ev.touches[0]);
+      }
     }
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
@@ -722,9 +731,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.touchend = function(ev) {
       this.mouseup(ev);
-      this.click();
+      this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
+      if (this.pickingactive) {
+        this.pickingactive = false;
+      }
     }
-*/
     this.keydown = function(ev) {
       for (var k in this.keystates) {
         this.keystates[k] = ev[k];
