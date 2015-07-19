@@ -2,11 +2,6 @@ body {
   font-size: .8em;
 }
 
-@media only screen and (max-width: 800px) {
-  body {
-    zoom: .6;
-  }
-}
 .engine_view {
   min-height: 600px;
   position: relative;
