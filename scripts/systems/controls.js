@@ -633,8 +633,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           clientX: ev.touches[0].clientX,
           clientY: ev.touches[0].clientY,
         };
-        newev.movementX = (this.lasttouchpos[0] - newev.clientX) / devicePixelRatio;
-        newev.movementY = (this.lasttouchpos[1] - newev.clientY) / devicePixelRatio;
+        newev.movementX = (this.lasttouchpos[0] - newev.clientX) / (devicePixelRatio * 2);
+        newev.movementY = (this.lasttouchpos[1] - newev.clientY) / (devicePixelRatio * 2);
         this.lasttouchpos = [newev.clientX, newev.clientY];
         this.mousemove(newev);
       } else {
