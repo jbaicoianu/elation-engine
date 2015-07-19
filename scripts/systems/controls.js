@@ -245,6 +245,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           16: 'shift',
           17: 'ctrl',
           18: 'alt',
+          20: 'capslock',
           27: 'esc',
 
           32: 'space',
@@ -295,7 +296,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         case 'keyboard':
           var basename = type + '_' + (!elation.utils.isEmpty(subid) ? subid + '_' : '');
           if (codes[type][id]) {
-            bindname = basename + codes[type][id];
+            // map the numeric code to a string, skipping the subid if it's redundant
+            bindname = type + '_' + (!elation.utils.isEmpty(subid) && subid !== codes[type][id] ? subid + '_' : '') + codes[type][id];
           } else if (id >= 65 && id <= 90) {
             bindname = basename + String.fromCharCode(id).toLowerCase();
           } else if (id >= 48 && id <= 57) {
