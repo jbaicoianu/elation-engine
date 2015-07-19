@@ -7,14 +7,14 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         startposition: { type: 'vector3', default: new THREE.Vector3() }
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
-        'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
-        'move_backward': ['keyboard_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
-        'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
-        'move_right': ['keyboard_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
-        'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
-        'turn_right': ['keyboard_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
-        'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
-        'look_down': ['keyboard_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
+        'move_forward': ['keyboard_w,keyboard_shift_w', elation.bind(this, this.updateControls)],
+        'move_backward': ['keyboard_s,keyboard_shift_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+        'move_left': ['keyboard_a,keyboard_shift_a', elation.bind(this, this.updateControls)],
+        'move_right': ['keyboard_d,keyboard_shift_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
+        'turn_left': ['keyboard_left,keyboard_shift_left', elation.bind(this, this.updateControls)],
+        'turn_right': ['keyboard_right,keyboard_shift_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+        'look_up': ['keyboard_up,keyboard_shift_up', elation.bind(this, this.updateControls)],
+        'look_down': ['keyboard_down,keyboard_shift_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
         'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
@@ -34,7 +34,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
       this.moveSpeed = 300;
-      this.runMultiplier = 2.5;
+      this.runMultiplier = 1.5;
       this.turnSpeed = 2;
       this.moveFriction = 4;
       //this.engine.systems.controls.activateContext('player');
@@ -46,6 +46,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.lightnum = 0;
 
       this.target = false;
+      this.addTag('player');
 
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
       elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
