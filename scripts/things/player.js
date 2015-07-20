@@ -155,7 +155,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.enablePointerLock(true);
       if (this.engine.systems.render.views.main) {
-        this.engine.systems.render.views.main.picking = false;
+        this.engine.systems.render.views.main.disablePicking();
       }
       this.controlstate._reset();
       this.lookVector.set(0,0,0);
@@ -168,7 +168,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.engine.systems.controls.deactivateContext('player');
       this.engine.systems.controls.enablePointerLock(false);
       if (this.engine.systems.render.views.main) {
-        this.engine.systems.render.views.main.picking = true;
+        this.engine.systems.render.views.main.enablePicking();
       }
       this.enableuse = false;
       if (this.objects.dynamics) {

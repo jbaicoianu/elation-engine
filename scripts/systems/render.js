@@ -870,8 +870,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.pickingobjects[id].visible = this.realvisible[id];
       }
     }
-    this.updatePickingObject = function() {
-      if (this.picking && this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2])) {
+    this.updatePickingObject = function(force) {
+      if (force || (this.picking && this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
         var dims = elation.html.dimensions(this.container);
         this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.mousepos[0];
@@ -916,6 +916,16 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.getPickingData = function(mesh, mousepos) {
       return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
+    }
+    this.enablePicking = function() {
+      this.picking = true;
+      this.updatePickingTarget(true);
+      this.updatePickingObject(true);
+    }
+    this.disablePicking = function() {
+      this.updatePickingTarget(true);
+      this.updatePickingObject(true);
+      this.picking = false;
     }
   });
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
