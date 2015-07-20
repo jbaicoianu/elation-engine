@@ -5,19 +5,18 @@ var deps = [
   "engine.things.generic",
   "engine.things.menu",
   "utils.math",
+  "ui.panel"
 ];
 
 if (ENV_IS_BROWSER) {
   deps = deps.concat([
+    "engine.external.three.three",
+    "share.picker",
     "share.targets.imgur",
     "share.targets.dropbox",
     "share.targets.google",
-    ])
-  deps.push("engine.external.three.three");
-  deps.push("ui.panel");
-}
-
-else if (ENV_IS_NODE) {
+  ]);
+} else if (ENV_IS_NODE) {
   deps.push("engine.external.three.nodethree");
 }
 
@@ -378,6 +377,7 @@ elation.require(deps, function() {
       this.configmenu.show();
     }
     this.startGame = function() {
+      this.hideMenu();
     }
     this.showAbout = function() {
     }
