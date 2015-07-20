@@ -157,7 +157,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       if (this.engine.systems.render.views.main) {
         this.engine.systems.render.views.main.picking = false;
       }
+      this.controlstate._reset();
+      this.lookVector.set(0,0,0);
+      this.turnVector.set(0,0,0);
       this.enableuse = true;
+      this.enabled = true;
+      this.engine.systems.controls.requestPointerLock();
     }
     this.disable = function() {
       this.engine.systems.controls.deactivateContext('player');
@@ -176,18 +181,23 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         this.camera.objects.dynamics.angular.set(0,0,0);
         this.camera.objects.dynamics.updateState();
       }
+      this.lookVector.set(0,0,0);
+      this.turnVector.set(0,0,0);
       this.hideUseDialog();
+      this.controlstate._reset();
+      this.enabled = false;
     }
     this.refresh = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
       return function() {
-        if (this.camera) {
+        if (this.camera && this.enabled) {
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
           this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
 
-          this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.turnSpeed;
-
-          this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.turnSpeed;
+          if (this.engine.systems.controls.pointerLockActive) {
+            this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.turnSpeed;
+            this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.turnSpeed;
+          }
 
           if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
           if (this.controlstate.crouch) {
@@ -233,7 +243,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
                 this.lookVector.x = 0;
               }
 */
-//console.log(this.lookVector.toArray());
               this.camera.objects.dynamics.setAngularVelocity(this.lookVector);
               //this.camera.objects.dynamics.processConstraints([]);
               this.camera.objects.dynamics.updateState();
