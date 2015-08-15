@@ -14,7 +14,8 @@ if (ENV_IS_BROWSER) {
     "share.picker",
     "share.targets.imgur",
     "share.targets.dropbox",
-    "share.targets.google",
+    "share.targets.googledrive",
+    "share.targets.youtube",
   ]);
 } else if (ENV_IS_NODE) {
   deps.push("engine.external.three.nodethree");
@@ -165,8 +166,9 @@ elation.require(deps, function() {
   });
   elation.component.add("engine.configuration", function() {
     this.init = function() {
-      this.engine = this.args.engine;
-      this.view = this.args.view;
+      this.client = this.args.client;
+      this.engine = this.client.engine;
+      this.view = this.client.view;
       this.create();
       this.addclass('engine_configuration');
     }
@@ -177,35 +179,11 @@ elation.require(deps, function() {
         });
 
         /* Video Settings */
-        var videopanel = elation.ui.panel({
-          orientation: 'vertical'
+        var videopanel = elation.engine.systems.render.config({
+          client: this.client,
+          rendersystem: this.engine.systems.render,
         });
-        var oculus = elation.ui.toggle({
-          label: 'Oculus Rift',
-          append: videopanel,
-          events: { toggle: elation.bind(this, this.toggleVR) }
-        });
-        var fullscreen = elation.ui.toggle({
-          label: 'Fullscreen',
-          append: videopanel,
-          events: { toggle: elation.bind(this, this.toggleFullscreen) }
-        });
-        this.view.scale = 100;
-        var scale = elation.ui.slider({
-          append: videopanel,
-          min: 1,
-          max: 200,
-          snap: 1,
-          handles: [
-            {
-              name: 'handle_one_scale',
-              value: this.view.scale,
-              labelprefix: 'View scale:',
-              bindvar: [this.view, 'scale']
-            }
-          ],
-          events: { ui_slider_change: elation.bind(this.view.rendersystem, this.view.rendersystem.setdirty) }
-        });
+
         var configtabs = elation.ui.tabbedcontent({
           append: this,
           items: {
@@ -262,7 +240,7 @@ elation.require(deps, function() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
         'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
         'share_screenshot': ['keyboard_comma', elation.bind(this, this.shareScreenshot)],
-        'share_gif': ['keyboard_period', elation.bind(this, this.shareGif)],
+        'share_gif': ['keyboard_period', elation.bind(this, this.shareMP4)],
         'pointerlock': ['pointerlock', elation.bind(this, this.togglePointerLock)],
         'vr_toggle': ['keyboard_ctrl_rightsquarebracket', elation.bind(this, this.toggleVR)],
         'vr_calibrate': ['keyboard_ctrl_leftsquarebracket', elation.bind(this, this.calibrateVR)],
@@ -361,7 +339,7 @@ elation.require(deps, function() {
     }
     this.configureOptions = function() {
       if (!this.configmenu) {
-        var configpanel = elation.engine.configuration({engine: this.engine, view: this.view});
+        var configpanel = elation.engine.configuration({client: this});
         this.configmenu = elation.ui.window({
           append: document.body,
           classname: this.name + '_config',
@@ -385,7 +363,8 @@ elation.require(deps, function() {
       this.sharepicker = elation.share.picker({append: document.body});
       this.sharepicker.addShareTarget(elation.share.targets.imgur({clientid: '96d8f6e2515953a'}));
       this.sharepicker.addShareTarget(elation.share.targets.dropbox({clientid: 'g5m5xsgqaqmf7jc'}));
-      this.sharepicker.addShareTarget(elation.share.targets.google({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
+      this.sharepicker.addShareTarget(elation.share.targets.googledrive({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
+      this.sharepicker.addShareTarget(elation.share.targets.youtube({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
     }
     this.shareScreenshot = function(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
@@ -393,6 +372,7 @@ elation.require(deps, function() {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
+/*
         recorder.captureJPG().then(elation.bind(this, function(data) {
           var img = data.image.data;
           this.sharepicker.share({
@@ -402,6 +382,17 @@ elation.require(deps, function() {
           });
           var now = new Date().getTime();
           console.log('finished jpg in ' + data.time.toFixed(2) + 'ms'); 
+        }));
+*/
+        recorder.capturePNG().then(elation.bind(this, function(data) {
+          var img = data.image.data;
+          this.sharepicker.share({
+            name: this.getScreenshotFilename('png'), 
+            type: 'image/png',
+            image: img, 
+          });
+          var now = new Date().getTime();
+          console.log('finished png in ' + data.time.toFixed(2) + 'ms'); 
         }));
       }
     }
@@ -420,6 +411,24 @@ elation.require(deps, function() {
           });
           var now = new Date().getTime();
           console.log('finished gif in ' + data.time.toFixed(2) + 'ms'); 
+        }));
+      }
+    }
+    this.shareMP4 = function(ev) {
+      if (typeof ev == 'undefined' || ev.value == 1) {
+        if (!this.sharepicker) {
+          this.createSharePicker();
+        }
+        var recorder = this.view.recorder;
+        recorder.captureMP4(1280, 720, 25, 20).then(elation.bind(this, function(data) {
+          var img = data.image;
+          this.sharepicker.share({
+            name: this.getScreenshotFilename('mp4'), 
+            type: 'video/mp4',
+            image: img, 
+          });
+          var now = new Date().getTime();
+          console.log('finished mp4 in ' + data.time.toFixed(2) + 'ms'); 
         }));
       }
     }
