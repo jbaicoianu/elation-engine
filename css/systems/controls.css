@@ -141,9 +141,7 @@
   left: 84px;
   top: 82px;
 }
-.controls_mouse,
-.controls_gamepad,
-.controls_keyboard {
+.engine_config_section {
   width: 60%;
   border: 1px solid #ccc;
   background: rgba(255,255,255,.2);

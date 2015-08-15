@@ -738,15 +738,15 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.create = function() {
         var mousecontrols = elation.ui.panel({
           append: this,
-          classname: 'controls_mouse',
+          classname: 'engine_config_section controls_mouse',
         });
         var gamepadcontrols = elation.ui.panel({
           append: this,
-          classname: 'controls_gamepad',
+          classname: 'engine_config_section controls_gamepad',
         });
         var keyboardcontrols = elation.ui.panel({
           append: this,
-          classname: 'controls_keyboard',
+          classname: 'engine_config_section controls_keyboard',
         });
         var label = elation.ui.labeldivider({
           append: mousecontrols, 
