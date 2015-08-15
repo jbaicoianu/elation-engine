@@ -53,6 +53,9 @@ elation.component.add("engine.things.generic", function() {
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
+      'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
+      'shadow':         { type: 'bool', default: true, comment: 'Casts and receives shadows' },
+      'wireframe':      { type: 'bool', default: false, comment: 'Render this object as a wireframe' },
       'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
       'persist':        { type: 'bool', default: false, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
@@ -702,8 +705,12 @@ elation.component.add("engine.things.generic", function() {
       //} else if (node instanceof THREE.Mesh) {
       } else if (node.name !== '') {
         this.parts[node.name] = node;
-        node.castShadow = true;
-        node.receiveShadow = true;
+        node.castShadow = this.properties.shadow;
+        node.receiveShadow = this.properties.shadow;
+      }
+      if (node.material) {
+        node.material.fog = this.properties.fog;
+        node.material.wireframe = this.properties.wireframe;
       }
     }));
     //console.log('Collada loaded: ', this.parts, this.cameras, this); 
