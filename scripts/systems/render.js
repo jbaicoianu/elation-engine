@@ -12,7 +12,11 @@ elation.require([
   "engine.external.three.render.CopyShader",
   "engine.external.three.render.RecordingPass",
 
+  "engine.external.threecap.threecap",
+
   "engine.external.gifjs.gif",
+  "engine.external.ffmpeg.ffmpeg",
+  //"engine.external.ffmpeg.ffmpeg_minimal",
   //"engine.external.three.render.SepiaShader",
   //"engine.external.three.render.BleachBypassShader",
   //"engine.external.three.render.FilmShader",
@@ -25,6 +29,8 @@ elation.require([
   //"engine.external.three.fonts.drive-thru_regular",
   "engine.materials",
   "engine.geometries",
+  "ui.select",
+  "ui.slider",
 ], function() {
   elation.requireCSS('ui.slider');
 
@@ -49,8 +55,8 @@ elation.require([
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
-      this.renderer.shadowMapEnabled = true;
-      this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       this.renderer.gammaInput = true;
       this.renderer.gammaOutput = true;
@@ -990,4 +996,76 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.init();
   });
+  elation.component.add('engine.systems.render.config', function() {
+    this.init = function() {
+        this.args.orientation = 'vertical'
+        elation.engine.systems.render.config.extendclass.init.call(this);
+
+        this.client = this.args.client;
+        this.engine = this.client.engine;
+        this.view = this.client.view;
+        this.rendersystem = this.args.rendersystem;
+
+        var displaypanel = elation.ui.panel({ 
+          orientation: 'vertical',
+          classname: 'engine_config_section',
+          append: this 
+        });
+        var capturepanel = elation.ui.panel({ 
+          orientation: 'vertical',
+          classname: 'engine_config_section',
+          append: this 
+        });
+
+        // Display Settings
+        var displaylabel = elation.ui.labeldivider({
+          append: displaypanel,
+          label: 'Display Settings'
+        });
+        var oculus = elation.ui.toggle({
+          label: 'Oculus Rift',
+          append: displaypanel,
+          events: { toggle: elation.bind(this.client, this.client.toggleVR) }
+        });
+        var fullscreen = elation.ui.toggle({
+          label: 'Fullscreen',
+          append: displaypanel,
+          events: { toggle: elation.bind(this.client, this.client.toggleFullscreen) }
+        });
+/*
+        this.view.scale = 100;
+        var scale = elation.ui.slider({
+          append: displaypanel,
+          min: 1,
+          max: 200,
+          snap: 1,
+          handles: [
+            {
+              name: 'handle_one_scale',
+              value: this.view.scale,
+              labelprefix: 'View scale:',
+              bindvar: [this.view, 'scale']
+            }
+          ],
+          events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
+        });
+*/
+
+      // Capture Settings
+      var capturelabel = elation.ui.labeldivider({
+        append: capturepanel,
+        label: 'Capture Settings'
+      });
+      var codec = elation.ui.select({
+        append: capturepanel,
+        label: 'Codec',
+        items: ['h264','gif']
+      });
+      var fps = elation.ui.select({
+        append: capturepanel,
+        label: 'FPS',
+        items: [5,10,25,30,45,60]
+      });
+    }
+  }, elation.ui.panel);
 });
