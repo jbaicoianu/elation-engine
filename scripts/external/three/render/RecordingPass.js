@@ -42,13 +42,14 @@ THREE.RecordingPass = function ( ) {
   this.recordtarget = new THREE.WebGLRenderTarget(640, 480, parameters);
   this.lastframe = false;
 
-console.log('new recording pass, cool!');
-
   this.recording = true;
 
 	this.enabled = true;
 	this.renderToScreen = false;
 	this.needsSwap = true;
+
+  //this.ffmpeg = new FFMPEG({scriptbase: '/scripts/engine/external/ffmpeg/', useWorker: true, quality: 'veryfast'});
+
 
 };
 
@@ -114,6 +115,20 @@ THREE.RecordingPass.prototype = {
       }
     }.bind(this));
   },
+  capturePNG: function(width, height) {
+    return new Promise(function(resolve, reject) {
+      var start = performance.now();
+      var imgdata = this.getCaptureData(width, height);
+      if (imgdata) {
+        this.encodeImage(imgdata.data, imgdata.width, imgdata.height, 'png').then(function(img) {
+          var end = performance.now();
+          resolve({image: img, time: end - start});
+        });
+      } else {
+        reject();
+      }
+    }.bind(this));
+  },
   captureGIF: function(width, height, frames, delay) {
     return new Promise(function(resolve, reject) {
       var framepromises = [];
@@ -137,7 +152,7 @@ THREE.RecordingPass.prototype = {
   scheduleGIFframe: function(width, height, frame, delay) {
     return new Promise(function(resolve, reject) {
       setTimeout(function() { 
-console.log('get frame', frame);
+        //console.log('get frame', frame);
         var imgdata = this.getCaptureData(width, height);
         if (imgdata) {
           resolve({frame: frame, image: imgdata});
@@ -145,6 +160,31 @@ console.log('get frame', frame);
           reject();
         }
       }.bind(this), delay);
+    }.bind(this));
+  },
+  captureMP4: function(width, height, fps, time) {
+    var delay = 1000 / fps;
+    var numframes = time * fps;
+    return new Promise(function(resolve, reject) {
+      var framepromises = [];
+      //var ffmpeg = this.ffmpeg;
+      var ffmpeg = new FFMPEG({scriptbase: '/scripts/engine/external/ffmpeg/', useWorker: true, quality: 'veryfast', fps: fps});
+      for (var i = 0; i < numframes; i++) {
+        var promise = this.scheduleGIFframe(width, height, i, delay * i);
+        framepromises.push(promise);
+        promise.then(function(framedata) {
+          ffmpeg.addFrame(framedata.image);
+        });
+      }
+      framepromises[0].then(function(f) {
+        var start = performance.now();
+        ffmpeg.on('finished', function(blob) {
+          var end = performance.now();
+          resolve({image: blob, time: end - start});
+        });
+        ffmpeg.render('ultrafast');
+      
+      });
     }.bind(this));
   },
   encodeImage: function(pixeldata, width, height, format) {
@@ -157,6 +197,7 @@ console.log('get frame', frame);
       var workermsg = {
         width: width,
         height: height,
+        format: format,
         data: pixeldata.buffer,
         timeStamp: new Date().getTime()
       };
