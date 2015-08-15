@@ -1,6 +1,6 @@
 elation.extend("engine.systems.server", function(args) {
   elation.implement(this, elation.engine.systems.system);
-  var wrtc = require('wrtc');
+  //var wrtc = require('wrtc');
   this.clients = {};
   this.adminClients = [];
   this.transport = 'websocket';
@@ -180,9 +180,11 @@ elation.extend("engine.systems.server", function(args) {
      type: ev.type,
      data: ev.data
    };
+/*
    this.adminServer.wss.clients.forEach(function(client){
      client.send(JSON.stringify(msg));
    });
+*/
  };
  
 });
@@ -296,7 +298,7 @@ elation.extend("engine.systems.server.adminserver", function() {
 })
 elation.extend("engine.systems.server.webrtc", function() {
   var http = require('http');
-  var webrtc = require('wrtc');
+  //var webrtc = require('wrtc');
   var ws = require('ws');
   var net = require('net');
   
