@@ -16,9 +16,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         'look_up': ['keyboard_up,keyboard_shift_up', elation.bind(this, this.updateControls)],
         'look_down': ['keyboard_down,keyboard_shift_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
-        'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
-        //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        'toss_ball': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
+        'crouch': ['keyboard_c,keyboard_shift_c', elation.bind(this, this.updateControls)],
+        //'jump': ['keyboard_space,keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
+        'toss_ball': ['keyboard_space,keyboard_shift_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
         'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
         'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
@@ -34,7 +34,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
       this.moveSpeed = 300;
-      this.runMultiplier = 1.5;
+      this.runMultiplier = 2;
       this.turnSpeed = 2;
       this.moveFriction = 4;
       //this.engine.systems.controls.activateContext('player');
