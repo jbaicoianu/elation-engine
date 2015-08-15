@@ -46,7 +46,7 @@ elation.require([], function() {
     }
     this.triggerOn = function() {
       if (!this.triggered) {
-        console.log('on:', this.name);
+        //console.log('on:', this.name);
         elation.events.fire({type: 'trigger_on', element: this});
         this.triggered = true;
         this.material.color.setHex(0xffff00);
@@ -55,7 +55,7 @@ elation.require([], function() {
     }
     this.triggerOff = function() {
       if (this.triggered) {
-        console.log('off:', this.name);
+        //console.log('off:', this.name);
         elation.events.fire({type: 'trigger_off', element: this});
         this.triggertimer = false; 
         this.triggered = false;
