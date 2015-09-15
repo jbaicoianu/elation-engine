@@ -4,6 +4,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     this.postinit = function() {
       this.defineProperties({
         height: { type: 'float', default: 2.0 },
+        fatness: { type: 'float', default: .25 },
         startposition: { type: 'vector3', default: new THREE.Vector3() }
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
@@ -21,7 +22,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         'toss_ball': ['keyboard_space,keyboard_shift_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss_ball)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
         'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
-        'toggle_gravity': ['keyboard_g', elation.bind(this, this.toggle_gravity)],
+        'toggle_flying': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.toggle_flying)],
         'reset_position': ['keyboard_r', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
@@ -41,6 +42,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.engine.systems.controls.activateContext('playerhmd');
       this.charging = false;
       this.usegravity = false;
+      this.flying = true;
 
       this.lights = [];
       this.lightnum = 0;
@@ -50,6 +52,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
 
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
       elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
+    }
+    this.createForces = function() {
+      this.objects.dynamics.setDamping(1,1);
     }
     this.createObjectDOM = function() {
       this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
@@ -76,7 +81,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         camdir.multiplyScalar(velocity);
         camdir.add(this.objects.dynamics.velocity);
   //console.log('pew!', velocity);
-        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .375, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity, player_id: this.properties.player_id, tags: 'local_sync' }, true);
+        var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .2426, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: true, player_id: this.properties.player_id, tags: 'local_sync' }, true);
+        //var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .08, mass: 1, position: campos, velocity: camdir, lifetime: 30, gravity: this.usegravity, player_id: this.properties.player_id, tags: 'local_sync' }, true);
 
 /*
         if (!this.lights[this.lightnum]) {
@@ -105,12 +111,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         this.charging = false;
       }
     }
-    this.toggle_gravity = function(ev) {
+    this.toggle_flying = function(ev) {
       if (ev.value == 1) {
-        this.usegravity = !this.usegravity;
-        var mult = 1; // FIXME - I'd expect to use mass here, but thatgives too much force, so I'm hacking it
-        this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8 * mult, 0));
-        console.log("Gravity " + (this.usegravity ? "enabled" : "disabled"));
+        this.flying = !this.flying;
+        this.usegravity = !this.flying;
+        this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8, 0));
       }
     }
     this.reset_position = function(ev) {
@@ -140,11 +145,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.gravityForce = this.objects.dynamics.addForce("gravity", new THREE.Vector3(0,0,0));
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.objects.dynamics.restitution = 0.1;
-      this.objects.dynamics.setCollider('sphere', {radius: .5});
+      this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
 
       // place camera at head height
-      this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8,0], mass: 0.1, player_id: this.properties.player_id } );
+      this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
     }
     this.getGroundHeight = function() {
@@ -189,6 +194,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     }
     this.refresh = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
+      var _moveforce = new THREE.Vector3();
       return function() {
         if (this.camera && this.enabled) {
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
@@ -201,21 +207,26 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
 
           if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
           if (this.controlstate.crouch) {
-            this.camera.properties.position.y = this.properties.height * .4;
+            this.camera.properties.position.y = this.properties.height * .4 - this.properties.fatness;
           } else {
-            this.camera.properties.position.y = this.properties.height * .8;
+            this.camera.properties.position.y = this.properties.height * .8 - this.properties.fatness;
           }
 
           if (this.moveForce) {
             var moveSpeed = Math.min(1.0, this.moveVector.length()) * this.moveSpeed * (this.controlstate.run ? this.runMultiplier : 1) * (this.controlstate.crouch ? .5 : 1);
-            this.moveForce.update(this.moveVector.clone().normalize().multiplyScalar(moveSpeed));
+            
+            _moveforce.copy(this.moveVector).normalize().multiplyScalar(moveSpeed);
+            if (this.flying) {
+              _moveforce.applyQuaternion(this.camera.properties.orientation);
+            }
+            this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
             if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               var scale = 1/.3048;
               if (this.hmdstate.hmd.position) {
                 this.camera.objects.dynamics.position.copy(this.hmdstate.hmd.position).multiplyScalar(scale);
-                this.camera.objects.dynamics.position.y += this.properties.height * .8;
+                this.camera.objects.dynamics.position.y += this.properties.height * .8 - this.properties.fatness;
               }
               if (this.hmdstate.hmd.linearVelocity) {
                 this.camera.objects.dynamics.velocity.copy(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
