@@ -106,6 +106,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
     };
 
+    this.capturekeys = [
+      'keyboard_f1'
+    ];
+
 
     this.system_attach = function(ev) {
       console.log('INIT: controls');
@@ -595,6 +599,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.changes.push(keyname);
       }
       this.state[keyname] = 1;
+      if (this.capturekeys.indexOf(keyname) != -1) {
+        ev.preventDefault();
+      }
     }
     this.keyup = function(ev) {
       var keymod = this.getKeyboardModifiers(ev);
