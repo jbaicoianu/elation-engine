@@ -194,6 +194,8 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 		scale /= dollyScale;
 
+		scope.update();
+
 	};
 
 	this.dollyOut = function ( dollyScale ) {
@@ -205,6 +207,8 @@ THREE.OrbitControls = function ( object, domElement ) {
 		}
 
 		scale *= dollyScale;
+
+		scope.update();
 
 	};
 
