@@ -24,8 +24,9 @@ elation.require([
 
       if (ENV_IS_BROWSER && document.location.hash) {
         this.parseDocumentHash();
-      elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
+        elation.events.add(window, 'popstate', elation.bind(this, this.parseDocumentHash));
       }
+      elation.events.add(this, 'world_thing_add', this);
     }
 
     this.engine_start = function(ev) {
@@ -56,12 +57,32 @@ elation.require([
       if (thing.container) {
         //this.renderer['world-dom'].domElement.appendChild(thing.container);
       }
-      elation.events.add(thing, 'thing_add,thing_remove', this);
+      this.attachEvents(thing);
       elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
     }
+    this.attachEvents = function(thing) {
+      elation.events.add(thing, 'thing_add,thing_remove,thing_change', this);
+      if (thing.children) {
+        for (var k in thing.children) {
+          this.attachEvents(thing.children[k]);
+        }
+      }
+    }
+      
     this.thing_add = function(ev) {
-      elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
-      elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+      //elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
+      this.attachEvents(ev.data.thing);
+    }
+    this.thing_remove = function(ev) {
+      elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
+      elation.events.remove(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+    }
+    this.thing_change = function(ev) {
+      elation.events.fire({type: 'world_thing_change', element: this, data: ev.data});
+    }
+    this.world_thing_add = function(ev) {
+      //elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
+      this.attachEvents(ev.data.thing);
 
       if (ev.data.thing && ev.data.thing.objects['3d']) {
         var object = ev.data.thing.objects['3d'];
@@ -76,13 +97,6 @@ elation.require([
           //console.log('no light here');
         }
       }
-    }
-    this.thing_remove = function(ev) {
-      elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
-      elation.events.remove(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
-    }
-    this.thing_change = function(ev) {
-      elation.events.fire({type: 'world_thing_change', element: this, data: ev.data});
     }
     this.remove = function(thing) {
       if (this.children[thing.name]) {
