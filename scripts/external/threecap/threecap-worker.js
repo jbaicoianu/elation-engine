@@ -1,0 +1,1 @@
+/home/bai/src/threecap/build/threecap-worker.js
