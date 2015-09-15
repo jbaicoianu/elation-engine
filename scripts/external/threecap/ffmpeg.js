@@ -1,1 +1,1 @@
-/home/bai/src/threecap/build/ffmpeg.js
+../lib/ffmpeg/ffmpeg.js

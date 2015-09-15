@@ -1,1 +1,4 @@
-/home/bai/src/threecap/build/threecap-worker.js
+importScripts('threecap.js', 'ffmpeg.js');
+
+var video = new THREEcapVideo({inWorker: true});
+onmessage = video.handleWorkerRequest.bind(video);
