@@ -55,25 +55,17 @@ elation.require([
 
         this.engine.systems.controls.addCommands('admin', {
           'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
-          'toggle_camera': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleControls(); }}),
-          'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); }}),
-  /*
-          'move_left': elation.bind(this, this.moveleft),
-          'move_right': elation.bind(this, this.moveright),
-          'move_forward': elation.bind(this, this.moveforward),
-          'move_back': elation.bind(this, this.moveback),
-  */
+          'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); } }),
+          'toggle_snap': elation.bind(this, function(ev) { this.toggleSnap(ev.value); }),
         });
         this.engine.systems.controls.addBindings('admin', {
           'keyboard_ctrl_a': 'add_thing',
-          'keyboard_ctrl_c': 'toggle_camera',
-          'keyboard_esc': 'toggle_admin',
-          'keyboard_ctrl_rightsquarebracket': 'toggle_vr',
-          'keyboard_ctrl_leftsquarebracket': 'calibrate_vr',
+          'keyboard_f1': 'toggle_admin',
+          'keyboard_shift': 'toggle_snap',
         });
         this.engine.systems.controls.activateContext('admin');
       } else if (this.cameraactive) {
-        this.admincontrols.update(ev.data.delta);
+        //this.admincontrols.update(ev.data.delta);
       }
       if (this.manipulator) {
         this.manipulator.update();
@@ -85,7 +77,9 @@ elation.require([
         var view = render.views['main'];
 
         this.manipulator = new THREE.TransformControls(view.actualcamera, view.container);
+        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { render.setdirty(); }));
 
+/*
         this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
         this.orbitcontrols.rotateUp(-Math.PI/4);
         this.orbitcontrols.rotateLeft(-Math.PI/4);
@@ -108,6 +102,10 @@ elation.require([
         this.admincontrols.update(0);
         this.cameraactive = true;
 
+*/
+      this.cameraactive = true;
+      this.admincontrols = true;
+        this.world.spawn('camera_admin', 'admincam', { position: [0, 1, 1], view: this.engine.systems.render.views['main']});
         elation.events.add(render.views['main'].container, 'dragenter,dragover,drop', this);
         elation.events.add(null, 'engine_control_capture,engine_control_release', this);
       }
@@ -116,30 +114,6 @@ elation.require([
       this.cameraactive = active;
       if (active) this.admincontrols.enabled = true;
       else this.admincontrols.enabled = false;
-    }
-    this.toggleControls = function() {
-      var oldobject = false;
-      if (this.admincontrols) {
-        if (this.admincontrols.disable) {
-          this.admincontrols.disable();
-        } else {
-          this.admincontrols.enabled = false;
-        }
-        oldobject = this.admincontrols.object;
-      }
-      if (this.admincontrols === this.orbitcontrols) {
-        this.admincontrols = this.flycontrols;
-      } else {
-        this.admincontrols = this.orbitcontrols;
-      }
-      if (this.admincontrols.enable) {
-        this.admincontrols.enable()
-      } else {
-        this.admincontrols.enabled = true;
-      }
-      if (oldobject) {
-        this.admincontrols.object = oldobject;
-      }
     }
     this.toggleAdmin = function(forceshow) {
       var render = this.engine.systems.render,
@@ -157,6 +131,9 @@ elation.require([
         //this.inspector.show();
         view.toggleStats(true);
       }
+    }
+    this.toggleSnap = function(state) {
+      this.manipulator.setSnap((state === 0 ? null : state));
     }
     this.dragenter = function(ev) {
       this.dragkeystate = {
@@ -340,6 +317,7 @@ elation.require([
       if (ev.data.thing.properties.pickable) {
         this.treeview.setItems(this.world.children);
       }
+      //elation.events.add(ev.data.thing, 'engine_thing_create,world_thing_add,world_thing_remove', this);
       //ev.target.persist();
     }
     this.world_thing_remove = function(ev) {
