@@ -14,8 +14,8 @@ elation.require([
 
   "engine.external.threecap.threecap",
 
-  "engine.external.gifjs.gif",
-  "engine.external.ffmpeg.ffmpeg",
+  //"engine.external.gifjs.gif",
+  //"engine.external.ffmpeg.ffmpeg",
   //"engine.external.ffmpeg.ffmpeg_minimal",
   //"engine.external.three.render.SepiaShader",
   //"engine.external.three.render.BleachBypassShader",
@@ -569,7 +569,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.getscene = function(obj) {
       var scene = obj;
 
-      while ( scene.parent !== undefined ) {
+      while ( scene.parent ) {
         scene = scene.parent;
       }
       if ( scene !== undefined && scene instanceof THREE.Scene )  {
@@ -960,7 +960,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (!this.intersection) {
         var mouse3d = new THREE.Vector3((mousepos[0] / viewport.size[0]) * 2 - 1, -(mousepos[1] / viewport.size[1]) * 2 + 1, -1);
         var projector = new THREE.Projector();
-        projector.unprojectVector(mouse3d, viewport.camera);
+        //projector.unprojectVector(mouse3d, viewport.camera);
+        mouse3d.unproject(viewport.camera);
 
         var worldpos = viewport.camera.position.clone().applyMatrix4(viewport.camera.matrixWorld);
         var ray = new THREE.Raycaster(worldpos, mouse3d.sub(worldpos).normalize());
