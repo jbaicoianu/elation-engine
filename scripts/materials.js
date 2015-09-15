@@ -432,7 +432,7 @@ elation.require(['utils.template'], function() {
     }
   });
   if (ENV_IS_BROWSER) {
-    elation.engine.materials.add('uvtest', new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1])}));
+    //elation.engine.materials.add('uvtest', new THREE.MeshPhongMaterial({map: elation.engine.materials.getTexture('/media/space/textures/uvtest.png', [1, 1])}));
   }
   elation.engine.materials.add('normal', new THREE.MeshNormalMaterial());
 });
