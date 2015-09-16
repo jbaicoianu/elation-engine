@@ -58,9 +58,9 @@ elation.require([
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-      this.renderer.gammaInput = true;
-      this.renderer.gammaOutput = true;
-      this.renderer.gammaFactor = 2.2;
+      this.renderer.gammaInput = false;
+      this.renderer.gammaOutput = false;
+      //this.renderer.gammaFactor = 2.2;
 
       this.lastframetime = 0;
 
