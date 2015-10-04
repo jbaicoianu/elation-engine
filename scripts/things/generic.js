@@ -16,6 +16,7 @@ elation.component.add("engine.things.generic", function() {
     this.name = this.args.name || '';
     this.type = this.args.type || 'generic';
     this.engine = this.args.engine;
+    this.client = this.args.client;
     this.properties = {};
     this.objects = {};
     this.parts = {};
@@ -37,6 +38,7 @@ elation.component.add("engine.things.generic", function() {
     };
 
     //elation.events.add(this, 'thing_create', this);
+    elation.events.add(this, 'thing_use_activate', this);
     this.defineActions({
       'spawn': this.spawn,
       'move': this.move
@@ -507,7 +509,10 @@ elation.component.add("engine.things.generic", function() {
   this.reparent = function(newparent) {
     if (newparent) {
       if (this.parent) {
+        newparent.worldToLocal(this.parent.localToWorld(this.properties.position));
+        this.properties.orientation.copy(newparent.worldToLocalOrientation(this.parent.localToWorldOrientation()));
         this.parent.remove(this);
+        //newparent.worldToLocalDir(this.parent.localToWorldDir(this.properties.orientation));
       }
       var success = newparent.add(this);
       this.refresh();
@@ -744,7 +749,7 @@ elation.component.add("engine.things.generic", function() {
 
     var root = new elation.physics.rigidbody({ orientation: obj.quaternion.clone() });
     var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
-    root.orientation.multiply(flip);
+    //root.orientation.multiply(flip);
 
     for (var i = 0; i < meshes.length; i++) {
       var m = meshes[i].material.name.match(re),
@@ -908,6 +913,7 @@ elation.component.add("engine.things.generic", function() {
         this.children[keys[i]].die();
       }
     }
+    elation.events.fire({element: this, type: 'thing_destroy'});
     this.destroy();
   }
   this.refresh = function() {
@@ -931,6 +937,31 @@ elation.component.add("engine.things.generic", function() {
   this.localToParent = function(localpos) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
     return localpos.applyMatrix4(this.objects['3d'].matrix);
+  }
+  this.localToWorldOrientation = function(orient) {
+    if (!orient) orient = new THREE.Quaternion();
+    var n = this;
+    while (n && n.properties) {
+      orient.multiply(n.properties.orientation);
+      n = n.parent;
+    }
+    return orient;
+  }
+  this.worldToLocalOrientation = function(orient) {
+    if (!orient) orient = new THREE.Quaternion();
+/*
+    var n = this.parent;
+    var worldorient = new THREE.Quaternion();
+    while (n && n.properties) {
+      worldorient.multiply(inverse.copy(n.properties.orientation).inverse());
+      n = n.parent;
+    }
+    return orient.multiply(worldorient);
+*/
+    // FIXME - this is cheating!
+    var tmpquat = new THREE.Quaternion();
+    return orient.multiply(tmpquat.copy(this.objects.dynamics.orientationWorld).inverse());
+    
   }
   this.lookAt = function(other, up) {
     if (!up) up = new THREE.Vector3(0,1,0);
@@ -989,10 +1020,14 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
             break;
 
         }
-        if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
-          //elation.utils.arrayset(ret.properties, k, propval);
-          ret.properties[k] = propval;
-          numprops++;
+        try {
+          if (propval !== null && !elation.utils.isIdentical(propval, propdef.default)) {
+            //elation.utils.arrayset(ret.properties, k, propval);
+            ret.properties[k] = propval;
+            numprops++;
+          }
+        } catch (e) {
+          console.log("Error serializing property: " + k, this, e); 
         }
       }
     }
@@ -1135,6 +1170,16 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     }
     return collection;
   }
+  this.getChildrenByType = function(type, collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      if (this.children[k].type == type) {
+        collection.push(this.children[k]);
+      }
+      this.children[k].getChildrenByType(type, collection);
+    }
+    return collection;
+  }
   this.distanceTo = (function() {
     // closure scratch variables
     var _v1 = new THREE.Vector3(),
@@ -1149,4 +1194,32 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
       return Infinity;
     } 
   });
+  this.canUse = function(object) {
+    return false;
+  }
+  this.thing_use_activate = function(ev) {
+    var player = ev.data;
+    var canuse = this.canUse(player);
+    if (canuse && canuse.action) {
+      canuse.action(player);
+    }
+  }
+  this.getBoundingSphere = function() {
+    // Iterate over all children and expand our bounding sphere to encompass them.  
+    // This gives us the total size of the whole thing
+
+    var bounds = new THREE.Sphere();
+    var worldpos = this.localToWorld(new THREE.Vector3());
+    var childworldpos = new THREE.Vector3();
+    this.objects['3d'].traverse(function(n) {
+      childworldpos.set(0,0,0).applyMatrix4(n.matrixWorld);
+      if (n.boundingSphere) {
+        var newradius = worldpos.distanceTo(childworldpos) + n.boundingSphere.radius;
+        if (newradius > bounds.radius) {
+          bounds.radius = newradius;
+        }
+      }
+    });
+    return bounds; 
+  }
 });
