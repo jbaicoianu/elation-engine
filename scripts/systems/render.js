@@ -7,6 +7,7 @@ elation.require([
   "engine.external.three.render.RenderPass",
   "engine.external.three.render.OculusRiftEffect",
   "engine.external.three.render.OculusRenderPass",
+  "engine.external.three.render.VREffect",
   "engine.external.three.render.ShaderPass",
   "engine.external.three.render.MaskPass",
   "engine.external.three.render.CopyShader",
@@ -137,10 +138,14 @@ elation.require([
       if (this.args.fullsize == 1) {
         elation.html.addclass(this.container, "engine_view_fullsize");
       }
+      if (this.args.crosshair == 1) {
+        elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this.container});
+      }
       this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
       elation.events.add(window, "resize,keydown,keyup", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
+      elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       if (!this.args.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
       } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
@@ -182,8 +187,9 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
-      this.composer = this.createRenderPath([this.rendermode, 'recording']);
+      this.composer = this.createRenderPath([this.rendermode, 'fxaa', 'recording']);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
+      this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
       if (this.showstats) {
         elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
       }
@@ -278,7 +284,7 @@ elation.require([
           pass = new THREE.FilmPass( 0.35, .75, 2048, false );
           break;
         case 'recording':
-          pass = new THREE.RecordingPass();
+          pass = new THREEcapRenderPass();
           this.recorder = pass;
           break;
         case 'sepia':
@@ -426,7 +432,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
 
           this.scene.overrideMaterial = null;
-          this.composer.render(delta);
+          //this.composer.render(delta);
+          this.vreffect.render(this.scene, this.camera);
           //this.rendersystem.renderer.render(this.scene, this.actualcamera);
         }
         if (this.rendersystem.cssrenderer) {
@@ -449,12 +456,20 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.toggleStats = function() {
       if (this.showstats) {
-        this.container.removeChild(this.renderstats.domElement)
-        this.container.removeChild(this.stats.domElement);
+        if (this.renderstats) {
+          this.container.removeChild(this.renderstats.domElement)
+        }
+        if (this.stats) {
+          this.container.removeChild(this.stats.domElement);
+        }
         this.showstats = false;
       } else {
-        this.container.appendChild(this.renderstats.domElement)
-        this.container.appendChild(this.stats.domElement);
+        if (this.renderstats) {
+          this.container.appendChild(this.renderstats.domElement)
+        }
+        if (this.stats) {
+          this.container.appendChild(this.stats.domElement);
+        }
         this.showstats = true;
       }
     }
@@ -464,6 +479,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         // update camera aspect ratio
         this.getsize();
       }
+      this.activething = thing;
     }
     this.setcamera = function(camera) {
       if (camera instanceof elation.component.base && camera.type == 'camera') {
@@ -665,13 +681,27 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
     }
     this.mousewheel = function(ev) {
-      this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
+      this.mousepos[0] = ev.clientX;
+      this.mousepos[1] = ev.clientY;
+      this.mousepos[2] = document.body.scrollTop;
     }
     this.mousemove = function(ev) {
-      if (this.mousepos && this.mousepos[0] != ev.clientX || this.mousepos[1] != ev.clientY) {
-        this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
+      var el = document.pointerLockElement || document.mozPointerLockElement;
+      if (el) {
+        var dims = elation.html.dimensions(el);
+        this.mousepos[0] = Math.round(dims.w / 2);
+        this.mousepos[1] = Math.round(dims.h / 2);
+        this.mousepos[2] = document.body.scrollTop;
+
+        if (this.rendermode == 'oculus') {
+          this.mousepos[0] /= 2;
+        }
+      } else if (this.mousepos && this.mousepos[0] != ev.clientX || this.mousepos[1] != ev.clientY) {
+        this.mousepos[0] = ev.clientX;
+        this.mousepos[1] = ev.clientY;
+        this.mousepos[2] = document.body.scrollTop;
         this.cancelclick = true;
-      }
+      } 
     }
     this.dragover = function(ev) {
       if (!this.pickingactive) {
@@ -828,15 +858,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       return this.pickingmaterials[id];
     }
     this.updatePickingTarget = function(force) {
+return;
       // ratelimit to once every n frames, for performance reasons
       //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
-      /*
       var now = new Date().getTime();
       if (now - this.picktime < 1000/20 && !force) {
         return;
       }
       this.picktime = now;
-      */
 
       this.pickingobjects = [];
       this.realmaterials = [];
@@ -877,7 +906,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
     }
     this.updatePickingObject = function(force) {
-      if (force || (this.picking && this.pickingactive && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
+      if (force || (this.picking && this.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
         var dims = elation.html.dimensions(this.container);
         this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.mousepos[0];
@@ -924,14 +953,24 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
     }
     this.enablePicking = function() {
+      console.log('picking enabled');
       this.picking = true;
       this.updatePickingTarget(true);
       this.updatePickingObject(true);
     }
     this.disablePicking = function() {
+      console.log('picking disabled');
       this.updatePickingTarget(true);
       this.updatePickingObject(true);
       this.picking = false;
+    }
+    this.pointerlockchange = function(ev) {
+      var el = document.pointerLockElement || document.mozPointerLockElement;
+      if (el) {
+        var dims = elation.html.dimensions(el);
+        this.mousepos[0] = Math.round(dims.w / 2);
+        this.mousepos[1] = Math.round(dims.h / 2);
+      }
     }
   });
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
