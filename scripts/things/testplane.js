@@ -13,7 +13,7 @@ elation.require(['engine.things.generic'], function() {
     this.createObject3D = function() {
       var geo = new THREE.BoxGeometry(64, 2, 64),
           mat = new THREE.MeshLambertMaterial({ 
-            map: elation.engine.materials.getTexture('/media/testchamber/dirt.jpg', [20, 20]),
+            map: elation.engine.materials.getTexture('/media/space/textures/dirt.jpg', [20, 20]),
             normalMap: elation.engine.materials.getTexture('/media/space/textures/dirt-normal.jpg'),
           });
       return new THREE.Mesh(geo, mat)

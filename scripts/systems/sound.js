@@ -30,7 +30,9 @@ elation.extend("engine.systems.sound", function(args) {
 
 
       this.stage.context.listener.setPosition(camera.position.x, camera.position.y, camera.position.z);
-      this.stage.context.listener.setOrientation(this.front.x, this.front.y, this.front.z, this.up.x, this.up.y, this.up.z);
+      if (elation.utils.isnumeric(this.front.x)) {
+        this.stage.context.listener.setOrientation(this.front.x, this.front.y, this.front.z, this.up.x, this.up.y, this.up.z);
+      }
 
       /*
       var tmpvel = camera.position.clone().sub(this.lastframepos).divideScalar(ev.data.delta);

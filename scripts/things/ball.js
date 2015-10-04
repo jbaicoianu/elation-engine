@@ -26,11 +26,11 @@ elation.require(['engine.things.generic'], function() {
     }
     this.createForces = function() {
       this.objects.dynamics.setDamping(1, .5);
-      this.objects.dynamics.restitution = .9;
+      this.objects.dynamics.restitution = .8;
       if (this.properties.gravity) {
         this.objects.dynamics.addForce('gravity', new THREE.Vector3(0,-9.8,0));
       }
-      this.objects.dynamics.addForce('friction', .4);
+      this.objects.dynamics.addForce('friction', .2);
     } 
     this.engine_frame = function(ev) { 
       this.age += ev.data.delta * this.engine.systems.physics.timescale;

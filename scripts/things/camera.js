@@ -1,7 +1,7 @@
 elation.require(['engine.things.generic'], function() {
   elation.component.add('engine.things.camera', function() {
     this.createObject3D = function() {
-      var cam = new THREE.PerspectiveCamera(75, 4/3, .1, 1000); // FIXME - need better default handling
+      var cam = new THREE.PerspectiveCamera(75, 4/3, 1, 3); // FIXME - need better default handling
       return cam;
     }
     this.createChildren = function() {

@@ -147,8 +147,8 @@ THREEcap.prototype.record = function(settings) {
   var video = new THREEcapVideo(recordsettings);
   return new Promise(function(resolve, reject) {
     video.on('finished', function(d) { resolve(video); });
-    video.record(recordsettings);
   });
+  video.record(recordsettings);
 }
 
 THREEcap.prototype.play = function(url) {
@@ -309,8 +309,8 @@ THREEcapRenderPass.prototype = {
 		return new Promise(function(resolve, reject) {
 			var framepromises = [];
       var threecap = this.threecap;
-      var size = this.threecap.getScaledSize([this.lastframe.width, this.lastframe.height], [width, height]);
-      threecap.setSize(size[0], size[1]);
+      //var size = this.threecap.getScaledSize([this.lastframe.width, this.lastframe.height], [width, height]);
+      //threecap.setSize(width, height);
 
       var promises = this.threecap.scheduleFrames(width[0], width[1], fps, time);
       var startframe = Math.min(10, framepromises.length-1);
@@ -323,6 +323,8 @@ THREEcapRenderPass.prototype = {
 				threecap.record({
           //width: f.image.width,
           //height: f.image.height,
+          width: width,
+          height: height,
           fps: fps,
           time: time,
           quality: 'ultrafast',
