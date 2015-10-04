@@ -6,6 +6,8 @@ elation.require(['engine.things.generic'], function() {
         'color':             { type: 'color', default: 0xffffff },
         'intensity':         { type: 'float', default: 1.0 },
         'radius':            { type: 'float', default: 10000.0 },
+        'target':            { type: 'object' },
+        'angle':             { type: 'float', default: Math.PI/3 },
       });
 
     }
@@ -19,8 +21,11 @@ elation.require(['engine.things.generic'], function() {
           this.lightobj.castShadow = false;
           break;
         case 'spot':
-          this.lightobj = new THREE.SpotLight(this.properties.color, this.properties.intensity, this.properties.radius);
+          this.lightobj = new THREE.SpotLight(this.properties.color, this.properties.intensity, this.properties.radius, this.properties.angle);
           this.initShadowmap(this.lightobj);
+          if (this.properties.target) {
+            this.lightobj.target = this.properties.target.objects['3d'];
+          }
 
           var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
           //this.lightobj.add(helper);
@@ -49,7 +54,7 @@ elation.require(['engine.things.generic'], function() {
       this.lightobj.color.setHex(color);
     }
     this.initShadowmap = function(light) {
-      light.castShadow = true;
+      light.castShadow = false;
       light.shadowCameraNear = 40;
       light.shadowCameraFar = 120;
       light.shadowCameraFov = 50;
