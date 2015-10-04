@@ -136,7 +136,28 @@ THREE.EffectComposer.prototype = {
 
 		this.reset( renderTarget );
 
-	}
+	},
+  
+  getSize: function() {
+    return this.renderer.getSize();
+  },
+
+	setScissor: function ( x, y, width, height ) {
+    return this.renderer.setScissor(x, y, width, height);
+	},
+
+	enableScissorTest: function ( boolean ) {
+
+		this.renderer.enableScissorTest( boolean );
+
+	},
+
+	clear: function ( color, depth, stencil ) {
+    this.renderer.clear(color, depth, stencil);
+  },
+	setViewport: function ( x, y, width, height ) {
+    this.renderer.setViewport(x, y, width, height);
+  }
 
 };
 
