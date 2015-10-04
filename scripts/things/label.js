@@ -6,6 +6,7 @@ elation.require(["engine.things.generic"], function() {
         'font':            { type: 'string', default: 'helvetiker' },
         'size':            { type: 'float', default: 1.0 },
         'color':           { type: 'color', default: 0xcccccc },
+        'emissive':         { type: 'color', default: 0x111111 },
         'opacity':         { type: 'float', default: 1.0 },
         'depthTest':       { type: 'bool', default: true },
         'thickness':       { type: 'float' },
@@ -36,7 +37,7 @@ elation.require(["engine.things.generic"], function() {
       var geomod = new THREE.Matrix4();
       geomod.setPosition(diff);
       geometry.applyMatrix(geomod);
-      this.material = new THREE.MeshPhongMaterial({color: this.properties.color, shading: THREE.SmoothShading, depthTest: this.properties.depthTest});
+      this.material = new THREE.MeshPhongMaterial({color: this.properties.color, emissive: this.properties.emissive, shading: THREE.SmoothShading, depthTest: this.properties.depthTest});
       if (this.properties.opacity < 1.0) {
         this.material.opacity = this.properties.opacity;
         this.material.transparent = true;
@@ -44,6 +45,15 @@ elation.require(["engine.things.generic"], function() {
       var mesh = new THREE.Mesh(geometry, this.material);
       
       return mesh;
+    }
+
+    this.setColor = function(color) {
+      this.material.color.setHex(color);
+      this.refresh();
+    }
+    this.setEmissionColor = function(color) {
+      this.material.emissive.setHex(color);
+      this.refresh();
     }
   }, elation.engine.things.generic);
 });
