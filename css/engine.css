@@ -11,6 +11,16 @@
   left: 0;
   right: 0;
 }
+.engine_view_crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: url(/images/engine/crosshair.png);
+  width: 11px;
+  height: 11px;
+  transform: translate(-5px, -5px);
+  z-index: 50;
+}
 .ui_window .ui_window_content.engine_configuration {
   width: 60em;
   padding: 1em 3em;
