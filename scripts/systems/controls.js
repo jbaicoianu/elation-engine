@@ -456,8 +456,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           height = this.container.offsetHeight || this.container.innerHeight;
       var scaleX = this.settings.mouse.sensitivity * (this.settings.mouse.invertX ? -1 : 1),
           scaleY = this.settings.mouse.sensitivity * (this.settings.mouse.invertY ? -1 : 1),
-          movementX = elation.utils.any(ev.movementX, ev.mozMovementX, ev.webkitMovementX),
-          movementY = elation.utils.any(ev.movementY, ev.mozMovementY, ev.webkitMovementY);
+          movementX = elation.utils.any(ev.movementX, ev.mozMovementX),
+          movementY = elation.utils.any(ev.movementY, ev.mozMovementY);
 
       // FIXME - works around a chrome bug where pointer lock returns massive values on focus
       if (Math.abs(movementY) == window.screenY && Math.abs(movementX) - 5 >= window.screenX) return [0, 0];
