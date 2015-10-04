@@ -4,6 +4,7 @@ elation.require([
   "engine.external.three.TransformControls",
   //"engine.external.highlight",
   "engine.things.manipulator",
+  "engine.things.camera_admin",
   "ui.accordion",
   "ui.buttonbar",
   "ui.slider",
@@ -77,7 +78,7 @@ elation.require([
         var view = render.views['main'];
 
         this.manipulator = new THREE.TransformControls(view.actualcamera, view.container);
-        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { render.setdirty(); }));
+        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { this.manipulator.object.userData.thing.refresh(); render.setdirty(); }));
 
 /*
         this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
@@ -105,7 +106,7 @@ elation.require([
 */
       this.cameraactive = true;
       this.admincontrols = true;
-        this.world.spawn('camera_admin', 'admincam', { position: [0, 1, 1], view: this.engine.systems.render.views['main']});
+        this.admincamera = this.world.spawn('camera_admin', 'admincam', { position: [0, 1, 1], view: this.engine.systems.render.views['main'], persist: false});
         elation.events.add(render.views['main'].container, 'dragenter,dragover,drop', this);
         elation.events.add(null, 'engine_control_capture,engine_control_release', this);
       }
@@ -124,12 +125,33 @@ elation.require([
         this.worldcontrol.hide();
         //this.inspector.hide();
         view.toggleStats(false);
+
+        if (this.lastactivething) {
+          view.setactivething(this.lastactivething);
+          this.lastactivething.enable();
+        }
+        if (this.manipulator && this.manipulator.parent) {
+          this.manipulator.parent.remove(this.manipulator);
+        }
+        this.lastactivething = false;
+        this.admincamera.disable();
       } else {
         this.hidden = false;
         this.scenetree.show();
         this.worldcontrol.show();
         //this.inspector.show();
         view.toggleStats(true);
+
+        if (view.activething) {
+          this.lastactivething = view.activething;
+          this.lastactivething.disable();
+          this.admincamera.properties.position.copy(this.lastactivething.properties.position);
+        }
+        if (this.manipulator) {
+          this.engine.systems.world.scene['world-3d'].add(this.manipulator);
+        }
+        view.setactivething(this.admincamera);
+        this.admincamera.enable();
       }
     }
     this.toggleSnap = function(state) {
@@ -203,12 +225,23 @@ elation.require([
       this.engine = this.world.engine;
 
       elation.events.add(this.world, 'engine_thing_create,world_thing_add,world_thing_remove', this);
+
+      this.attachEvents(this.world);
+      
       this.create();
 
       //this.cameratoggle = elation.ui.button(null, elation.html.create({tag: 'button', append: this.window.titlebar}), {label: '🔁'});
       //elation.events.add(this.cameratoggle, "ui_button_click", elation.bind(this, function() { this.admin.toggleControls(); }));
 
     }
+    this.attachEvents = function(thing) {
+      elation.events.add(thing, 'thing_add', elation.bind(this, this.world_thing_add));
+      elation.events.add(thing, 'thing_remove', elation.bind(this, this.world_thing_remove));
+      for (var k in thing.children) {
+        this.attachEvents(thing.children[k]);
+      }
+    }
+
     this.create = function() {
       this.addclass('engine_admin_scenetree');
       var title = elation.html.create({tag: 'h2'});
@@ -307,12 +340,13 @@ elation.require([
     }
     this.ui_treeview_select = function(ev) {
       var thing = ev.data.value;
-      if (thing.properties.pickable) {
+      if (thing.properties.pickable && !this.hidden) {
         this.selectedthing = ev.data;
         elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
       }
     }
     this.world_thing_add = function(ev) {
+      this.attachEvents(ev.data.thing);
       // refresh tree view when new items are added
       if (ev.data.thing.properties.pickable) {
         this.treeview.setItems(this.world.children);
@@ -613,8 +647,14 @@ elation.require([
 */
     }
     this.setThing = function(thingwrapper) {
+      if (this.thingwrapper) {
+        elation.events.remove(this.thingwrapper.value, 'thing_change', this);
+      }
       this.thingwrapper = thingwrapper;
       var thing = thingwrapper.value;
+
+      elation.events.add(this.thingwrapper.value, 'thing_change', this);
+
       if (!this.tabs) {
         this.createTabs();
       }
@@ -684,6 +724,9 @@ elation.require([
         this.tabcontents[newtab.name].reparent(this.contentarea);
         this.tabcontents[newtab.name].setThing(this.thingwrapper);
       }
+    }
+    this.thing_change = function(ev) {
+      this.tabcontents.properties.setThing(this.thingwrapper)
     }
   }, elation.ui.base);
   elation.component.add("engine.systems.admin.inspector.properties", function() {
@@ -880,13 +923,19 @@ elation.require([
           'save': { label: 'save', events: { click: elation.bind(this, this.save) }, autoblur: true },
         }
       });
-      this.speedslider = elation.ui.slider(null, elation.html.create({append: this.content}), {
+      this.speedslider = elation.ui.slider({
+        append: this.content,
         value: this.timescale * 100,
-        minpos: -500,
-        maxpos: 500,
+        min: -500,
+        max: 500,
         labelprefix: 'Speed: ',
         labelsuffix: '%',
-        snap: 2.5
+        snap: 2.5,
+        handle: {
+          name: 'handle_one',
+          value: this.timescale * 100,
+          //bindvar: [this, this.timescale],
+        }
       });
       elation.events.add(this.speedslider, 'ui_slider_change', this);
 
