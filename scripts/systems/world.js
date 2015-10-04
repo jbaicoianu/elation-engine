@@ -46,19 +46,23 @@ elation.require([
       console.log('SHUTDOWN: world');
     }
     this.add = function(thing) {
-      this.children[thing.name] = thing;
-      thing.parent = this;
-      if (thing.objects['3d']) {
-        this.scene['world-3d'].add(thing.objects['3d']);
+      if (!this.children[thing.name]) {
+        this.children[thing.name] = thing;
+        thing.parent = this;
+        if (thing.objects['3d']) {
+          this.scene['world-3d'].add(thing.objects['3d']);
+        }
+        if (thing.objects['dynamics']) {
+          this.engine.systems.physics.add(thing.objects['dynamics']);
+        }
+        if (thing.container) {
+          //this.renderer['world-dom'].domElement.appendChild(thing.container);
+        }
+        this.attachEvents(thing);
+        elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
+        return true;
       }
-      if (thing.objects['dynamics']) {
-        this.engine.systems.physics.add(thing.objects['dynamics']);
-      }
-      if (thing.container) {
-        //this.renderer['world-dom'].domElement.appendChild(thing.container);
-      }
-      this.attachEvents(thing);
-      elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
+      return false;
     }
     this.attachEvents = function(thing) {
       elation.events.add(thing, 'thing_add,thing_remove,thing_change', this);
@@ -245,14 +249,26 @@ elation.require([
 
     }
     this.loadSceneFromURL = function(url, callback) {
+      this.engine.systems.world.reset();
       elation.net.get(url, null, { onload: elation.bind(this, this.handleSceneLoad, callback) });  
+      if (ENV_IS_BROWSER) {
+        var dochash = "world.url=" + url;
+        if (this.engine.systems.physics.timescale == 0) {
+          dochash += "&world.paused=1";
+        }
+        document.location.hash = dochash;
+      }
     }
     this.handleSceneLoad = function(callback, ev) {
       console.log(ev);
       var response = ev.target.response;
       var data = JSON.parse(response);
-      for (var i = 0; i < data.length; i++) {
-        this.load(data[i]);
+      if (elation.utils.isArray(response)) {
+        for (var i = 0; i < data.length; i++) {
+          this.load(data[i]);
+        }
+      } else {
+        this.load(data);
       }
       if (callback) { setTimeout(callback, 0); }
     }
@@ -282,7 +298,7 @@ elation.require([
           // Right now this might end up with weird double-object behavior...
           type = 'generic';
         } else {
-          currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, properties: spawnargs});
+          currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, client: this.client, properties: spawnargs});
           parent.add(currentobj);
           //currentobj.reparent(parent);
 
@@ -296,9 +312,12 @@ elation.require([
     this.serialize = function(serializeAll) {
       var ret = {};
       for (var k in this.children) {
-        ret[k] = this.children[k].serialize(serializeAll);
+        if (this.children[k].properties.persist) {
+          ret[k] = this.children[k].serialize(serializeAll);
+          return ret[k]; // FIXME - dumb
+        }
       }
-      return ret[k]; // FIXME - dumb
+      return null;
     }
     this.setSky = function(texture, format, prefixes) {
       if (texture !== false) {
@@ -369,6 +388,18 @@ elation.require([
         if (parsedurl.hashargs['world.load'] && parsedurl.hashargs['world.load'] != this.rootname) {
           this.loadLocal(parsedurl.hashargs['world.load']);
         }
+        if (parsedurl.hashargs['world.url']) {
+          elation.net.get(parsedurl.hashargs['world.url'], null, {
+            callback: function(response) { 
+              try {
+                var data = JSON.parse(response);
+                this.load(data);
+              } catch (e) {
+                console.log('Error loading world:', response, e);
+              }
+            }.bind(this)
+          });
+        }
       }
     }
 
@@ -396,10 +427,32 @@ elation.require([
       return things;
     }
     this.getThingsByType = function(type) {
+      var things = [];
+      var childnames = Object.keys(this.children);
+      for (var i = 0; i < childnames.length; i++) {
+        var childname = childnames[i];
+        if (this.children[childname].type == type) {
+          things.push(this.children[childname]);
+        }
+        this.children[childname].getChildrenByType(type, things);
+      }
+      return things;
     }
     this.getThingByObject = function(obj) {
     }
     this.getThingById = function(id) {
+    }
+    this.worldToLocal = function(pos) {
+      return pos;
+    }
+    this.localToWorld = function(pos) {
+      return pos;
+    }
+    this.worldToLocalOrientation = function(orient) {
+      return orient;
+    }
+    this.localToWorldOrientation = function(orient) {
+      return orient;
     }
   });
 });
