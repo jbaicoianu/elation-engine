@@ -38,6 +38,7 @@ elation.require(deps, function() {
     this.name = name;
 
     this.init = function() {
+      this.client = elation.engine.client(this.name);
       this.systems = new elation.engine.systems(this);
       // shutdown cleanly if the user leaves the page
       var target = null;
@@ -217,15 +218,20 @@ elation.require(deps, function() {
   elation.component.add('engine.client', function() {
     this.init = function() {
       this.name = this.args.name || 'default';
-      this.engine = elation.engine.create(this.name, ["physics", "sound", "ai", "world", "render", "controls"], elation.bind(this, this.startEngine));
+      this.engine = elation.engine.create(this.name, ["physics", "world", "render", "controls"], elation.bind(this, this.startEngine));
     }
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
+      var worldurl = elation.utils.arrayget(this.args, 'world.url');
+      var parsedurl = elation.utils.parseURL(document.location.hash);
+      if (worldurl && !(parsedurl.hashargs && parsedurl.hashargs['world.url'])) {
+        this.engine.systems.world.loadSceneFromURL(worldurl);
+      }
     }
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: false } );
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: false, crosshair: true } );
 
       this.initWorld();
       this.initControls();
@@ -247,10 +253,20 @@ elation.require(deps, function() {
       });
       this.engine.systems.controls.activateContext(this.name);
     }
+    this.getPlayer = function() {
+      if (!this.player) {
+        var players = this.engine.systems.world.getThingsByType('player');
+        if (players && players.length > 0) {
+          this.player = players[0];
+        }
+      }
+      return this.player;
+    }
     this.showMenu = function() {
-      if (this.player){
+      var player = this.getPlayer();
+      if (player){
         if (!this.menu) {
-          this.menu = this.player.camera.spawn('menu', null, { 
+          this.menu = player.camera.spawn('menu', null, { 
             position: [0,0,-2],
             items: [
               { 
@@ -287,19 +303,22 @@ elation.require(deps, function() {
             }
           });
         } else {
-          this.player.camera.add(this.menu);
+          player.camera.add(this.menu);
         }
-        this.player.disable();
+        player.disable();
         this.menu.enable();
+        this.menu.refresh();
+        player.refresh();
         this.menuShowing = true;
       }
     }
     this.hideMenu = function() {
-      if (this.menu) {
-        this.player.camera.remove(this.menu);
+      var player = this.getPlayer();
+      if (player && this.menu) {
+        player.camera.remove(this.menu);
         if (this.configmenu) this.configmenu.hide();
         //if (this.loaded) {
-          this.player.enable();
+          player.enable();
         //}
         this.menuShowing = false;
         this.menu.disable();
