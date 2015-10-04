@@ -48,7 +48,21 @@ elation.require(['utils.template'], function() {
           //this.texturecache[url].flipY = false;
           */
         } else {
-          this.texturecache[url] = THREE.ImageUtils.loadTexture(url);
+          var texture = this.texturecache[url] = THREE.ImageUtils.loadTexture(url, undefined, elation.bind(this, function() {
+            var image = texture.image;
+            if (!this.isPowerOfTwo(image.width) || !this.isPowerOfTwo(image.height)) {
+              // Scale up the texture to the next highest power of two dimensions.
+              var canvas = document.createElement("canvas");
+              canvas.width = this.nextHighestPowerOfTwo(image.width);
+              canvas.height = this.nextHighestPowerOfTwo(image.height);
+              var ctx = canvas.getContext("2d");
+              ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+              texture.image = canvas;
+              texture.needsUpdate = true;
+            }
+
+            elation.events.fire({element: texture, type: 'engine_texture_load'}); 
+          }));
           //elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: this.texturecache[url].image } });
         }
         if (!this.texturecache[url]) {
@@ -75,6 +89,17 @@ elation.require(['utils.template'], function() {
         texture.repeat.set(repeat[0], repeat[1]);
       }
     }
+    this.isPowerOfTwo = function(num) {
+      return (num & (num - 1)) == 0;
+    }
+    this.nextHighestPowerOfTwo = function(num) {
+      num--;
+      for (var i = 1; i < 32; i <<= 1) {
+        num = num | num >> i;
+      }
+      return num + 1;
+    }
+
     this.addShader = function(shadername, shader) {
       this.shaders[shadername] = shader;
     }
