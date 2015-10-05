@@ -858,7 +858,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       return this.pickingmaterials[id];
     }
     this.updatePickingTarget = function(force) {
-return;
       // ratelimit to once every n frames, for performance reasons
       //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
       var now = new Date().getTime();
