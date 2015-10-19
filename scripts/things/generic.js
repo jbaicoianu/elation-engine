@@ -328,6 +328,9 @@ elation.component.add("engine.things.generic", function() {
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
     }
+    this.colliders = new THREE.Object3D();
+    this.colliders.bindPosition(this.properties.position);
+    this.colliders.bindQuaternion(this.properties.orientation);
 
     var childkeys = Object.keys(this.children);
     if (childkeys.length > 0) {
@@ -380,7 +383,7 @@ elation.component.add("engine.things.generic", function() {
           this.extractEntities(subobj);
           this.objects['3d'].add(subobj);
 
-          this.colliders = this.extractColliders(subobj, true);
+          this.extractColliders(subobj, true);
           if (ENV_IS_BROWSER){
             var textures = this.extractTextures(subobj, true);
             this.loadTextures(textures);
@@ -481,6 +484,11 @@ elation.component.add("engine.things.generic", function() {
       }
       if (this.container && thing.container) {
         this.container.appendChild(thing.container);
+      }
+      if (this.colliders && thing.colliders) {
+        // FIXME - we should probably keep a separate 
+        //this.engine.systems.world.scene['colliders'].add(thing.colliders);
+        this.colliders.add(thing.colliders);
       }
       elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
       return true;
@@ -608,7 +616,7 @@ elation.component.add("engine.things.generic", function() {
     this.extractEntities(scene);
     this.objects['3d'].add(scene);
 
-    this.colliders = this.extractColliders(scene);
+    this.extractColliders(scene);
     var textures = this.extractTextures(scene, true);
     this.loadTextures(textures);
     elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
@@ -637,7 +645,7 @@ elation.component.add("engine.things.generic", function() {
 */
     this.objects['3d'].add(collada.scene);
 
-    this.colliders = this.extractColliders(collada.scene, true);
+    this.extractColliders(collada.scene, true);
     var textures = this.extractTextures(collada.scene, true);
     this.loadTextures(textures);
     elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
@@ -747,6 +755,9 @@ elation.component.add("engine.things.generic", function() {
       } 
     });
 
+    // FIXME - hack to make demo work
+    //this.colliders.bindPosition(this.localToWorld(new THREE.Vector3()));
+
     var root = new elation.physics.rigidbody({ orientation: obj.quaternion.clone() });
     var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
     //root.orientation.multiply(flip);
@@ -826,6 +837,14 @@ elation.component.add("engine.things.generic", function() {
         });
       }
       meshes[i].parent.remove(meshes[i]);
+      meshes[i].bindPosition(rigid.position);
+      meshes[i].bindQuaternion(rigid.orientation);
+      meshes[i].bindScale(this.properties.scale);
+      //meshes[i].material = new THREE.MeshBasicMaterial({color: 0xff0000})
+      meshes[i].userData.thing = this;
+      meshes[i].updateMatrixWorld();
+      this.colliders.add(meshes[i]);
+      meshes[i].updateMatrixWorld();
     }
     this.objects.dynamics.add(root);
 
@@ -835,6 +854,9 @@ elation.component.add("engine.things.generic", function() {
     new3d.quaternion.copy(obj.quaternion);
     this.objects['3d'].add(new3d);
     */
+    //this.colliders.bindScale(this.properties.scale);
+    this.colliders.updateMatrixWorld();
+    return this.colliders;
   }
   this.extractTextures = function(object, useloadhandler) {
     if (!object) object = this.objects['3d'];

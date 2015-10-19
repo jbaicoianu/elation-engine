@@ -65,6 +65,9 @@ elation.require([
         if (thing.container) {
           //this.renderer['world-dom'].domElement.appendChild(thing.container);
         }
+        if (thing.colliders) {
+          this.scene['colliders'].add(thing.colliders);
+        }
         this.attachEvents(thing);
         elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
         return true;
