@@ -8,6 +8,7 @@ elation.require([
     this.scene = {
       'world-3d': new THREE.Scene(),
       'world-dom': new THREE.Scene(),
+      'colliders': new THREE.Scene(),
       'sky': false
     };
     this.persistdelay = 1000;
@@ -15,6 +16,12 @@ elation.require([
 
     //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
     //this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
+
+    // Initialize collider scene with some basic lighting for debug purposes
+    this.scene['colliders'].add(new THREE.AmbientLight(0xcccccc));
+    var colliderlight = new THREE.DirectionalLight();
+    colliderlight.position.set(10, 17.5, 19);
+    this.scene['colliders'].add(colliderlight);
 
     this.system_attach = function(ev) {
       console.log('INIT: world');
@@ -133,6 +140,12 @@ elation.require([
       for (var k in this.children) {
         this.children[k].die();
       }
+      while (this.scene['world-3d'].children.length > 0) {
+        this.scene['world-3d'].remove(this.scene['world-3d'].children[0]);
+      }
+      while (this.scene['colliders'].children.length > 0) {
+        this.scene['colliders'].remove(this.scene['colliders'].children[0]);
+      }
     }
     this.createNew = function() {
       this.reset();
@@ -249,7 +262,7 @@ elation.require([
 
     }
     this.loadSceneFromURL = function(url, callback) {
-      this.engine.systems.world.reset();
+      this.reset();
       elation.net.get(url, null, { onload: elation.bind(this, this.handleSceneLoad, callback) });  
       if (ENV_IS_BROWSER) {
         var dochash = "world.url=" + url;
