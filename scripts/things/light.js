@@ -8,6 +8,7 @@ elation.require(['engine.things.generic'], function() {
         'radius':            { type: 'float', default: 10000.0 },
         'target':            { type: 'object' },
         'angle':             { type: 'float', default: Math.PI/3 },
+        'exponent':          { type: 'float', default: 40 },
       });
 
     }
@@ -26,6 +27,7 @@ elation.require(['engine.things.generic'], function() {
           if (this.properties.target) {
             this.lightobj.target = this.properties.target.objects['3d'];
           }
+          this.lightobj.exponent = this.properties.exponent;
 
           var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
           //this.lightobj.add(helper);
