@@ -38,12 +38,21 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       this.light = this.spawn('light', this.id + '_light', {
         position: [0, 10, 15],
         persist: false,
-        intensity: 1,
+        intensity: .5,
         color: 0x999999,
         type: 'spot',
         target: this.child,
         angle: Math.PI/8
       });
+
+      // FIXME - dumb hack for demo!
+      var collgeo = new THREE.BoxGeometry(4, 8, 4);
+      var collmat = new THREE.MeshLambertMaterial({color: 0x990000, transparent: true, opacity: .5});
+      var collider = new THREE.Mesh(collgeo, collmat);
+      collider.userData.thing = this;
+      collider.position.y = 4;
+      this.colliders.add(collider);
+      collider.updateMatrixWorld();
     }
     this.mouseover = function(ev) {
       //this.child.properties.scale.copy(this.properties.childscale).multiplyScalar(1.2);
