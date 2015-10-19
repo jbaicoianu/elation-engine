@@ -141,8 +141,7 @@ elation.require([
       if (this.args.crosshair == 1) {
         elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this.container});
       }
-      this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
-      elation.events.add(window, "resize,keydown,keyup", this);
+      elation.events.add(window, "resize", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
@@ -173,6 +172,7 @@ elation.require([
       this.setcamera(cam);
 
       this.setscene(this.engine.systems.world.scene['world-3d']);
+      //this.setscene(this.engine.systems.world.scene['colliders']);
       if (this.engine.systems.world.scene['sky']) {
         this.setskyscene(this.engine.systems.world.scene['sky']);
       }
@@ -215,7 +215,7 @@ elation.require([
       if (this.picking) {
         this.mousepos = [0, 0, document.body.scrollTop];
         this.lastmousepos = [-1, -1, -1];
-        this.initPickingMaterial();
+        this.initPicking();
 
         this.pickingdebug = false;
 
@@ -433,7 +433,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
           this.scene.overrideMaterial = null;
           //this.composer.render(delta);
-          this.vreffect.render(this.scene, this.camera);
+          //this.vreffect.render(this.scene, this.camera);
+
+          this.vreffect.render();
+          //this.rendersystem.renderer.render(this.engine.systems.world.scene['world-3d'], this.actualcamera);
           //this.rendersystem.renderer.render(this.scene, this.actualcamera);
         }
         if (this.rendersystem.cssrenderer) {
@@ -700,7 +703,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.mousepos[0] = ev.clientX;
         this.mousepos[1] = ev.clientY;
         this.mousepos[2] = document.body.scrollTop;
-        this.cancelclick = true;
+        //this.cancelclick = true;
       } 
     }
     this.dragover = function(ev) {
@@ -719,8 +722,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (this.pickingactive) {
         elation.events.remove(this.container, 'mousemove,mouseout', this);
         this.pickingactive = false;
-        if (this.pickingobject) {
-          var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
+        if (this.picker.pickingobject) {
+          var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
           this.pickingobject = false;
           for (var i = 0; i < fired.length; i++) {
             if (fired[i].cancelBubble) ev.stopPropagation();
@@ -730,17 +733,17 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.mouseup = function(ev) {
       if (this.pickingactive && this.pickingobject) {
-        var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
+        var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble) ev.stopPropagation();
         }
       }
     }
     this.click = function(ev) {
-      if (this.pickingactive && this.pickingobject && !this.cancelclick) {
-        var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY])});
+      if (this.pickingactive && this.picker.pickingobject && !this.cancelclick) {
+        var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY])});
         for (var i = 0; i < fired.length; i++) {
-          if (fired[i].cancelBubble) ev.stopPropagation();
+          if (fired[i].cancelBubble && ev.stopPropagation) ev.stopPropagation();
         }
       }
       if (ev && ev.preventDefault) {
@@ -772,16 +775,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.pickingactive = false;
       }
     }
-    this.keydown = function(ev) {
-      for (var k in this.keystates) {
-        this.keystates[k] = ev[k];
-      }
-    }
-    this.keyup = function(ev) {
-      for (var k in this.keystates) {
-        this.keystates[k] = ev[k];
-      }
-    }
     this.change = function(ev) {
       console.log('change', ev);
     }
@@ -792,164 +785,21 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       return null;
     }
-    this.initPickingMaterial = function() {
-      elation.engine.materials.addChunk("controls_picking", {
-        uniforms: {
-          "id" : { type: "i", value: 0 },
-          "diffuse" : { type: "c", value: new THREE.Color(0xff0000) },
-        },
-        vertex_pars: [
-          "uniform int id;",
-          "varying vec2 vUv;",
-        ].join('\n'),
-
-        vertex: [
-          "vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);",
-          "gl_Position = projectionMatrix * mvPosition;",
-          //"vUv = uv;",
-        ].join('\n'),
-        fragment_pars: [
-          "uniform int id;",
-          "uniform vec3 diffuse;",
-          "varying vec2 vUv;",
-        ].join('\n'),
-        fragment: [
-            //"gl_FragColor = vec4(1,0,0, 1);",
-            //"gl_FragColor = vec4( vUv.x, vUv.y, float(id) / 256.0, 1.0);",
-            //"gl_FragColor = vec4( float(id) / 256.0, 0, 0, 1.0);",
-            "gl_FragColor = vec4( diffuse, 1.0);",
-        ].join('\n')
-      });
-      elation.engine.materials.buildShader("controls_picking", {
-        uniforms: [
-          //'common',
-          //'color',
-          'controls_picking',
-        ],
-        chunks_vertex: [
-          'controls_picking',
-          //'color',
-          //'default',
-        ],
-        chunks_fragment: [
-          //'color',
-          'controls_picking',
-        ]
-      });
-
-      this.pickingmaterials = [];
-      this.pickingtarget = new THREE.WebGLRenderTarget(this.size[0], this.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true, generateMipmaps: false});
-      this.pickingtarget.generateMipmaps = false;
-
-      this.pickingcomposer = this.createRenderPath([this.rendermode], this.pickingtarget);
-      this.pickingbuffer = new Uint8Array(4);
-      this.picknum = 0;
-      this.picktime = 0;
-
-      this.pickingobjects = [];
-      this.realmaterials = [];
-      this.realvisible = [];
-    }
-    this.getPickingMaterial = function(id) {
-      if (!this.pickingmaterials[id]) {
-        var idcolor = new THREE.Color(id);
-        this.pickingmaterials[id] = elation.engine.materials.getShaderMaterial("controls_picking", {diffuse: idcolor}, null, false);
-      }
-      return this.pickingmaterials[id];
+    this.initPicking = function() {
+      //this.picker = new elation.engine.systems.render.picking_gpu(this);
+      this.picker = new elation.engine.systems.render.picking_cpu(this, this.engine.systems.world.scene['colliders']);
     }
     this.updatePickingTarget = function(force) {
-      // ratelimit to once every n frames, for performance reasons
-      //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
-      var now = new Date().getTime();
-      if (now - this.picktime < 1000/20 && !force) {
-        return;
-      }
-      this.picktime = now;
-
-      this.pickingobjects = [];
-      this.realmaterials = [];
-      this.realvisible = [];
-      var objid = 1;
-      // replace texture with placeholder
-      this.scene.traverse(elation.bind(this, function(node) {
-        if (node.material) {
-          var objid = node.id;
-          this.realvisible[objid] = node.visible;
-          this.realmaterials[objid] = node.material;
-          var parent = this.getParentThing(node);
-          if (node.visible && parent && parent.properties && parent.properties.mouseevents) {
-            node.material = this.getPickingMaterial(objid);
-          } else {
-            node.visible = false;
-          }
-          this.pickingobjects[objid] = node;
-          //objid++;
-        } else {
-        }
-      }));
-      //this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
-      this.pickingcomposer.render();
-      //this.pickingtarget.needsUpdate = true;
-      if (this.pickingdebug) {
-        //this.rendersystem.renderer.render(this.scene, this.camera);
-      }
-
-      // revert textures
-      var ids = Object.keys(this.pickingobjects);
-      for (var i = 0; i < ids.length; i++) {
-        var id = ids[i];
-        if (this.realmaterials[id]) {
-          this.pickingobjects[id].material = this.realmaterials[id];
-        }
-        this.pickingobjects[id].visible = this.realvisible[id];
-      }
+      return this.picker.updatePickingTarget(force);
     }
     this.updatePickingObject = function(force) {
-      if (force || (this.picking && this.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
-        var dims = elation.html.dimensions(this.container);
-        this.pick(this.mousepos[0] - dims.x, this.mousepos[1] - dims.y);
-        this.lastmousepos[0] = this.mousepos[0];
-        this.lastmousepos[1] = this.mousepos[1];
-        this.lastmousepos[2] = this.mousepos[2];
-      }
+      return this.picker.updatePickingObject(force);
     }
     this.pick = function(x, y) {
-      //var oldframebuffer = this.glcontext.bindFramebuffer();
-
-      this.rendersystem.renderer.setRenderTarget( this.pickingcomposer.output );
-      var s = elation.html.dimensions(this.container);
-      var scale = this.scale / 100;
-      this.glcontext.readPixels((x + s.left) * scale, (this.container.offsetHeight - (y + s.top)) * scale, 1, 1, this.glcontext.RGBA, this.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
-      this.rendersystem.renderer.setRenderTarget( null );
-      
-      var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
-      var pickedthing = false, oldpickedthing = false;
-      if (this.pickingobject) {
-        pickedthing = oldpickedthing = this.getParentThing(this.pickingobject);
-      }
-      if (pickid > 0) {
-        if (this.pickingobject !== this.pickingobjects[pickid]) {
-          pickedthing = this.getParentThing(this.pickingobjects[pickid]);
-          if (this.pickingobject) {
-            //console.log('mouseout', this.pickingobject);
-            elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
-          }
-          this.pickingobject = this.pickingobjects[pickid];
-          if (this.pickingobject) {
-            elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
-          }
-        }
-        elation.events.fire({type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
-      } else {
-        if (this.pickingobject) {
-          //console.log('mouseout', this.pickingobject);
-          elation.events.fire({type: "mouseout", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
-          this.pickingobject = false;
-        }
-      }
+      return this.picker.pick(x, y);
     }
-    this.getPickingData = function(mesh, mousepos) {
-      return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
+    this.getPickingData = function(obj) {
+      return this.picker.getPickingData(obj);
     }
     this.enablePicking = function() {
       console.log('picking enabled');
@@ -1107,4 +957,262 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       });
     }
   }, elation.ui.panel);
+
+  elation.extend('engine.systems.render.picking_gpu', function(view) {
+    this.view = view;
+    this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
+    this.lastmousepos = [0, 0, 0];
+
+    this.init = function() {
+      this.initPickingMaterial();
+      elation.events.add(window, "keydown,keyup", this);
+    }
+
+    this.update = function(mousepos) {
+      
+    }
+    this.updatePickingTarget = function(force) {
+      // ratelimit to once every n frames, for performance reasons
+      //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
+      var now = new Date().getTime();
+      if (now - this.picktime < 1000/20 && !force) {
+        return;
+      }
+      this.picktime = now;
+
+      this.pickingobjects = [];
+      this.realmaterials = [];
+      this.realvisible = [];
+      var objid = 1;
+      // replace texture with placeholder
+      this.view.scene.traverse(elation.bind(this, function(node) {
+        if (node.material) {
+          var objid = node.id;
+          this.realvisible[objid] = node.visible;
+          this.realmaterials[objid] = node.material;
+          var parent = this.view.getParentThing(node);
+          if (node.visible && parent && parent.properties && parent.properties.mouseevents) {
+            node.material = this.getPickingMaterial(objid);
+          } else {
+            node.visible = false;
+          }
+          this.pickingobjects[objid] = node;
+          //objid++;
+        } else {
+        }
+      }));
+      //this.rendersystem.renderer.render(this.scene, this.camera, this.pickingtarget, true);
+      this.pickingcomposer.render();
+      //this.pickingtarget.needsUpdate = true;
+      if (this.pickingdebug) {
+        //this.rendersystem.renderer.render(this.scene, this.camera);
+      }
+
+      // revert textures
+      var ids = Object.keys(this.pickingobjects);
+      for (var i = 0; i < ids.length; i++) {
+        var id = ids[i];
+        if (this.realmaterials[id]) {
+          this.pickingobjects[id].material = this.realmaterials[id];
+        }
+        this.pickingobjects[id].visible = this.realvisible[id];
+      }
+    }
+    this.updatePickingObject = function(force) {
+      if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
+        var dims = elation.html.dimensions(this.view.container);
+        this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
+        this.lastmousepos[0] = this.view.mousepos[0];
+        this.lastmousepos[1] = this.view.mousepos[1];
+        this.lastmousepos[2] = this.view.mousepos[2];
+      }
+    }
+    this.pick = function(x, y) {
+      //var oldframebuffer = this.glcontext.bindFramebuffer();
+
+      this.view.rendersystem.renderer.setRenderTarget( this.pickingcomposer.output );
+      var s = elation.html.dimensions(this.view.container);
+      var scale = this.view.scale / 100;
+      this.view.glcontext.readPixels((x + s.left) * scale, (this.view.container.offsetHeight - (y + s.top)) * scale, 1, 1, this.view.glcontext.RGBA, this.view.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
+      this.view.rendersystem.renderer.setRenderTarget( null );
+      
+      var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
+      var pickedthing = false, oldpickedthing = false;
+      if (this.pickingobject) {
+        pickedthing = oldpickedthing = this.view.getParentThing(this.pickingobject);
+      }
+      if (pickid > 0) {
+        if (this.pickingobject !== this.pickingobjects[pickid]) {
+          pickedthing = this.view.getParentThing(this.pickingobjects[pickid]);
+          if (this.pickingobject) {
+            //console.log('mouseout', this.pickingobject);
+            elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
+          }
+          this.pickingobject = this.pickingobjects[pickid];
+          if (this.pickingobject) {
+            elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+          }
+        }
+        elation.events.fire({type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+      } else {
+        if (this.pickingobject) {
+          //console.log('mouseout', this.pickingobject);
+          elation.events.fire({type: "mouseout", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
+          this.pickingobject = false;
+        }
+      }
+    }
+    this.initPickingMaterial = function() {
+      elation.engine.materials.addChunk("controls_picking", {
+        uniforms: {
+          "id" : { type: "i", value: 0 },
+          "diffuse" : { type: "c", value: new THREE.Color(0xff0000) },
+        },
+        vertex_pars: [
+          "uniform int id;",
+          "varying vec2 vUv;",
+        ].join('\n'),
+
+        vertex: [
+          "vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);",
+          "gl_Position = projectionMatrix * mvPosition;",
+          //"vUv = uv;",
+        ].join('\n'),
+        fragment_pars: [
+          "uniform int id;",
+          "uniform vec3 diffuse;",
+          "varying vec2 vUv;",
+        ].join('\n'),
+        fragment: [
+            //"gl_FragColor = vec4(1,0,0, 1);",
+            //"gl_FragColor = vec4( vUv.x, vUv.y, float(id) / 256.0, 1.0);",
+            //"gl_FragColor = vec4( float(id) / 256.0, 0, 0, 1.0);",
+            "gl_FragColor = vec4( diffuse, 1.0);",
+        ].join('\n')
+      });
+      elation.engine.materials.buildShader("controls_picking", {
+        uniforms: [
+          //'common',
+          //'color',
+          'controls_picking',
+        ],
+        chunks_vertex: [
+          'controls_picking',
+          //'color',
+          //'default',
+        ],
+        chunks_fragment: [
+          //'color',
+          'controls_picking',
+        ]
+      });
+
+      this.pickingmaterials = [];
+      this.pickingtarget = new THREE.WebGLRenderTarget(this.view.size[0], this.view.size[1], {minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, depthBuffer: true, generateMipmaps: false});
+      this.pickingtarget.generateMipmaps = false;
+
+      this.pickingcomposer = this.view.createRenderPath([this.view.rendermode], this.pickingtarget);
+      this.pickingbuffer = new Uint8Array(4);
+      this.picknum = 0;
+      this.picktime = 0;
+
+      this.pickingobjects = [];
+      this.realmaterials = [];
+      this.realvisible = [];
+    }
+    this.getPickingMaterial = function(id) {
+      if (!this.pickingmaterials[id]) {
+        var idcolor = new THREE.Color(id);
+        this.pickingmaterials[id] = elation.engine.materials.getShaderMaterial("controls_picking", {diffuse: idcolor}, null, false);
+      }
+      return this.pickingmaterials[id];
+    }
+    this.getPickingData = function(mesh, mousepos) {
+      return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
+    }
+    this.keydown = function(ev) {
+      for (var k in this.keystates) {
+        this.keystates[k] = ev[k];
+      }
+    }
+    this.keyup = function(ev) {
+      for (var k in this.keystates) {
+        this.keystates[k] = ev[k];
+      }
+    }
+
+    this.init();
+  });
+  elation.extend('engine.systems.render.picking_cpu', function(view, scene) {
+    this.view = view;
+    this.scene = scene;
+    this.raycaster = new THREE.Raycaster();
+    this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
+    this.lastmousepos = [0, 0, 0];
+    this.mousevec = new THREE.Vector2();
+
+    this.init = function() {
+    }
+    this.updatePickingTarget = function(force) {
+    }
+    this.updatePickingObject = function(force) {
+      if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
+        var dims = elation.html.dimensions(this.view.container);
+        this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
+        this.lastmousepos[0] = this.view.mousepos[0];
+        this.lastmousepos[1] = this.view.mousepos[1];
+        this.lastmousepos[2] = this.view.mousepos[2];
+      }
+    }
+    this.pick = function(x, y) {
+      this.mousevec.x = (x / this.view.size[0]) * 2 - 1;
+      this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
+
+      var objects = [];
+      this.scene.traverse(function(n) { 
+        n.updateMatrix();
+        n.updateMatrixWorld();
+        objects.push(n); 
+      });
+
+      this.raycaster.setFromCamera(this.mousevec, this.view.camera);
+      var intersects = this.raycaster.intersectObjects(objects);
+      if (intersects.length > 0) {
+        var hit = intersects[0];
+        this.lasthit = hit; // FIXME - hack for demo
+        var foo = this.firePickingEvents(hit, x, y);
+      }
+    }
+    this.firePickingEvents = function(hit, x, y) {
+      var pickedthing = false, oldpickedthing = false;
+      if (this.pickingobject) {
+        pickedthing = oldpickedthing = this.pickingobject.userData.thing;
+      }
+      if (hit) {
+        hit.thing = hit.object.userData.thing;
+        if (this.pickingobject !== hit.object) {
+          pickedthing = hit.object.userData.thing;
+          if (this.pickingobject) {
+            elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: hit});
+          }
+          this.pickingobject = hit.object;
+          if (this.pickingobject) {
+            elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+          }
+        }
+        elation.events.fire({type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+      } else {
+        if (this.pickingobject) {
+          //console.log('mouseout', this.pickingobject);
+          elation.events.fire({type: "mouseout", element: pickedthing, data: hit});
+          this.pickingobject = false;
+        }
+      }
+    }
+    this.getPickingData = function(obj) {
+      return this.lasthit;
+    }
+
+    this.init();
+  });
 });
