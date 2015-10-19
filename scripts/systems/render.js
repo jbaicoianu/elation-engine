@@ -1168,15 +1168,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.mousevec.x = (x / this.view.size[0]) * 2 - 1;
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
 
-      var objects = [];
-      this.scene.traverse(function(n) { 
-        n.updateMatrix();
-        n.updateMatrixWorld();
-        objects.push(n); 
-      });
-
       this.raycaster.setFromCamera(this.mousevec, this.view.camera);
-      var intersects = this.raycaster.intersectObjects(objects);
+      var intersects = this.raycaster.intersectObjects(this.scene.children, true);
       if (intersects.length > 0) {
         var hit = intersects[0];
         this.lasthit = hit; // FIXME - hack for demo
