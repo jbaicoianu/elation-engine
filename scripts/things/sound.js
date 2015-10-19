@@ -48,12 +48,12 @@ elation.require(['engine.things.generic'], function() {
       }
     }
     this.pause = function() {
-      if (this.audio) {
+      if (this.audio && this.audio.isPlaying) {
         this.audio.pause();
       }
     }
     this.stop = function() {
-      if (this.audio) {
+      if (this.audio && this.audio.isPlaying) {
         this.audio.stop();
       }
     }
