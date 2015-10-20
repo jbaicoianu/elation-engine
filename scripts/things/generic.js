@@ -486,8 +486,6 @@ elation.component.add("engine.things.generic", function() {
         this.container.appendChild(thing.container);
       }
       if (this.colliders && thing.colliders) {
-        // FIXME - we should probably keep a separate 
-        //this.engine.systems.world.scene['colliders'].add(thing.colliders);
         this.colliders.add(thing.colliders);
       }
       elation.events.fire({type: 'thing_add', element: this, data: {thing: thing}});
@@ -507,6 +505,9 @@ elation.component.add("engine.things.generic", function() {
       }
       if (thing.objects['dynamics'] && thing.objects['dynamics'].parent) {
         thing.objects['dynamics'].parent.remove(thing.objects['dynamics']);
+      }
+      if (this.colliders && thing.colliders) {
+        this.colliders.remove(thing.colliders);
       }
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
@@ -542,6 +543,7 @@ elation.component.add("engine.things.generic", function() {
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
 
+      var collidergeom = false;
       // Create appropriate collider for the geometry associated with this thing
       if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
         var geom = this.objects['3d'].geometry;
@@ -549,6 +551,7 @@ elation.component.add("engine.things.generic", function() {
             geom instanceof THREE.SphereBufferGeometry) {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
           dyn.setCollider('sphere', {radius: geom.boundingSphere.radius});
+          collidergeom = new THREE.SphereBufferGeometry(geom.boundingSphere.radius, 16, 8);
         } else if (geom instanceof THREE.PlaneGeometry) {
           // FIXME - this only works on non-deformed planes, and right now only at the origin
           var pnorm = new THREE.Vector3(0,1,0);
@@ -559,16 +562,25 @@ elation.component.add("engine.things.generic", function() {
              pnorm = this.localToWorld(pnorm.copy(geom.normals[0])); 
           }
           dyn.setCollider('plane', {normal: pnorm, offset: poffset});
+          collidergeom = new THREE.PlaneBufferGeometry(geom.width, geom.height, 1, 1);
         } else if (geom instanceof THREE.CylinderGeometry) {
           if (geom.radiusTop == geom.radiusBottom) {
             dyn.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
+            collidergeom = new THREE.CylinderGeometry(geom.radiusTop, geom.radiusBottom, geom.height, 8, 1);
           } else {
             console.log('FIXME - cylinder collider only supports uniform cylinders for now');
           }
         } else {
           if (!geom.boundingBox) geom.computeBoundingBox();
           dyn.setCollider('box', geom.boundingBox);
+          var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
+          collidergeom = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
         }
+      }
+      if (collidergeom) {
+        var collidermesh = new THREE.Mesh(collidergeom, new THREE.MeshLambertMaterial({color: 0x009900, opacity: .5, transparent: true}));
+        collidermesh.userData.thing = this;
+        this.colliders.add(collidermesh);
       }
       elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
       elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
