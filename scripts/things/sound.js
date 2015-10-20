@@ -5,6 +5,8 @@ elation.require(['engine.things.generic'], function() {
         src: { type: 'string' },
         autoplay: { type: 'boolean', default: true },
         loop: { type: 'boolean', default: true },
+        distance: { type: 'float', default: 100 },
+        volume: { type: 'float', default: 1 },
       });
       elation.events.add(this, 'thing_destroy', elation.bind(this, this.stop));
 
@@ -29,8 +31,12 @@ elation.require(['engine.things.generic'], function() {
       var players = this.engine.systems.world.getThingsByType('player');
       if (players && players.length > 0 && players[0].ears) {
         this.audio = new THREE.Audio(players[0].ears);
+        this.audio.panner.maxDistance = this.properties.distance;
+        this.audio.panner.maxDistance = this.properties.distance;
+        this.audio.panner.distanceModel = 'linear';
         this.audio.autoplay = this.properties.autoplay;
         this.audio.setLoop(this.properties.loop);
+        this.audio.setVolume(this.properties.volume);
         this.audio.load(this.properties.src);
         this.objects['3d'].add(this.audio);
       }
