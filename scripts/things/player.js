@@ -12,7 +12,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         turnspeed: { type: 'float', default: 2.0 },
         movefriction: { type: 'float', default: 4.0 },
         defaultplayer: { type: 'boolean', default: true },
-        startposition: { type: 'vector3', default: new THREE.Vector3() }
+        startposition: { type: 'vector3', default: new THREE.Vector3() },
+        startorientation: { type: 'quaternion', default: new THREE.Quaternion() },
+        startcameraorientation: { type: 'quaternion', default: new THREE.Quaternion() }
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w,keyboard_shift_w', elation.bind(this, this.updateControls)],
@@ -124,9 +126,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     this.reset_position = function(ev) {
       if (!ev || ev.value == 1) {
         this.properties.position.copy(this.properties.startposition);
+        this.properties.orientation.copy(this.properties.startorientation);
+        this.camera.properties.orientation.copy(this.properties.startcameraorientation);
         this.properties.velocity.set(0,0,0);
         this.objects.dynamics.angular.set(0,0,0);
         this.engine.systems.controls.calibrateHMDs();
+        this.refresh();
       }
     }
     this.getspin = function() {
@@ -156,6 +161,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       // place camera at head height
       this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
+
+      this.reset_position();
     }
     this.getGroundHeight = function() {
       
