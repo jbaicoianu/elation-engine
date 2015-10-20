@@ -479,8 +479,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       return ret;
     }
     this.mousedown = function(ev) {
-      if (ev.button === 0) {
+      if (ev.button === 0 && !this.getPointerLockElement()) {
         this.requestPointerLock();
+        ev.stopPropagation();
+        ev.preventDefault();
       }
       var bindid = "mouse_button_" + ev.button;
       if (!this.state[bindid]) {
