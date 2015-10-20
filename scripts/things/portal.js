@@ -75,7 +75,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       this.child.refresh();
     }
     this.click = function(ev) {
-      if (this.properties.url) {
+      if (ev.data.distance <= 40 && this.properties.url) {
         this.engine.systems.world.loadSceneFromURL(this.properties.url);
       }
     }
