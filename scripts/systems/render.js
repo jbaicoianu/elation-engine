@@ -433,11 +433,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
           this.scene.overrideMaterial = null;
           //this.composer.render(delta);
-          //this.vreffect.render(this.scene, this.camera);
-
-          this.vreffect.render();
-          //this.rendersystem.renderer.render(this.engine.systems.world.scene['world-3d'], this.actualcamera);
           //this.rendersystem.renderer.render(this.scene, this.actualcamera);
+          this.vreffect.render(this.scene, this.camera);
         }
         if (this.rendersystem.cssrenderer) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
@@ -1167,6 +1164,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.pick = function(x, y) {
       this.mousevec.x = (x / this.view.size[0]) * 2 - 1;
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
+
+      this.scene.updateMatrixWorld();
 
       this.raycaster.setFromCamera(this.mousevec, this.view.camera);
       var intersects = this.raycaster.intersectObjects(this.scene.children, true);
