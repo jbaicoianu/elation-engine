@@ -389,19 +389,27 @@ elation.require(['utils.template'], function() {
         }
       }
     }
-    this.getTextureLabel = function(text) {
+    this.getTextureLabel = function(text, fontsize, color, font, background) {
       var c = elation.html.create('canvas');
       var ctx = c.getContext('2d');
 
-      var fontsize = 12;
-      ctx.font = fontsize + 'px monospace';
+      if (fontsize === undefined) fontsize = 32;
+      if (color === undefined) color = '#fff';
+      if (font === undefined) font = 'serif';
+      if (background === undefined) background = 'rgba(0,0,0,0)';
 
+      ctx.font = fontsize + 'px ' + font;
       var size = ctx.measureText(text);
       c.width = size.width;
       c.height = fontsize;
+      // changing width resets context, so reset size
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, c.width, c.height);
 
-      ctx.fillStyle = '#0f0';
-      ctx.fillText(text, 0, fontsize);
+      ctx.font = fontsize + 'px ' + font;
+      ctx.fillStyle = color;
+      ctx.fillText(text, 0, fontsize - fontsize/6);
+      ctx.strokeText(text, 0, fontsize - fontsize/6);
 
   /*
   document.body.appendChild(c);
