@@ -120,6 +120,9 @@ elation.require([
         if (thing.container) {
           //this.renderer['world-dom'].domElement.removeChild(thing.container);
         }
+        if (thing.colliders) {
+          this.scene['colliders'].remove(thing.colliders);
+        }
         delete this.children[thing.name];
         elation.events.fire({type: 'world_thing_remove', element: this, data: {thing: thing}});
       }
