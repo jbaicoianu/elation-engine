@@ -393,7 +393,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.calibrateHMDs = function() {
       if (this.hmds) {
         for (var i = 0; i < this.hmds.length; i++) {
-          this.hmds[i].zeroSensor();
+          this.hmds[i].resetSensor();
         }
       }
     }
