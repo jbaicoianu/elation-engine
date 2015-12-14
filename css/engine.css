@@ -15,11 +15,31 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  background: url(/images/engine/crosshair.png);
-  width: 11px;
-  height: 11px;
-  transform: translate(-5px, -5px);
+  background: url(http://i.imgur.com/AQEShze.png) no-repeat;
+  width: 48px;
+  height: 48px;
+  opacity: .4;
+  transform: translate(-24px, -24px);
   z-index: 50;
+  pointer-events: none;
+}
+.engine_view_rendermode_oculus .engine_view_crosshair {
+  position: absolute;
+  top: 50%;
+  background-position: 27%;
+  width: 100%;
+  left: 0;
+}
+.engine_view_rendermode_oculus .engine_view_crosshair::after {
+  content: ' ';
+  position: absolute;
+  background: url(http://i.imgur.com/AQEShze.png) no-repeat;
+  background-position: 73%;
+  display: block;
+  width: 100%;
+  height: 48px;
+  transform: translate(-24px, -24px);
+  top: 50%;
 }
 .ui_window .ui_window_content.engine_configuration {
   width: 60em;
