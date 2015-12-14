@@ -1,4 +1,4 @@
-elation.require(['engine.things.controller'], function() {
+elation.require(['engine.external.three.tween', 'engine.things.controller'], function() {
   elation.component.add('engine.things.pathtracker', function() {
     this.postinit = function() {
       this.defineProperties({
@@ -6,16 +6,26 @@ elation.require(['engine.things.controller'], function() {
         'target': { type: 'object' },
         'tracktime': { type: 'float', default: 5.0 },
         'autostart': { type: 'bool', default: false },
+        'autostartdelay': { type: 'float', default: 0 },
         'repeat': { type: 'bool', default: false },
       });
       this.addPart("tracker", elation.engine.parts.ai.pathtracker({thing: this, path: this.properties.path}));
 
       // TODO - better syntax?
       //this.tracker = this.addPart('ai.pathtracker', { path: this.properties.path });
+      var path = new THREE.CurvePath();
+      var linecurve = new THREE.LineCurve3(this.properties.path[0], this.properties.path[1]);
+      path.add(linecurve);
 
-      this.parts.tracker.setPath(this.properties.path, this.properties.tracktime);
+      this.parts.tracker.setPath(path, this.properties.tracktime);
+
       if (this.properties.autostart) {
-        this.start();
+        if (this.properties.autostartdelay) {
+          this.setPathPoint(0);
+          setTimeout(elation.bind(this, this.start), 1000 * this.properties.autostartdelay);
+        } else {
+          this.start();
+        }
       }
     }
     this.createObject3D = function() {
