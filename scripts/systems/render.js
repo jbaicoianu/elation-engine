@@ -22,7 +22,7 @@ elation.require([
   //"engine.external.three.render.BleachBypassShader",
   //"engine.external.three.render.FilmShader",
   //"engine.external.three.render.FilmPass",
-  //"engine.external.three.render.ConvolutionShader",
+  "engine.external.three.render.ConvolutionShader",
   "engine.external.three.render.BloomPass",
   "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
@@ -166,7 +166,7 @@ elation.require([
       }
       this.rendersystem.view_add(this.id, this);
 
-      var cam = new THREE.PerspectiveCamera(60, this.container.offsetWidth / this.container.offsetHeight, 1e-2, 1e4);
+      var cam = new THREE.PerspectiveCamera(75, 47/53 * 8, 1e-2, 1e4);
       this.actualcamera = cam;
 
       this.setcamera(cam);
@@ -187,9 +187,26 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
-      this.composer = this.createRenderPath([this.rendermode, 'fxaa', 'recording']);
+      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
+
+      this.vrdisplay = false;
+      if (navigator.getVRDevices) {
+        navigator.getVRDevices().then(function(n) {
+          for (var i = 0; i < n.length; i++) {  
+            if (n[i] instanceof HMDVRDevice) {
+              this.vrdisplay = n[i];
+              console.log('COOL FOUND A VR DEVICE', this.vrdisplay);
+              setTimeout(elation.bind(this, function() {
+                //this.engine.client.toggleVR({value: 1});
+              }), 1000);
+              break;
+            }
+          }
+        }.bind(this));
+      }
+
       if (this.showstats) {
         elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
       }
@@ -301,7 +318,7 @@ elation.require([
           pass.renderToScreen = true;
           break;
         case 'bloom':
-          pass = new THREE.BloomPass(.25);
+          pass = new THREE.BloomPass(0.65, 25, 5);
           break;
         case 'fxaa':
           pass = new THREE.ShaderPass( THREE.FXAAShader );
@@ -331,12 +348,22 @@ elation.require([
 console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, lastpass, pass, this.renderpasses);
 
       this.composer.passes[passidx] = pass;
-      this.pickingcomposer.passes[passidx] = pass;
+      if (this.pickingcomposer) this.pickingcomposer.passes[passidx] = pass;
       pass.camera = this.actualcamera;
 
+      elation.html.removeclass(this.container, "engine_view_rendermode_" + this.rendermode);
       this.rendermode = mode;
+      elation.html.addclass(this.container, "engine_view_rendermode_" + this.rendermode);
+
 
       this.rendersystem.setdirty();
+    }
+    this.isFullscreen = function() {
+      var fsel = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+      if (fsel) {
+        return true;
+      }
+      return false;
     }
     this.toggleFullscreen = function(fullscreen) {
       if (typeof fullscreen == 'undefined') {
@@ -350,7 +377,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         var c = document.body;
         c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
         if (typeof c.requestFullscreen == 'function') {
-          c.requestFullscreen();
+          c.requestFullscreen({vrDisplay: this.vrdisplay});
         }
       } else {
         var fsel = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
