@@ -218,7 +218,7 @@ elation.require(deps, function() {
   elation.component.add('engine.client', function() {
     this.init = function() {
       this.name = this.args.name || 'default';
-      this.engine = elation.engine.create(this.name, ["physics", "world", "render", "controls"], elation.bind(this, this.startEngine));
+      this.engine = elation.engine.create(this.name, ["physics", "world", "ai", "render", "controls"], elation.bind(this, this.startEngine));
     }
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
