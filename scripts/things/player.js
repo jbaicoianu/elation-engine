@@ -28,17 +28,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
         'crouch': ['keyboard_c,keyboard_shift_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        'toss': ['keyboard_space,keyboard_shift_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
+        //'toss': ['keyboard_space,keyboard_shift_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
-        'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
+        'use': ['keyboard_space,keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
         'toggle_flying': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.toggle_flying)],
-        'reset_position': ['keyboard_r', elation.bind(this, this.reset_position)],
+        'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
       // Separate HMD context so it can remain active when player controls are disabled
       this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
-        //'hmd': ['hmd_0', elation.bind(this, this.refresh)],
-        //'orientation': ['orientation', elation.bind(this, this.refresh)],
+        'hmd': ['hmd_0', elation.bind(this, this.refresh)],
+        'orientation': ['orientation', elation.bind(this, this.refresh)],
       });
       this.moveVector = new THREE.Vector3();
       this.turnVector = new THREE.Euler(0, 0, 0);
@@ -55,7 +55,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.target = false;
       this.addTag('player');
 
-      elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
+      //elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
       elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
       elation.events.add(this, 'thing_create', elation.bind(this, this.handleCreate));
     }
@@ -140,8 +140,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     }
     this.createObject3D = function() {
       this.objects['3d'] = new THREE.Object3D();
-      this.ears = new THREE.AudioListener();
-      this.objects['3d'].add(this.ears);
       //this.camera.rotation.set(-Math.PI/16, 0, 0);
 
       //var camhelper = new THREE.CameraHelper(this.camera);
@@ -149,6 +147,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       return this.objects['3d'];
     }
     this.createChildren = function() {
+      this.ears = new THREE.AudioListener();
+      // place camera at head height
+      this.camera.objects['3d'].add(this.ears);
+      //this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
+      this.reset_position();
     }
     this.createForces = function() {
       this.frictionForce = this.objects.dynamics.addForce("friction", this.properties.movefriction);
@@ -157,12 +160,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.objects.dynamics.restitution = 0.1;
       this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
-
-      // place camera at head height
+      // FIXME - should be in createChildren
       this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
-      this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
-
-      this.reset_position();
     }
     this.getGroundHeight = function() {
       
@@ -180,7 +179,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.enableuse = true;
       this.enabled = true;
       this.engine.systems.controls.requestPointerLock();
-      this.refresh();
+
+      // FIXME - quick hack to ensure we don't refresh before everything is initialized
+      if (this.objects.dynamics) {
+        this.refresh();
+      }
     }
     this.disable = function() {
       this.engine.systems.controls.deactivateContext('player');
@@ -240,7 +243,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
             if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
-              var scale = 1/.3048;
+              var scale = 1;///.3048;
               if (this.hmdstate.hmd.position) {
                 this.camera.objects.dynamics.position.copy(this.hmdstate.hmd.position).multiplyScalar(scale);
                 this.camera.objects.dynamics.position.y += this.properties.height * .8 - this.properties.fatness;
@@ -392,7 +395,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         //this.holding.reparent(this.engine.systems.world);
         this.charging = 0.0001; // fixme - hardcoded value is silly here, this lets us just drop the item
         this.toss({value: 0});
-console.log('toss it!!!!', this.holding);
       }
       this.holding = object;
       object.reparent(this.camera);
