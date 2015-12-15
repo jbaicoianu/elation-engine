@@ -17,6 +17,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     this.createChildren = function() {
       this.child = this.spawn('generic', this.id + '_model', {
         'render.collada': this.properties.render.collada, 
+        'render.meshname': this.properties.render.meshname, 
         'position': this.properties.childposition,
         'orientation': this.properties.childorientation.clone(),
         'scale': this.properties.childscale.clone(),
