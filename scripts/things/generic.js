@@ -63,6 +63,7 @@ elation.component.add("engine.things.generic", function() {
       'persist':        { type: 'bool', default: false, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
       'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
+      'render.meshname':{ type: 'string' },
       'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
@@ -223,6 +224,10 @@ elation.component.add("engine.things.generic", function() {
   }
 
   this.set = function(property, value, forcerefresh) {
+    if (!this._thingdef.properties[property]) {
+      console.warn('Tried to set unknown property', property, value, this);
+      return;
+    }
     var propval = this.getPropertyValue(this._thingdef.properties[property].type, value);
     var currval = this.get(property);
     //if (currval !== null) {
@@ -376,19 +381,7 @@ elation.component.add("engine.things.generic", function() {
         this.loadglTF(this.properties.render.gltf + cachebust);
       } else if (this.properties.render.meshname) {
         object = new THREE.Object3D();
-        setTimeout(elation.bind(this, function() {
-          var subobj = elation.engine.geometries.getMesh(this.properties.render.meshname).clone();
-          subobj.rotation.x = -Math.PI/2;
-          subobj.rotation.z = Math.PI;
-          this.extractEntities(subobj);
-          this.objects['3d'].add(subobj);
-
-          this.extractColliders(subobj, true);
-          if (ENV_IS_BROWSER){
-            var textures = this.extractTextures(subobj, true);
-            this.loadTextures(textures);
-          }
-        }), 0);
+        setTimeout(elation.bind(this, this.loadMeshName, this.properties.render.meshname), 0);
       }
     }
 
@@ -561,8 +554,10 @@ elation.component.add("engine.things.generic", function() {
           } else if (geom.normals) {
              pnorm = this.localToWorld(pnorm.copy(geom.normals[0])); 
           }
-          dyn.setCollider('plane', {normal: pnorm, offset: poffset});
-          collidergeom = new THREE.PlaneBufferGeometry(geom.width, geom.height, 1, 1);
+          if (!geom.boundingBox) geom.computeBoundingBox();
+          var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
+          dyn.setCollider('box', geom.boundingBox);
+          collidergeom = new THREE.BoxGeometry(size.x, size.y, size.z, 1, 1);
         } else if (geom instanceof THREE.CylinderGeometry) {
           if (geom.radiusTop == geom.radiusBottom) {
             dyn.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
@@ -731,6 +726,22 @@ elation.component.add("engine.things.generic", function() {
 
     this.refresh();
   }
+  this.loadMeshName = function(meshname) {
+    var subobj = elation.engine.geometries.getMesh(meshname);
+    subobj.rotation.x = -Math.PI/2;
+    subobj.rotation.y = 0;
+    subobj.rotation.z = Math.PI;
+    this.extractEntities(subobj);
+    this.objects['3d'].add(subobj);
+    this.extractColliders(subobj);
+
+    elation.events.add(null, 'resource_load_complete', elation.bind(this, this.extractColliders, subobj));
+
+    if (ENV_IS_BROWSER){
+      var textures = this.extractTextures(subobj, true);
+      this.loadTextures(textures);
+    }
+  }
   this.extractEntities = function(scene) {
     this.cameras = [];
     this.parts = {};
@@ -755,6 +766,7 @@ elation.component.add("engine.things.generic", function() {
     //this.updateCollisionSize();
   }
   this.extractColliders = function(obj, useParentPosition) {
+    if (!this.properties.collidable) return;
     var meshes = [];
     if (!obj) obj = this.objects['3d'];
     var re = new RegExp(/^[_\*](collider|trigger)-(.*)$/);
@@ -770,8 +782,8 @@ elation.component.add("engine.things.generic", function() {
     // FIXME - hack to make demo work
     //this.colliders.bindPosition(this.localToWorld(new THREE.Vector3()));
 
-    var root = new elation.physics.rigidbody({ orientation: obj.quaternion.clone() });
     var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
+    var root = new elation.physics.rigidbody({orientation: flip});// orientation: obj.quaternion.clone() });
     //root.orientation.multiply(flip);
 
     for (var i = 0; i < meshes.length; i++) {
@@ -857,8 +869,11 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].updateMatrixWorld();
       this.colliders.add(meshes[i]);
       meshes[i].updateMatrixWorld();
+      meshes[i].visible = false;
     }
-    this.objects.dynamics.add(root);
+    if (this.objects.dynamics) {
+      this.objects.dynamics.add(root);
+    }
 
     /*
     new3d.scale.copy(obj.scale);
