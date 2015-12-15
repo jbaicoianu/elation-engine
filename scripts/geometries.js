@@ -133,7 +133,10 @@ elation.require([], function() {
       this.meshes[name] = mesh;
     }
     this.loadMeshFromURL = function(name, url, type) {
-      this.meshes[name] = new THREE.Group();
+      if (!this.meshes[name]) {
+        // Add a placeholder for newly-added objects so they can be used immediately
+        this.meshes[name] = new THREE.Group();
+      }
       if (typeof THREE.ColladaLoader == 'undefined') {
         // If the loader hasn't been initialized yet, fetch it!
         THREE.ColladaLoader = false;
@@ -149,6 +152,7 @@ elation.require([], function() {
     }
     this.handleMeshLoadCollada = function(name, url, data) {
       //this.meshes[name] = data.scene;
+      // Add the model data as a child of the placeholder we created earlier
       this.meshes[name].add(data.scene);
       //data.scene.rotation.x = -Math.PI/2;
       //data.scene.rotation.z = Math.PI;
@@ -163,6 +167,10 @@ elation.require([], function() {
       elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
     }
     this.getMesh = function(name) {
+      if (!this.meshes[name]) {
+        // If we requested a mesh which hasn't been added yet, create a placeholder so it can be filled in later
+        this.meshes[name] = new THREE.Group();
+      }
       return this.meshes[name];
     }
     this.getMeshGeometry = function(name) {
