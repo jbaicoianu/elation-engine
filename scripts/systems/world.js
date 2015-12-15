@@ -143,8 +143,11 @@ elation.require([
       return types;
     }
     this.reset = function() {
+      // Kill all objects except ones which are set to persist
       for (var k in this.children) {
-        this.children[k].die();
+        if (!this.children[k].properties.persist) {
+          this.children[k].die();
+        }
       }
       while (this.scene['world-3d'].children.length > 0) {
         this.scene['world-3d'].remove(this.scene['world-3d'].children[0]);
@@ -198,7 +201,14 @@ elation.require([
       this.loading = true;
       if (!this.root) {
         this.currentlyloaded = thing;
-        var loadtypes = this.extract_types(thing, [], true);
+        var loadtypes = [];
+        if (elation.utils.isArray(thing)) {
+          for (var i = 0; i < thing.length; i++) {
+            this.extract_types(thing[i], loadtypes, true);
+          }
+        } else {
+          this.extract_types(thing, loadtypes, true);
+        }
         if (loadtypes.length > 0) {
           elation.require(loadtypes.map(function(a) { return 'engine.things.' + a; }), elation.bind(this, function() { this.load(thing, root, logprefix); }));
           return;
@@ -268,7 +278,7 @@ elation.require([
 
     }
     this.loadSceneFromURL = function(url, callback) {
-      this.reset();
+      //this.reset();
       elation.net.get(url, null, { onload: elation.bind(this, this.handleSceneLoad, callback) });  
       if (ENV_IS_BROWSER) {
         var dochash = "world.url=" + url;
@@ -279,10 +289,9 @@ elation.require([
       }
     }
     this.handleSceneLoad = function(callback, ev) {
-      console.log(ev);
       var response = ev.target.response;
       var data = JSON.parse(response);
-      if (elation.utils.isArray(response)) {
+      if (elation.utils.isArray(data)) {
         for (var i = 0; i < data.length; i++) {
           this.load(data[i]);
         }
@@ -317,7 +326,14 @@ elation.require([
           // Right now this might end up with weird double-object behavior...
           type = 'generic';
         } else {
-          currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, client: this.client, properties: spawnargs});
+          currentobj = elation.engine.things[type].obj[name];
+          if (currentobj) {
+            for (var k in spawnargs) {
+              currentobj.setProperties(spawnargs);
+            }
+          } else {
+            currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, client: this.client, properties: spawnargs});
+          }
           parent.add(currentobj);
           //currentobj.reparent(parent);
 
