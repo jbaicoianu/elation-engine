@@ -216,7 +216,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
               var action = this.bindings[context][this.changes[i]];
               if (this.contexts[context][action]) {
                 contextstate[action] = this.state[this.changes[i]];
-                var ev = {timeStamp: now, type: this.changes[i], value: this.state[this.changes[i]], data: contextstate};
+                //var ev = {timeStamp: now, type: this.changes[i], value: this.state[this.changes[i]], data: contextstate};
+                var ev = {timeStamp: now, type: action, value: this.state[this.changes[i]], data: contextstate};
                 //console.log('call it', this.changes[i], this.bindings[context][this.changes[i]], this.state[this.changes[i]]);
                 if (this.contexttargets[context]) {
                   ev.target = this.contexttargets[context];
