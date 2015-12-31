@@ -231,6 +231,7 @@ elation.require([
         this.dirty = true;
         elation.events.fire({type: 'engine_world_init', element: this});
       }
+      return root;
     }
     this.reload = function() {
       if (this.rootname) {
