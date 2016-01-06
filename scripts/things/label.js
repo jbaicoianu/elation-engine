@@ -77,10 +77,34 @@ elation.require(["engine.things.generic"], function() {
         geomod.makeTranslation(0, 0, -1 * diff.z);
         geometry.applyMatrix(geomod);
       }
+      geometry.computeBoundingBox();
       return geometry;
     }
     this.setText = function(text) {
-      this.objects['3d'].geometry = this.createTextGeometry(text);
+      if (text.indexOf && text.indexOf('\n') != -1) {
+        this.setMultilineText(text);
+      } else {
+        this.objects['3d'].geometry = this.createTextGeometry(text);
+      }
+      this.refresh();
+   }
+    this.setMultilineText = function(text) {
+      var lines = text.split('\n');
+      var geometry = new THREE.Geometry();
+      var linematrix = new THREE.Matrix4();
+      var lineoffset = 0;
+      var lineheight = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var linegeometry = this.createTextGeometry(lines[i]);
+        linematrix.makeTranslation(0, lineoffset, 0);
+        geometry.merge(linegeometry, linematrix);
+        if (!lineheight) {
+          var bboxdiff = new THREE.Vector3().subVectors(linegeometry.boundingBox.max, linegeometry.boundingBox.min);
+          lineheight = bboxdiff.y;
+        }
+        lineoffset -= lineheight * 1.2;
+      }
+      this.objects['3d'].geometry = geometry;
     }
     this.setColor = function(color) {
       this.material.color.setHex(color);
