@@ -124,7 +124,7 @@ elation.require([
         this.scenetree.hide();
         this.worldcontrol.hide();
         //this.inspector.hide();
-        view.toggleStats(false);
+        //view.toggleStats(false);
 
         if (this.lastactivething) {
           view.setactivething(this.lastactivething);
@@ -140,7 +140,7 @@ elation.require([
         this.scenetree.show();
         this.worldcontrol.show();
         //this.inspector.show();
-        view.toggleStats(true);
+        //view.toggleStats(true);
 
         if (view.activething) {
           this.lastactivething = view.activething;
