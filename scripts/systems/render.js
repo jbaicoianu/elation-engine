@@ -171,8 +171,11 @@ elation.require([
 
       this.setcamera(cam);
 
-      this.setscene(this.engine.systems.world.scene['world-3d']);
-      //this.setscene(this.engine.systems.world.scene['colliders']);
+      if (this.pickingdebug) {
+        this.setscene(this.engine.systems.world.scene['colliders']);
+      } else {
+        this.setscene(this.engine.systems.world.scene['world-3d']);
+      }
       if (this.engine.systems.world.scene['sky']) {
         this.setskyscene(this.engine.systems.world.scene['sky']);
       }
@@ -236,9 +239,9 @@ elation.require([
 
         this.pickingdebug = false;
 
-        //this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function() { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; })});
-        //this.engine.systems.controls.addBindings('view', {'keyboard_p': 'picking_debug'});
-        //this.engine.systems.controls.activateContext('view');
+        this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function(ev) { if (ev.value == 1) { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; } })});
+        this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
+        this.engine.systems.controls.activateContext('view');
       }
     }
     this.createRenderPath = function(passes, target) {
@@ -435,34 +438,20 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.updatePickingTarget();
           //}
         }
-        if (this.pickingdebug) {
-          if (!this.pickingdebugscene) {
-            // If this is our first time showing the picking debug screen, create the scene, 
-            // camera, and quad to display it
-            // FIXME - this should just use the pickingdebugcomposer which does exactly this internally
-            this.pickingdebugscene = new THREE.Scene();
-            this.pickingdebugcam = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
-            //this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: this.pickingtarget})));
-            this.pickingdebugscene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: this.pickingcomposer.output})));
-            //plane.position.set(0,0,-1);
-            this.pickingdebugscene.add(this.pickingdebugcam);
-  /*
-            this.pickingdebugscene = true;
-            this.pickingdebugcomposer = this.createRenderPath(['copy', 'copy', 'screenout'], this.pickingtarget);
-  */
-          }
-          //this.rendersystem.renderer.clear();
-          this.rendersystem.renderer.render(this.pickingdebugscene, this.pickingdebugcam);
-          //this.pickingdebugcomposer.render();
-        } else {
-          this.scene.overrideMaterial = this.depthMaterial;
-          //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
-
-          this.scene.overrideMaterial = null;
-          //this.composer.render(delta);
-          //this.rendersystem.renderer.render(this.scene, this.actualcamera);
-          this.vreffect.render(this.scene, this.camera);
+        if (this.pickingdebug && this.scene != this.engine.systems.world.scene['colliders']) {
+          this.setscene(this.engine.systems.world.scene['colliders']);
+        } else if (!this.pickingdebug && this.scene != this.engine.systems.world.scene['world-3d']) {
+          this.setscene(this.engine.systems.world.scene['world-3d']);
         }
+        /*
+        this.scene.overrideMaterial = this.depthMaterial;
+        //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
+
+        this.scene.overrideMaterial = null;
+        */
+        //this.composer.render(delta);
+        //this.rendersystem.renderer.render(this.scene, this.actualcamera);
+        this.vreffect.render(this.scene, this.camera);
         if (this.rendersystem.cssrenderer) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
         }
@@ -524,7 +513,17 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
   */
     }
     this.setscene = function(scene) {
+      var oldscene = this.scene;
       this.scene = scene;
+      if (this.composer) {
+        for (var i = 0; i < this.composer.passes.length; i++) {
+          var pass = this.composer.passes[i];
+          if (pass.scene && pass.scene === oldscene) {
+            pass.scene = this.scene;
+          }
+        }
+      }
+      this.rendersystem.setdirty();
     }
     this.setcameranearfar = function(near, far) {
       /*
@@ -845,7 +844,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.mousepos[1] = Math.round(dims.h / 2);
       }
     }
-  });
+  }, elation.ui.base);
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
     // Represents an intersection between the mouse and an object in the scene as viewed from the specified viewport
 
@@ -1193,14 +1192,27 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
 
       this.scene.updateMatrixWorld();
-
+      this.view.camera.updateMatrixWorld();
       this.raycaster.setFromCamera(this.mousevec, this.view.camera);
-      var intersects = this.raycaster.intersectObjects(this.scene.children, true);
-      if (intersects.length > 0) {
-        var hit = intersects[0];
-        this.lasthit = hit; // FIXME - hack for demo
-        var foo = this.firePickingEvents(hit, x, y);
+/*
+      if (!this.rayviz) {
+        this.rayviz = new THREE.ArrowHelper(this.raycaster.ray.direction.clone(), this.raycaster.ray.origin.clone(), 100);
+        this.scene.add(this.rayviz);
+      } else {
+        this.rayviz.position.copy(this.raycaster.ray.origin);
+        this.rayviz.setDirection(this.raycaster.ray.direction.clone().normalize());
+        this.view.rendersystem.setdirty();
+//console.log(this.mousevec.toArray(), this.raycaster.ray.origin.toArray(), this.raycaster.ray.direction.toArray());
       }
+*/
+      
+      var intersects = this.raycaster.intersectObjects(this.scene.children, true);
+      var hit = false;
+      if (intersects.length > 0) {
+        hit = intersects[0];
+        this.lasthit = hit; // FIXME - hack for demo
+      }
+      var foo = this.firePickingEvents(hit, x, y);
     }
     this.firePickingEvents = function(hit, x, y) {
       var pickedthing = false, oldpickedthing = false;
