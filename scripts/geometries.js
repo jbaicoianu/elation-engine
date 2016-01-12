@@ -170,8 +170,9 @@ elation.require([], function() {
       if (!this.meshes[name]) {
         // If we requested a mesh which hasn't been added yet, create a placeholder so it can be filled in later
         this.meshes[name] = new THREE.Group();
+        return this.meshes[name];
       }
-      return this.meshes[name];
+      return this.meshes[name].clone();
     }
     this.getMeshGeometry = function(name) {
       if (this.meshes[name] && this.meshes[name] instanceof THREE.Mesh) {
