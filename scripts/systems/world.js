@@ -86,6 +86,10 @@ elation.require([
     this.thing_add = function(ev) {
       //elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
       this.attachEvents(ev.data.thing);
+
+      if (this.hasLights(ev.data.thing)) {
+        this.refreshLights();
+      }
     }
     this.thing_remove = function(ev) {
       elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
@@ -99,16 +103,8 @@ elation.require([
       this.attachEvents(ev.data.thing);
 
       if (ev.data.thing && ev.data.thing.objects['3d']) {
-        var object = ev.data.thing.objects['3d'];
-        var hasLight = object instanceof THREE.Light;
-        if (!hasLight && object.children.length > 0) {
-          object.traverse(function(n) { if (n instanceof THREE.Light) { hasLight = true; } });
-        }
-        if (hasLight) {
-          //console.log('the new thing has a light!');
+        if (this.hasLights(ev.data.thing)) {
           this.refreshLights();
-        } else {
-          //console.log('no light here');
         }
       }
     }
@@ -240,6 +236,14 @@ elation.require([
     }
     this.refresh = function() {
       elation.events.fire({type: 'world_change', element: this});
+    }
+    this.hasLights = function(thing) {
+      var object = thing.objects['3d'];
+      var hasLight = object instanceof THREE.Light;
+      if (!hasLight && object.children.length > 0) {
+        object.traverse(function(n) { if (n instanceof THREE.Light) { hasLight = true; } });
+      }
+      return hasLight;
     }
     this.refreshLights = function() {
       this.scene['world-3d'].traverse(function(n) { if (n instanceof THREE.Mesh) { n.material.needsUpdate = true; } });
