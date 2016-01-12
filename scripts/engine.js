@@ -218,7 +218,18 @@ elation.require(deps, function() {
   elation.component.add('engine.client', function() {
     this.init = function() {
       this.name = this.args.name || 'default';
-      this.engine = elation.engine.create(this.name, ["physics", "world", "ai", "render", "controls"], elation.bind(this, this.startEngine));
+      this.engine = elation.engine.create(
+        this.name,
+        [
+          "physics",
+          "world",
+          "ai",
+          //"admin", 
+          "render", 
+          "controls"
+        ], 
+        elation.bind(this, this.startEngine)
+      );
     }
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
@@ -231,7 +242,7 @@ elation.require(deps, function() {
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: false, crosshair: true } );
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: true, crosshair: false } );
 
       this.initWorld();
       this.initControls();
