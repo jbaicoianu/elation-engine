@@ -11,6 +11,9 @@
   left: 0;
   right: 0;
 }
+.engine_view.state_cursor {
+  cursor: pointer;
+}
 .engine_view_crosshair {
   position: absolute;
   top: 50%;
