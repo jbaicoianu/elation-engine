@@ -524,7 +524,7 @@ elation.component.add("engine.things.generic", function() {
   }
   this.createDynamics = function() {
     if (!this.objects['dynamics'] && this.engine.systems.physics) {
-      var dyn = this.objects['dynamics'] = new elation.physics.rigidbody({
+      this.objects['dynamics'] = new elation.physics.rigidbody({
         position: this.properties.position,
         orientation: this.properties.orientation,
         mass: this.properties.mass,
@@ -536,10 +536,32 @@ elation.component.add("engine.things.generic", function() {
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
 
+      if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
+        this.updateColliderFromGeometry();
+      }
+
+      elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
+      elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
+    }
+  }
+  this.removeDynamics = function() {
+    if (this.objects.dynamics) {
+      if (this.objects.dynamics.parent) {
+        this.objects.dynamics.parent.remove(this.objects.dynamics);
+      } else {
+        this.engine.systems.physics.remove(this.objects.dynamics);
+      }
+      delete this.objects.dynamics;
+    }
+  }
+  this.createForces = function() {
+  }
+  this.updateColliderFromGeometry = function(geom) {
+      if (!geom) geom = this.objects['3d'].geometry;
       var collidergeom = false;
       // Create appropriate collider for the geometry associated with this thing
-      if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
-        var geom = this.objects['3d'].geometry;
+      var dyn = this.objects['dynamics'];
+      if (geom && dyn) {
         if (geom instanceof THREE.SphereGeometry ||
             geom instanceof THREE.SphereBufferGeometry) {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
@@ -569,29 +591,21 @@ elation.component.add("engine.things.generic", function() {
           if (!geom.boundingBox) geom.computeBoundingBox();
           dyn.setCollider('box', geom.boundingBox);
           var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
+          var offset = new THREE.Vector3().addVectors(geom.boundingBox.max, geom.boundingBox.min).multiplyScalar(.5);
           collidergeom = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
+          collidergeom.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
         }
       }
+      if (this.collidermesh) {
+        this.colliders.remove(this.collidermesh);
+        this.collidermesh = false;
+      }
       if (collidergeom) {
-        var collidermesh = new THREE.Mesh(collidergeom, new THREE.MeshLambertMaterial({color: 0x009900, opacity: .5, transparent: true}));
-        collidermesh.userData.thing = this;
-        this.colliders.add(collidermesh);
+        this.collidermesh = new THREE.Mesh(collidergeom, new THREE.MeshLambertMaterial({color: 0x009900, opacity: .5, transparent: true}));
+        this.collidermesh.userData.thing = this;
+        this.colliders.add(this.collidermesh);
+
       }
-      elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
-      elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
-    }
-  }
-  this.removeDynamics = function() {
-    if (this.objects.dynamics) {
-      if (this.objects.dynamics.parent) {
-        this.objects.dynamics.parent.remove(this.objects.dynamics);
-      } else {
-        this.engine.systems.physics.remove(this.objects.dynamics);
-      }
-      delete this.objects.dynamics;
-    }
-  }
-  this.createForces = function() {
   }
   this.physics_collide = function(ev) {
     var obj1 = ev.data.bodies[0].object, obj2 = ev.data.bodies[1].object;
@@ -876,7 +890,6 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].updateMatrixWorld();
       this.colliders.add(meshes[i]);
       meshes[i].updateMatrixWorld();
-      meshes[i].visible = false;
     }
     if (this.objects.dynamics) {
       this.objects.dynamics.add(root);
