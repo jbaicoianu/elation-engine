@@ -113,7 +113,7 @@ elation.require([], function(elation) {
       var url = this.getFullURL();
       var parts = url.split('/');
       parts.pop();
-      return parts.join('/');
+      return parts.join('/') + '/';
     },
     loadURL: function(url) {
       elation.net.get(url, null, { callback: elation.bind(this, function(data) {
