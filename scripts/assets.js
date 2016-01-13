@@ -18,6 +18,7 @@ elation.require([], function(elation) {
     sourceurl: false,
     loaded: false,
     preview: false,
+    baseurl: '',
 
     load: function() {
       console.log('engine.assets.base load() should not be called directly', this);
@@ -94,8 +95,25 @@ elation.require([], function(elation) {
   
     load: function() {
       if (this.src) {
-        this.loadURL(this.src);
+        var url = this.getFullURL();
+        this.loadURL(url);
       }
+    },
+    isSrcRelative: function(src) {
+      if (src.match(/^https?:/) || src[0] == '/') {
+        return false;
+      }
+      return true;
+    },
+    getFullURL: function() {
+      var url = (this.isSrcRelative(this.src) ? this.baseurl + this.src : this.src);
+      return url;
+    },
+    getBaseURL: function() {
+      var url = this.getFullURL();
+      var parts = url.split('/');
+      parts.pop();
+      return parts.join('/');
     },
     loadURL: function(url) {
       elation.net.get(url, null, { callback: elation.bind(this, function(data) {
@@ -104,9 +122,11 @@ elation.require([], function(elation) {
       })});
     },
     loadJSON: function(json) {
-      console.log('got some json data', json);
+      var baseurl = this.getBaseURL();
+      console.log('got some json data', json, baseurl);
       this.assets = [];
       json.forEach(elation.bind(this, function(assetdef) {
+        assetdef.baseurl = baseurl;
         var asset = elation.engine.assets.get(assetdef);
         this.assets.push(asset);
         asset.load();
