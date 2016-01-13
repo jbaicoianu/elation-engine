@@ -19,10 +19,27 @@ elation.require([], function(elation) {
     loaded: false,
     preview: false,
     baseurl: '',
+    src: false,
 
     load: function() {
       console.log('engine.assets.base load() should not be called directly', this);
-    }
+    },
+    isSrcRelative: function(src) {
+      if (src.match(/^https?:/) || src[0] == '/') {
+        return false;
+      }
+      return true;
+    },
+    getFullURL: function() {
+      var url = (this.isSrcRelative(this.src) ? this.baseurl + this.src : this.src);
+      return url;
+    },
+    getBaseURL: function() {
+      var url = this.getFullURL();
+      var parts = url.split('/');
+      parts.pop();
+      return parts.join('/') + '/';
+    },
   }, elation.class);
 
   elation.define('engine.assets.unknown', {
@@ -43,7 +60,8 @@ elation.require([], function(elation) {
       var loader = new THREE.TextureLoader();
       console.log('load this image!', this);
       if (this.src) {
-        loader.load(this.src, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
+        var url = this.getFullURL();
+        loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
       }
     },
     handleLoad: function(data) {
@@ -79,7 +97,8 @@ elation.require([], function(elation) {
         var loader = new THREE.ColladaLoader();
         console.log('load this model!', this);
         if (this.src) {
-          loader.load(this.src, elation.bind(this, this.handleLoad));
+          var url = this.getFullURL();
+          loader.load(url, elation.bind(this, this.handleLoad));
         }
       }));
     },
@@ -98,22 +117,6 @@ elation.require([], function(elation) {
         var url = this.getFullURL();
         this.loadURL(url);
       }
-    },
-    isSrcRelative: function(src) {
-      if (src.match(/^https?:/) || src[0] == '/') {
-        return false;
-      }
-      return true;
-    },
-    getFullURL: function() {
-      var url = (this.isSrcRelative(this.src) ? this.baseurl + this.src : this.src);
-      return url;
-    },
-    getBaseURL: function() {
-      var url = this.getFullURL();
-      var parts = url.split('/');
-      parts.pop();
-      return parts.join('/') + '/';
     },
     loadURL: function(url) {
       elation.net.get(url, null, { callback: elation.bind(this, function(data) {
