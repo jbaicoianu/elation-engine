@@ -1,6 +1,7 @@
 var deps = [ 
   "engine.parts",
   "engine.materials",
+  "engine.assets",
   "engine.geometries",
   "engine.things.generic",
   "engine.things.menu",
