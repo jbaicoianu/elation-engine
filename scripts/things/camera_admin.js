@@ -10,18 +10,20 @@ elation.require(['engine.things.camera'], function() {
       this.controlstate = this.engine.systems.controls.addContext('camera_admin', {
         'toggle_camera': ['keyboard_ctrl_c', elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleControls(); }}) ]
       });
+      this.ears = new THREE.Object3D();
       this.engine.systems.controls.activateContext('camera_admin');
       elation.events.add(this.engine, 'engine_frame', this);
     }
     this.createObject3D = function() {
-        var obj = new THREE.Object3D();
-        return obj;
+        this.camera = new THREE.PerspectiveCamera(90, this.view.size[0] / this.view.size[1], 1e-2, 1e4);
+        this.camera.position.set(0,1,1);
+        this.camera.add(this.ears);
+        return this.camera;
     }
     this.createChildren = function() {
-      console.log('DHSJHJSHF');
-        this.camera = new THREE.PerspectiveCamera(60, this.view.size[0] / this.view.size[1], 1e-2, 1e4);
-        this.camera.position.set(0,1,1);
-        this.objects['3d'].add(this.camera);
+        //this.objects['3d'].add(this.camera);
+
+
         this.orbitcontrols = new THREE.OrbitControls(this.camera, this.view.container);
         this.orbitcontrols.rotateUp(-Math.PI/4);
         this.orbitcontrols.rotateLeft(-Math.PI/4);
@@ -44,8 +46,7 @@ elation.require(['engine.things.camera'], function() {
         this.admincontrols.update(0);
         this.cameraactive = true;
 
-        this.view.setactivething(this);
-        return obj;
+        this.engine.client.setActiveThing(this);
     }
     this.toggleControls = function() {
 console.log('toggle controls', this.admincontrols, this.orbitcontrols, this.flycontrols);
