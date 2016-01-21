@@ -55,7 +55,7 @@ elation.component.add("engine.things.generic", function() {
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
-      'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
+      //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
       'shadow':         { type: 'bool', default: true, comment: 'Casts and receives shadows' },
       'wireframe':      { type: 'bool', default: false, comment: 'Render this object as a wireframe' },
       'forcereload':    { type: 'bool', default: false, comment: 'Force a full reload of all files' },
@@ -66,6 +66,7 @@ elation.component.add("engine.things.generic", function() {
       'render.meshname':{ type: 'string' },
       'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
       'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
+      'render.model':   { type: 'string', comment: 'Name of model asset' },
       'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
       'render.materialname': { type: 'string', comment: 'Material library name' },
       'render.texturepath': { type: 'string', comment: 'Texture location' },
@@ -270,6 +271,7 @@ elation.component.add("engine.things.generic", function() {
         }
       }
     }
+    this.refresh();
   }
   this.setProperties = function(properties, interpolate) {
     for (var prop in properties) {
@@ -333,9 +335,14 @@ elation.component.add("engine.things.generic", function() {
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
     }
-    this.colliders = new THREE.Object3D();
-    this.colliders.bindPosition(this.properties.position);
-    this.colliders.bindQuaternion(this.properties.orientation);
+    if (!this.colliders) {
+      this.colliders = new THREE.Object3D();
+      this.colliders.bindPosition(this.properties.position);
+      this.colliders.bindQuaternion(this.properties.orientation);
+      this.colliders.bindScale(this.properties.scale);
+      //this.colliders.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
+      this.colliders.userData.thing = this;
+    }
 
     var childkeys = Object.keys(this.children);
     if (childkeys.length > 0) {
@@ -377,6 +384,8 @@ elation.component.add("engine.things.generic", function() {
         this.loadJSON(this.properties.render.mesh, this.properties.render.texturepath + cachebust);
       } else if (this.properties.render.collada) {
         this.loadCollada(this.properties.render.collada + cachebust);
+      } else if (this.properties.render.model) {
+        object = elation.engine.assets.find('model', this.properties.render.model);
       } else if (this.properties.render.gltf) {
         this.loadglTF(this.properties.render.gltf + cachebust);
       } else if (this.properties.render.meshname) {
@@ -567,7 +576,7 @@ elation.component.add("engine.things.generic", function() {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
           dyn.setCollider('sphere', {radius: geom.boundingSphere.radius});
           collidergeom = new THREE.SphereBufferGeometry(geom.boundingSphere.radius, 16, 8);
-        } else if (geom instanceof THREE.PlaneGeometry) {
+        } else if (geom instanceof THREE.PlaneGeometry || geom instanceof THREE.PlaneBufferGeometry) {
           // FIXME - this only works on non-deformed planes, and right now only at the origin
           var pnorm = new THREE.Vector3(0,1,0);
           var poffset = 0; // FIXME - need to calculate real offset, given world position and plane normal
@@ -579,7 +588,7 @@ elation.component.add("engine.things.generic", function() {
           if (!geom.boundingBox) geom.computeBoundingBox();
           var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
           dyn.setCollider('box', geom.boundingBox);
-          collidergeom = new THREE.BoxGeometry(size.x, size.y, size.z, 1, 1);
+          collidergeom = new THREE.BoxGeometry(size.x, 1, size.z, 1, 1);
         } else if (geom instanceof THREE.CylinderGeometry) {
           if (geom.radiusTop == geom.radiusBottom) {
             dyn.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
@@ -590,6 +599,7 @@ elation.component.add("engine.things.generic", function() {
         } else {
           if (!geom.boundingBox) geom.computeBoundingBox();
           dyn.setCollider('box', geom.boundingBox);
+          var scale = this.properties.scale;
           var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
           var offset = new THREE.Vector3().addVectors(geom.boundingBox.max, geom.boundingBox.min).multiplyScalar(.5);
           collidergeom = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
@@ -803,7 +813,8 @@ elation.component.add("engine.things.generic", function() {
     // FIXME - hack to make demo work
     //this.colliders.bindPosition(this.localToWorld(new THREE.Vector3()));
 
-    var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
+    //var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
+    var flip = new THREE.Quaternion();
     var root = new elation.physics.rigidbody({orientation: flip});// orientation: obj.quaternion.clone() });
     //root.orientation.multiply(flip);
 
@@ -884,7 +895,7 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].parent.remove(meshes[i]);
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
-      meshes[i].bindScale(this.properties.scale);
+      //meshes[i].bindScale(this.properties.scale);
       //meshes[i].material = new THREE.MeshBasicMaterial({color: 0xff0000})
       meshes[i].userData.thing = this;
       meshes[i].updateMatrixWorld();
