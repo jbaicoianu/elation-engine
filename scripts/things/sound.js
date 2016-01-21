@@ -28,9 +28,9 @@ elation.require(['engine.things.generic'], function() {
         }
         this.objects['3d'].remove(this.audio);
       }
-      var players = this.engine.systems.world.getThingsByType('player');
-      if (players && players.length > 0 && players[0].ears) {
-        this.audio = new THREE.Audio(players[0].ears);
+      var listener = this.engine.systems.sound.getRealListener();
+      if (listener) {
+        this.audio = new THREE.Audio(listener);
         this.audio.panner.maxDistance = this.properties.distance;
         this.audio.panner.maxDistance = this.properties.distance;
         this.audio.panner.distanceModel = 'linear';
