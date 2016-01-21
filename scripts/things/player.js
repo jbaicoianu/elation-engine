@@ -140,6 +140,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     }
     this.createObject3D = function() {
       this.objects['3d'] = new THREE.Object3D();
+      this.ears = new THREE.Object3D();
       //this.camera.rotation.set(-Math.PI/16, 0, 0);
 
       //var camhelper = new THREE.CameraHelper(this.camera);
@@ -147,10 +148,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       return this.objects['3d'];
     }
     this.createChildren = function() {
-      this.ears = new THREE.AudioListener();
       // place camera at head height
-      this.camera.objects['3d'].add(this.ears);
-      //this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
+      this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
       this.reset_position();
     }
     this.createForces = function() {
@@ -162,6 +161,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
       this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
+      this.camera.objects['3d'].add(this.ears);
     }
     this.getGroundHeight = function() {
       
@@ -292,7 +292,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     this.handleCreate = function(ev) {
       console.log('player is new', ev);
       if (this.properties.defaultplayer) {
-        this.engine.systems.render.views.main.setactivething(this);
+        this.engine.client.setActiveThing(this);
         this.enable();
       }
     }
