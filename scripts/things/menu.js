@@ -93,7 +93,6 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       }
       for (var i = 0; i < this.menuitems.length; i++) {
         var item = this.menuitems[this.menuitems.length - i - 1];
-console.log(i, this.menuitems.length, item);
         if (!item.properties.disabled) {
           item.select();
           break;
@@ -163,7 +162,9 @@ console.log(i, this.menuitems.length, item);
         text: this.properties.text, 
         font: this.properties.font, 
         size: this.properties.size, 
-        color: color
+        color: color,
+        align: 'center',
+        verticalalign: 'middle'
       });
       elation.events.add(this.label, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
