@@ -48,8 +48,10 @@ elation.require(['utils.template'], function() {
           //this.texturecache[url].flipY = false;
           */
         } else {
+          THREE.ImageUtils.crossOrigin = '';
           var texture = this.texturecache[url] = THREE.ImageUtils.loadTexture(url, undefined, elation.bind(this, function() {
             var image = texture.image;
+            image.crossOrigin = '';
             if (!this.isPowerOfTwo(image.width) || !this.isPowerOfTwo(image.height)) {
               // Scale up the texture to the next highest power of two dimensions.
               var canvas = document.createElement("canvas");
