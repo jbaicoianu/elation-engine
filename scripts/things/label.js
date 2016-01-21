@@ -9,7 +9,7 @@ elation.require(["engine.things.generic"], function() {
         'align':           { type: 'string', default: 'left' },
         'verticalalign':   { type: 'string', default: 'bottom' },
         'zalign':          { type: 'string', default: 'back' },
-        'emissive':        { type: 'color', default: 0x111111 },
+        'emissive':        { type: 'color', default: 0x000000 },
         'opacity':         { type: 'float', default: 1.0 },
         'depthTest':       { type: 'bool', default: true },
         'thickness':       { type: 'float' },
