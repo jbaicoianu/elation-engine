@@ -25,7 +25,7 @@ elation.require([
   elation.requireCSS('engine.systems.admin');
 
   elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
-  elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" value="{value}">{/children}');
+  elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" name="{fullname}" value="{value}">{/children}');
   elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.name} ({type})</span>');
   elation.template.add('engine.systems.admin.inspector.function', '<span class="engine_thing_function{?function.own} engine_thing_function_own{/function.own}" title="this.{function.name} = {function.content}">{function.name}</span>');
 
@@ -127,7 +127,7 @@ elation.require([
         //view.toggleStats(false);
 
         if (this.lastactivething) {
-          view.setactivething(this.lastactivething);
+          this.engine.client.setActiveThing(this.lastactivething);
           this.lastactivething.enable();
         }
         if (this.manipulator && this.manipulator.parent) {
@@ -150,7 +150,7 @@ elation.require([
         if (this.manipulator) {
           this.engine.systems.world.scene['world-3d'].add(this.manipulator);
         }
-        view.setactivething(this.admincamera);
+        this.engine.client.setActiveThing(this.admincamera);
         this.admincamera.enable();
       }
     }
@@ -771,7 +771,7 @@ elation.require([
         } else if (properties[k] instanceof THREE.Mesh) {
           root[k]['value'] = '[mesh]';
         } else if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
-          root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + "_");
+          root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + ".");
         } else if (elation.utils.isArray(properties[k]) || elation.utils.isObject(properties[k])) {
           root[k]['value'] = JSON.stringify(properties[k]);
         } else {
@@ -781,7 +781,7 @@ elation.require([
       return root;
     }
     this.change = function(ev) {
-      var propname = ev.target.id.replace(/^engine_admin_inspector_properties_/, "").replace(/_/g, ".");
+      var propname = ev.target.name;
       var thing = this.thingwrapper.value;
       thing.set(propname, ev.target.value, true);
     }
