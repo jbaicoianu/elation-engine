@@ -17,12 +17,6 @@ elation.require([
     //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
     //this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
 
-    // Initialize collider scene with some basic lighting for debug purposes
-    this.scene['colliders'].add(new THREE.AmbientLight(0xcccccc));
-    var colliderlight = new THREE.DirectionalLight();
-    colliderlight.position.set(10, 17.5, 19);
-    this.scene['colliders'].add(colliderlight);
-
     this.system_attach = function(ev) {
       console.log('INIT: world');
       this.rootname = (args ? args.parentname + '/' + args.name : '/');
@@ -151,6 +145,12 @@ elation.require([
       while (this.scene['colliders'].children.length > 0) {
         this.scene['colliders'].remove(this.scene['colliders'].children[0]);
       }
+      // Initialize collider scene with some basic lighting for debug purposes
+      this.scene['colliders'].add(new THREE.AmbientLight(0xcccccc));
+      var colliderlight = new THREE.DirectionalLight();
+      colliderlight.position.set(10, 17.5, 19);
+      this.scene['colliders'].add(colliderlight);
+
     }
     this.createNew = function() {
       this.reset();
@@ -174,11 +174,12 @@ elation.require([
         this.createDefaultScene();
       }
       if (ENV_IS_BROWSER) {
-        var dochash = "world.load=" + name;
+        var hashargs = elation.url();
+        hashargs['world.load'] = name;
         if (this.engine.systems.physics.timescale == 0) {
-          dochash += "&world.paused=1";
+          hashargs['world.paused'] = 1;
         }
-        document.location.hash = dochash;
+        document.location.hash = elation.utils.encodeURLParams(hashargs);
       }
     }
     this.listLocalOverrides = function() {
@@ -375,6 +376,8 @@ elation.require([
           var texturecube = THREE.ImageUtils.loadTextureCube( urls, undefined, elation.bind(this, this.refresh) );
           texturecube.format = THREE.RGBFormat;
           this.skytexture = texturecube;
+        } else {
+          this.skytexture = texture;
         }
         if (!this.scene['sky']) {
           this.scene['sky'] = (this.engine.systems.render && this.engine.systems.render.views[0] ? this.engine.systems.render.views[0].skyscene : new THREE.Scene());
@@ -418,6 +421,9 @@ elation.require([
     this.setFogExp = function(exp, color) {
       if (!color) color = 0xffffff;
       this.scene['world-3d'].fog = new THREE.FogExp2(color, exp);
+    }
+    this.disableFog = function() {
+      this.scene['world-3d'].fog = false;
     }
     this.parseDocumentHash = function() {
       var parsedurl = elation.utils.parseURL(document.location.hash);
