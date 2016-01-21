@@ -232,7 +232,7 @@ elation.require(deps, function() {
           "sound", 
           "controls"
         ],
-        crosshair: false,
+        crosshair: true,
         stats: true,
         picking: true,
         fullsize: true,
