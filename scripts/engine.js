@@ -37,6 +37,8 @@ elation.require(deps, function() {
     this.started = false;
     this.running = false;
     this.name = name;
+    this.useAnimationFrame = true;
+    this.targetFramerate = 60;
 
     this.init = function() {
       this.client = elation.engine.client(this.name);
@@ -76,8 +78,9 @@ elation.require(deps, function() {
     }
 
     // simple requestAnimationFrame wrapper
-    this.requestAnimationFrame = (function() {
-        if (typeof window !== 'undefined') {
+    this.requestAnimationFrame = (elation.bind(this, function() {
+        var framerate = this.targetFramerate || 60;
+        if (this.useAnimationFrame && typeof window !== 'undefined') {
           // Browsers
           return  window.requestAnimationFrame       || 
                   window.webkitRequestAnimationFrame || 
@@ -85,15 +88,15 @@ elation.require(deps, function() {
                   window.oRequestAnimationFrame      || 
                   window.msRequestAnimationFrame     || 
                   function( callback ) {
-                    setTimeout(callback, 1000 / 60);
+                    setTimeout(callback, 1000 / framerate);
                   };
         } else {
           // NodeJS
           return function( callback ) {
-            setTimeout(callback, 1000 / 60);
-          };
+            setTimeout(callback, 1000 / this.targetFramerate);
+          }.bind(this);
         }
-      })();
+      }))();
     this.frame = function(fn) {
       if (ENV_IS_NODE) var window;
       this.requestAnimationFrame.call(window, fn);
@@ -219,18 +222,35 @@ elation.require(deps, function() {
   elation.component.add('engine.client', function() {
     this.init = function() {
       this.name = this.args.name || 'default';
-      this.engine = elation.engine.create(
-        this.name,
-        [
+      this.enginecfg = {
+        systems: [
           "physics",
           "world",
           "ai",
           //"admin", 
           "render", 
+          "sound", 
           "controls"
-        ], 
+        ],
+        crosshair: false,
+        stats: true,
+        picking: true,
+        fullsize: true,
+      };
+      this.initEngine();
+      this.loadEngine();
+    }
+    // Set up engine parameters before creating.  To be overridden by extending class
+    this.initEngine = function() {
+    }
+    // Instantiate the engine
+    this.loadEngine = function() {
+      this.engine = elation.engine.create(
+        this.name, 
+        this.enginecfg.systems,
         elation.bind(this, this.startEngine)
       );
+      this.engine.client = this;
     }
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
@@ -243,7 +263,7 @@ elation.require(deps, function() {
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: 1, picking: true, engine: this.name, showstats: true, crosshair: false } );
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: this.enginecfg.fullsize, picking: this.enginecfg.picking, engine: this.name, showstats: this.enginecfg.stats, crosshair: this.enginecfg.crosshair } );
 
       this.initWorld();
       this.initControls();
@@ -264,6 +284,13 @@ elation.require(deps, function() {
         'vr_calibrate': ['keyboard_ctrl_leftsquarebracket', elation.bind(this, this.calibrateVR)],
       });
       this.engine.systems.controls.activateContext(this.name);
+    }
+    this.setActiveThing = function(thing) {
+      this.engine.systems.render.views.main.setactivething(thing);
+      if (thing.ears) {
+        this.engine.systems.sound.setActiveListener(thing.ears);
+      }
+
     }
     this.getPlayer = function() {
       if (!this.player) {
