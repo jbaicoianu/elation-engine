@@ -53,6 +53,7 @@ elation.component.add("engine.things.generic", function() {
       'angularacceleration': { type: 'vector3', default: [0, 0, 0], comment: 'Object angular acceleration (radians/sec^2)' },
       'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
+      'visible':        { type: 'bool', default: true, comment: 'Is visible' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
       //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
@@ -353,6 +354,9 @@ elation.component.add("engine.things.generic", function() {
           this.objects['3d'].add(this.children[k].objects['3d']);
         }
       }
+    }
+    if (!this.properties.visible) {
+      this.objects['3d'].visible = false;
     }
     this.refresh();
   }
