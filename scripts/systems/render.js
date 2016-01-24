@@ -26,8 +26,6 @@ elation.require([
   "engine.external.three.render.BloomPass",
   "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
-  "engine.external.three.fonts.helvetiker_regular",
-  //"engine.external.three.fonts.drive-thru_regular",
   "engine.materials",
   "engine.geometries",
   "ui.select",
@@ -453,7 +451,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
         this.vreffect.render(this.scene, this.camera);
         if (this.rendersystem.cssrenderer) {
-          this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
+          this.rendersystem.cssrenderer.render(this.scene, this.camera);
         }
       }
       /*
@@ -772,6 +770,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (ev && ev.preventDefault) {
         ev.preventDefault();
       }
+      this.container.focus();
     }
     this.touchstart = function(ev) {
       if (!this.pickingactive) {
@@ -999,7 +998,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       //if (!this.pickingdebug && this.picknum++ % 3 != 0) return;
       var now = new Date().getTime();
       if (now - this.picktime < 1000/20 && !force) {
-        return;
+        //return;
       }
       this.picktime = now;
 
@@ -1043,7 +1042,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.updatePickingObject = function(force) {
       if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
-        var dims = elation.html.dimensions(this.view.container);
+        //var dims = elation.html.dimensions(this.view.container);
+        var dims = {x: this.view.size[0], y: this.view.size[1]};
         this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.view.mousepos[0];
         this.lastmousepos[1] = this.view.mousepos[1];
@@ -1181,6 +1181,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.updatePickingObject = function(force) {
       if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
         var dims = elation.html.dimensions(this.view.container);
+        //var dims = {x: this.view.size[0], y: this.view.size[1]};
         this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.view.mousepos[0];
         this.lastmousepos[1] = this.view.mousepos[1];
