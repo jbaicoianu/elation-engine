@@ -1,7 +1,9 @@
 importScripts('/scripts/utils/elation.js');
+var global = {};
+importScripts('/scripts/engine/external/pako.js');
 
 elation.require([
-    'engine.external.three.three', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
+    'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
     'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader'], function() {
 
   THREE.Texture = function(image) {
@@ -72,208 +74,277 @@ elation.require([
       onLoad( img );
     }
   }
+  THREE.ImageLoader.prototype.setPath = function(path) {
+  }
+  THREE.ImageLoader.prototype.setCrossOrigin = function(origin) {
+  }
 
-  elation.define('engine.assets.loaders.generic', {
-    _construct: function() {
-      this.loaders = {
-        'dae': new elation.engine.assets.loaders.collada(),
-        'obj': new elation.engine.assets.loaders.obj()
+  elation.define('engine.assets.loaders.model', {
+    _construct: function(args) {
+      elation.class.call(this, args);
+      this.parsers = {
+        'collada': new elation.engine.assets.loaders.model_collada(),
+        'obj': new elation.engine.assets.loaders.model_obj(),
+        'fbx': new elation.engine.assets.loaders.model_fbx(),
       }
     },
-    detectType: function(url) {
-      var parts = url.split('.');
-      var extension = parts.pop();
-      if (extension == 'gz') {
-        extension = parts.pop();
-        this.extension = extension;
-        this.compression = 'gzip';
-      }
-      return extension.toLowerCase();
-    },
-    load: function(job) {
-      var type = this.detectType(job.data.src);
-      if (this.loaders[type]) {
-        this.loaders[type].load(job);
-      } else {
-        console.log('UNSUPPORTED TYPE', type, data);
-      }
-    }
-  });
-  elation.define('engine.assets.loaders.obj', {
-    load: function(job) {
-      var loader = (job.data.mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
-      loader.setCrossOrigin('anonymous');
-      //console.log('load obj model!', this, loader);
-      //var mtlurl = url.replace('.obj', '.mtl');
-      if (job.data.mtl) {
-        loader.load(job.data.src, job.data.mtl, elation.bind(this, this.handleLoadOBJ, job), elation.bind(this, this.handleProgress, job), elation.bind(this, this.handleError, job));
-      } else {
-        loader.load(job.data.src, elation.bind(this, this.handleLoadOBJ, job), elation.bind(this, this.handleProgress, job), elation.bind(this, this.handleError, job));
-      }
-    },
-    handleLoadOBJ: function(job, data) {
-      data.traverse(function(n) {
-        if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
-            (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
-          //n.geometry.computeFaceNormals();
-          //n.geometry.computeVertexNormals();
-        }
-        if (n.geometry && n.geometry instanceof THREE.Geometry) {
-          var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
-          n.geometry = bufgeo;
-        }
-      });
-      var summary = data.toJSON();
-      console.log('loaded obj:', job, data);
-      postMessage({message: 'finished', id: job.id, data: summary});
-    }
-  });
-  elation.define('engine.assets.loaders.collada', {
-    parser: new DOMParser(),
-
     load: function(job) {
       elation.net.get(job.data.src, null, {
+        responseType: 'arraybuffer',
         callback: elation.bind(this, this.onload, job),
         onprogress: elation.bind(this, this.onprogress, job),
         onerror: elation.bind(this, this.onerror, job),
       });
     },
-    onload: function(job, data, xhr) {
-      var docRoot = this.parser.parseFromString(data);
-      var collada = docRoot.getElementsByTagName('COLLADA')[0];
-
-      // helper functions
-      function getChildrenByTagName(node, tag) {
-        var tags = [];
-        for (var i = 0; i < node.childNodes.length; i++) {
-          var childnode = node.childNodes[i];
-          if (childnode.tagName == tag) {
-            tags.push(childnode);
-            childnode.querySelectorAll = querySelectorAll;
-            childnode.querySelector = querySelector;
-          }
-        };
-        return tags;
+    contentIsGzipped: function(databuf) {
+      var c1 = databuf[0], c2 = databuf[1];
+      console.log('gzip check?', [c1, c2], [0x1f, 0x8b]);
+      if (c1 == 0x1f && c2 == 0x8b) {
+        return true;
       }
-      function querySelectorAll(selector) {
-/*
-        var parts = selector.split(' ');
-        var root = collada;
+      return false;
+    },
+    detectContentType: function(content) {
+      var foo = '';
+      for (var i = 0; i < 500; i++) {
+        foo += content[i];
+      }
+      //content = foo;
+      var tests = [
+        [/<COLLADA/im, 'collada'],
+        [/^\s*v\s+-?[\d\.]+\s+-?[\d\.]+\s+-?[\d\.]+\s*$/im, 'obj'],
+        [/FBXHeader/i, 'fbx']
+      ];
 
-        var tags = [];
-        var tagpool = getChildrenByTagName(collada, parts[0]);
-        if (parts.length > 1) {
-          var tagpool2 = [];
-          tagpool.forEach(function(n) {
-            tagpool2.push.apply(tagpool2, getChildrenByTagName(n, parts[1]));
-          });
-          tags = tagpool2;
-        } else {
-          tags = tagpool;
+      var type = false;
+      tests.forEach(function(t) {
+        console.log(t[0], elation.utils.isString(content), content.match(t[0]));
+        if (content.match(t[0])) {
+          type = t[1];
         }
-
-        //tags.forEach(function(n) { fakeQuerySelector(n); });
-        return tags;
-*/
-        var sels = selector.split(","),
-            run = function(node,selector) {
-                var sel = selector.split(/[ >]+/), com = selector.match(/[ >]+/g) || [], s, c, ret = [node], nodes, l, i, subs, m, j, check, x, w, ok,
-                    as;
-                com.unshift(" ");
-                while(s = sel.shift()) {
-                    c = com.shift();
-                    if( c) c = c.replace(/^ +| +$/g,"");
-                    nodes = ret.slice(0);
-                    ret = [];
-                    l = nodes.length;
-                    subs = s.match(/[#.[]?[a-z_-]+(?:='[^']+'|="[^"]+")?]?/gi);
-                    m = subs.length;
-                    for( i=0; i<l; i++) {
-                        if( subs[0].charAt(0) == "#") ret = [document.getElementById(subs[0].substr(1))];
-                        else {
-                            check = c == ">" ? nodes[i].children : nodes[i].getElementsByTagName("*");
-                            if( !check) continue;
-                            w = check.length;
-                            for( x=0; x<w; x++) {
-                                ok = true;
-                                for( j=0; j<m; j++) {
-                                    switch(subs[j].charAt(0)) {
-                                    case ".":
-                                        if( !check[x].className.match(new RegExp("\\b"+subs[j].substr(1)+"\\b"))) ok = false;
-                                        break;
-                                    case "[":
-                                        as = subs[j].substr(1,subs[j].length-2).split("=");
-                                        if( !check[x].getAttribute(as[0])) ok = false;
-                                        else if( as[1]) {
-                                            as[1] = as[1].replace(/^['"]|['"]$/g,"");
-                                            if( check[x].getAttribute(as[0]) != as[1]) ok = false;
-                                        }
-                                        break;
-                                    default:
-                                        if( check[x].tagName.toLowerCase() != subs[j].toLowerCase()) ok = false;
-                                        break;
-                                    }
-                                    if( !ok) break;
-                                }
-                                if( ok) ret.push(check[x]);
-                            }
-                        }
-                    }
-                }
-                return ret;
-            }, l = sels.length, i, ret = [], tmp, m, j;
-        for( i=0; i<l; i++) {
-            tmp = run(this,sels[i]);
-            m = tmp.length;
-            for( j=0; j<m; j++) {
-                ret.push(tmp[j]);
-            }
-        }
-        return ret;
-
+      });
+      return type;
+    },
+    parse: function(data, job) {
+      var type = this.detectContentType(data);
+      console.log('LOAD MODEL: ', job.data.url, type);
+      if (this.parsers[type]) {
+        return this.parsers[type].parse(data, job); 
       }
-      function querySelector(selector) {
-        return this.querySelectorAll(selector)[0];
-      }
+      return new Promise(function(resolve, reject) { 
+        resolve(false); 
+      });
+    },
+    onload: function(job, rawdata, xhr) {
+      var databuf = new Uint8Array(rawdata),
+          modeldata = false;
 
-      function fakeQuerySelector(node) {
-        node.querySelectorAll = querySelectorAll;
-        node.querySelector = querySelector;
-
-        if (node.childNodes && node.childNodes.length > 0) {
-          for (var i = 0; i < node.childNodes.length; i++) {
-            fakeQuerySelector(node.childNodes[i]);
-          }
-        }
-      }
-      fakeQuerySelector(docRoot);
-      var loader = new THREE.ColladaLoader();
-      loader.options.convertUpAxis = true;
-      loader.options.upAxis = 'Y';
-      loader.parse(docRoot, function(data) {
-        data.scene.traverse(function(n) {
-          if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
-              (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
-            //n.geometry.computeFaceNormals();
-            //n.geometry.computeVertexNormals();
-          }
-          if (n.geometry && n.geometry instanceof THREE.Geometry) {
-            var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
-            n.geometry = bufgeo;
-          }
+      if (this.contentIsGzipped(databuf)) {
+        modeldata = window.pako.inflate(databuf, {to: 'string'});
+      } else {
+        var dataview = new DataView(rawdata);
+        var decoder = new TextDecoder('utf-8');
+        modeldata = decoder.decode(dataview);
+      }    
+      if (modeldata) {
+        this.parse(modeldata, job).then(function(data) {
+          //console.log('loaded model:', job, data);
+          postMessage({message: 'finished', id: job.id, data: data});
         });
-        var summary = data.scene.toJSON();
-        console.log('loaded collada:', job, data, summary);
-        postMessage({message: 'finished', id: job.id, data: summary});
-      }, job.data.src);
-
+      } else {
+        postMessage({message: 'finished', id: job.id, data: false});
+      }
     },
     onprogress: function(job, ev) {
       console.log('progress', job, ev);
     },
   });
+  elation.define('engine.assets.loaders.model_obj', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) { 
+        var mtl = job.data.mtl || false;
+/*
+        var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
+        if (!mtl) {
+          var re = /^mtllib (.*)$/im;
+          var m = data.match(re);
+          console.log('yay', m);
+          if (m) {
+            mtl = baseurl + '/' + m[1];
+          }
+        }
+*/
+    
+        var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
+        var modeldata = loader.parse(data);
 
-  var loader = new elation.engine.assets.loaders.generic();
+        if (mtl) {
+          var mtlLoader = new THREE.MTLLoader( );
+          mtlLoader.setBaseUrl( mtl.substr( 0, mtl.lastIndexOf( "/" ) + 1 ) );
+          mtlLoader.setCrossOrigin( 'anonymous' );
+          mtlLoader.load( mtl, 
+            elation.bind(this, function ( materials ) {
+              var materialsCreator = materials;
+              materialsCreator.preload();
+
+              modeldata.traverse( function ( object ) {
+
+                if ( object instanceof THREE.Mesh ) {
+
+                  if ( object.material.name ) {
+
+                    var material = materialsCreator.create( object.material.name );
+
+                    if ( material ) object.material = material;
+
+                  }
+
+                }
+
+              } );
+              resolve(modeldata.toJSON());
+            }),
+            undefined,
+            elation.bind(this, function() {
+              //reject();
+            })
+          );
+        } else {
+          resolve(modeldata.toJSON());
+        }
+        return modeldata;
+      });
+    },
+  });
+  elation.define('engine.assets.loaders.model_collada', {
+    parser: new DOMParser(),
+
+    parse: function(xml, job) {
+      return new Promise(elation.bind(this, function(resolve, reject) {
+        var docRoot = this.parser.parseFromString(xml);
+        var collada = docRoot.getElementsByTagName('COLLADA')[0];
+        var data = false;
+
+        // helper functions
+        function getChildrenByTagName(node, tag) {
+          var tags = [];
+          for (var i = 0; i < node.childNodes.length; i++) {
+            var childnode = node.childNodes[i];
+            if (childnode.tagName == tag) {
+              tags.push(childnode);
+              childnode.querySelectorAll = querySelectorAll;
+              childnode.querySelector = querySelector;
+            }
+          };
+          return tags;
+        }
+        function querySelectorAll(selector) {
+          var sels = selector.split(","),
+              run = function(node,selector) {
+                  var sel = selector.split(/[ >]+/), com = selector.match(/[ >]+/g) || [], s, c, ret = [node], nodes, l, i, subs, m, j, check, x, w, ok,
+                      as;
+                  com.unshift(" ");
+                  while(s = sel.shift()) {
+                      c = com.shift();
+                      if( c) c = c.replace(/^ +| +$/g,"");
+                      nodes = ret.slice(0);
+                      ret = [];
+                      l = nodes.length;
+                      subs = s.match(/[#.[]?[a-z_-]+(?:='[^']+'|="[^"]+")?]?/gi);
+                      m = subs.length;
+                      for( i=0; i<l; i++) {
+                          if( subs[0].charAt(0) == "#") ret = [document.getElementById(subs[0].substr(1))];
+                          else {
+                              check = c == ">" ? nodes[i].children : nodes[i].getElementsByTagName("*");
+                              if( !check) continue;
+                              w = check.length;
+                              for( x=0; x<w; x++) {
+                                  ok = true;
+                                  for( j=0; j<m; j++) {
+                                      switch(subs[j].charAt(0)) {
+                                      case ".":
+                                          if( !check[x].className.match(new RegExp("\\b"+subs[j].substr(1)+"\\b"))) ok = false;
+                                          break;
+                                      case "[":
+                                          as = subs[j].substr(1,subs[j].length-2).split("=");
+                                          if( !check[x].getAttribute(as[0])) ok = false;
+                                          else if( as[1]) {
+                                              as[1] = as[1].replace(/^['"]|['"]$/g,"");
+                                              if( check[x].getAttribute(as[0]) != as[1]) ok = false;
+                                          }
+                                          break;
+                                      default:
+                                          if( check[x].tagName.toLowerCase() != subs[j].toLowerCase()) ok = false;
+                                          break;
+                                      }
+                                      if( !ok) break;
+                                  }
+                                  if( ok) ret.push(check[x]);
+                              }
+                          }
+                      }
+                  }
+                  return ret;
+              }, l = sels.length, i, ret = [], tmp, m, j;
+          for( i=0; i<l; i++) {
+              tmp = run(this,sels[i]);
+              m = tmp.length;
+              for( j=0; j<m; j++) {
+                  ret.push(tmp[j]);
+              }
+          }
+          return ret;
+
+        }
+        function querySelector(selector) {
+          return this.querySelectorAll(selector)[0];
+        }
+
+        function fakeQuerySelector(node) {
+          node.querySelectorAll = querySelectorAll;
+          node.querySelector = querySelector;
+
+          if (node.childNodes && node.childNodes.length > 0) {
+            for (var i = 0; i < node.childNodes.length; i++) {
+              fakeQuerySelector(node.childNodes[i]);
+            }
+          }
+        }
+        fakeQuerySelector(docRoot);
+        var loader = new THREE.ColladaLoader();
+        loader.options.convertUpAxis = true;
+        loader.options.upAxis = 'Y';
+        loader.parse(docRoot, function(parsed) {
+          parsed.scene.traverse(function(n) {
+            if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
+                (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
+              //n.geometry.computeFaceNormals();
+              //n.geometry.computeVertexNormals();
+            }
+            if (n.geometry && n.geometry instanceof THREE.Geometry) {
+              var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+              n.geometry = bufgeo;
+            }
+          });
+          data = parsed;        
+        }, job.data.src);
+
+        resolve(data.scene.toJSON());
+      }));
+    },
+  });
+  elation.define('engine.assets.loaders.model_fbx', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) { 
+        var loader = new THREE.FBXLoader();
+        var modeldata = loader.parse(data);
+
+        resolve(modeldata.toJSON());
+      });
+    }
+  });
+
+  var loader = new elation.engine.assets.loaders.model();
 
   onmessage = function(ev) {
     var job = ev.data;
