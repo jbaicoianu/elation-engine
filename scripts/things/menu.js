@@ -195,9 +195,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       //this.material.depthWrite = false;
       var color = (this.properties.disabled ? this.properties.disabledhovercolor : this.properties.hovercolor);
       var emissive = (this.properties.disabled ? this.properties.disabledhoveremissive : this.properties.hoveremissive);
-      this.label.material.color.setHex(color);
-      this.label.material.emissive.setHex(emissive);
-      this.label.refresh();
+      if (this.label) {
+        this.label.material.color.setHex(color);
+        this.label.material.emissive.setHex(emissive);
+        this.label.refresh();
+      }
 
       var view = this.engine.systems.render.views.main;
       if (!this.properties.disabled && !view.hasclass('state_cursor')) {
@@ -210,9 +212,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     this.deselect = function() {
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
       var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
-      this.label.material.color.setHex(color);
-      this.label.material.emissive.setHex(emissive);
-      this.label.refresh();
+      if (this.label) {
+        this.label.material.color.setHex(color);
+        this.label.material.emissive.setHex(emissive);
+        this.label.refresh();
+      }
 
       var view = this.engine.systems.render.views.main;
       if (view.hasclass('state_cursor')) {
