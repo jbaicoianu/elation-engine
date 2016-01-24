@@ -30,7 +30,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       for (var k in this.properties.items) {
         var item = this.properties.items[k];
         var itemcfg = {
-          collidable: false,
+          collidable: true,
           opacity: .8,
         };
         elation.utils.merge(labelcfg, itemcfg);
@@ -140,32 +140,53 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         'font':            { type: 'string', default: 'helvetiker' },
         'size':            { type: 'float', default: 1.0 },
         'lineheight':      { type: 'float', default: 1.4 },
-        'color':           { type: 'color', default: 0xcccccc },
+        'color':           { type: 'color', default: 0xffffff },
+        'backgroundcolor': { type: 'color', default: 0x333333 },
+        'emissive':        { type: 'color', default: 0x444444 },
         'hovercolor':      { type: 'color', default: 0xffffcc },
-        'disabledcolor':   { type: 'color', default: 0x111111 },
-        'disabledhovercolor': { type: 'color', default: 0xff0000 },
+        'hoveremissive':   { type: 'color', default: 0x006600 },
+        'disabledcolor':   { type: 'color', default: 0xaa0000 },
+        'disabledhovercolor': { type: 'color', default: 0xaa0000 },
+        'disabledemissive': { type: 'color', default: 0x331111 },
+        'disabledhoveremissive': { type: 'color', default: 0x440000 },
         'callback':        { type: 'function' },
         'disabled':        { type: 'bool', default: false },
       });
       elation.events.add(this, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
-    this.createChildren = function() {
+    this.createObject3D = function() {
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
+      var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
 
       // background plane
-      var boxgeo = new THREE.PlaneBufferGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
-      var mat = new THREE.MeshBasicMaterial({color: this.properties.color, opacity: .1, transparent: true});
+      //var boxgeo = new THREE.PlaneBufferGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
+      var boxgeo = new THREE.BoxGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight, .001);
+      var mat = new THREE.MeshBasicMaterial({color: this.properties.backgroundcolor, emissive: emissive, opacity: .8, transparent: true, depthTest: false});
       var mesh = new THREE.Mesh(boxgeo, mat);
-      mesh.position.z = -this.properties.size;
-      this.objects['3d'].add(mesh);
+      mesh.renderOrder = 5;
+      return mesh;
+    }
+    this.createChildren = function() {
+      var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
+      var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
       this.label = this.spawn('label', null, {
         text: this.properties.text, 
+        position: [0,0,this.properties.size/2],
+        thickness: .01, 
         font: this.properties.font, 
         size: this.properties.size, 
         color: color,
+        emissive: emissive,
         align: 'center',
-        verticalalign: 'middle'
+        verticalalign: 'middle',
+        opacity: 0.99,
+        depthTest: false,
+        'bevel.enabled': true,
+        'bevel.thickness': .005,
+        'bevel.size': .005,
+        collidable: true
       });
+      this.label.objects['3d'].renderOrder = 6;
       elation.events.add(this.label, 'mouseover,mouseout,mousedown,mouseup,click', this);
     }
     this.select = function() {
@@ -173,16 +194,31 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       //this.material.transparent = true;
       //this.material.depthWrite = false;
       var color = (this.properties.disabled ? this.properties.disabledhovercolor : this.properties.hovercolor);
+      var emissive = (this.properties.disabled ? this.properties.disabledhoveremissive : this.properties.hoveremissive);
       this.label.material.color.setHex(color);
-      this.label.material.emissive.setHex(color);
+      this.label.material.emissive.setHex(emissive);
       this.label.refresh();
+
+      var view = this.engine.systems.render.views.main;
+      if (!this.properties.disabled && !view.hasclass('state_cursor')) {
+        view.addclass('state_cursor');
+      }
+
       this.refresh();
       elation.events.fire({type: 'menuitem_select', element: this});
     }
     this.deselect = function() {
-      this.label.material.color.setHex((this.properties.disabled ? this.properties.disabledcolor : this.properties.color));
-      this.label.material.emissive.setHex(0x000000);
+      var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
+      var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
+      this.label.material.color.setHex(color);
+      this.label.material.emissive.setHex(emissive);
       this.label.refresh();
+
+      var view = this.engine.systems.render.views.main;
+      if (view.hasclass('state_cursor')) {
+        view.removeclass('state_cursor');
+      }
+
       this.refresh();
       elation.events.fire({type: 'menuitem_deselect', element: this});
     }
