@@ -98,7 +98,7 @@ elation.require([
     },
     contentIsGzipped: function(databuf) {
       var c1 = databuf[0], c2 = databuf[1];
-      console.log('gzip check?', [c1, c2], [0x1f, 0x8b]);
+      //console.log('gzip check?', [c1, c2], [0x1f, 0x8b]);
       if (c1 == 0x1f && c2 == 0x8b) {
         return true;
       }
@@ -118,7 +118,6 @@ elation.require([
 
       var type = false;
       tests.forEach(function(t) {
-        console.log(t[0], elation.utils.isString(content), content.match(t[0]));
         if (content.match(t[0])) {
           type = t[1];
         }
@@ -127,7 +126,6 @@ elation.require([
     },
     parse: function(data, job) {
       var type = this.detectContentType(data);
-      console.log('LOAD MODEL: ', job.data.url, type);
       if (this.parsers[type]) {
         return this.parsers[type].parse(data, job); 
       }
@@ -156,24 +154,22 @@ elation.require([
       }
     },
     onprogress: function(job, ev) {
-      console.log('progress', job, ev);
+      //console.log('progress', job, ev);
     },
   });
   elation.define('engine.assets.loaders.model_obj', {
     parse: function(data, job) {
       return new Promise(function(resolve, reject) { 
         var mtl = job.data.mtl || false;
-/*
+
         var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
         if (!mtl) {
           var re = /^mtllib (.*)$/im;
           var m = data.match(re);
-          console.log('yay', m);
           if (m) {
             mtl = baseurl + '/' + m[1];
           }
         }
-*/
     
         var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
         var modeldata = loader.parse(data);
@@ -206,7 +202,7 @@ elation.require([
             }),
             undefined,
             elation.bind(this, function() {
-              //reject();
+              resolve(modeldata.toJSON());
             })
           );
         } else {
