@@ -1,5 +1,6 @@
-elation.require(['utils.workerpool'], function(elation) {
+elation.require(['utils.workerpool', 'engine.external.three.three'], function(elation) {
 
+  THREE.Cache.enabled = true;
   elation.extend('engine.assets', {
     assets: {},
     types: {},
@@ -66,13 +67,14 @@ elation.require(['utils.workerpool'], function(elation) {
       }
       return true;
     },
-    getFullURL: function(url) {
+    getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
-      var fullurl = (this.isSrcRelative(url) ? this.baseurl + url : url);
+      if (!baseurl) baseurl = this.baseurl;
+      var fullurl = (this.isSrcRelative(url) ? baseurl + url : url);
       return fullurl;
     },
-    getBaseURL: function() {
-      var url = this.getFullURL();
+    getBaseURL: function(url) {
+      var url = url || this.getFullURL();
       var parts = url.split('/');
       parts.pop();
       return parts.join('/') + '/';
@@ -296,7 +298,7 @@ console.log('fired', this._texture);
     load: function() {
       if (this.src) {
         var loadargs = {src: this.getFullURL()};
-        if (this.mtl) loadargs.mtl = this.getFullURL(this.mtl);
+        if (this.mtl) loadargs.mtl = this.getFullURL(this.mtl, this.getBaseURL(loadargs.src));
         this.loadWithWorker(loadargs);
       } else {
         this.removePlaceholders();
@@ -318,100 +320,50 @@ console.log('fired', this._texture);
       elation.engine.assets.loaderpool.addJob(url)
         .then(elation.bind(this, this.handleLoadJSON));
     },
-    loadCollada: function(url) {
-      this._model = new THREE.Group();
-      this._model.userData.loaded = false;
-
-      elation.require(['engine.external.three.ColladaLoader'], elation.bind(this, function() {
-        var loader = new THREE.ColladaLoader();
-        loader.options.convertUpAxis = true;
-        loader.options.upAxis = 'Y';
-        console.log('load this model!', this);
-        if (this.src) {
-          if (this.compression == 'none') {
-            loader.load(url, elation.bind(this, this.handleLoadCollada), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
-          } else if (this.compression == 'gzip') {
-            elation.net.get(url, null, { callback: elation.bind(this, function(data, xhr) {
-              //var contents = JXG.decompress(data);
-              var bufView = [];//new Uint16Array(buf);
-              for (var i=0, strLen=data.length; i<strLen; i++) {
-                bufView[i] = data.charCodeAt(i);
-              }
-              //var contents = (new JXG.Util.Unzip(bufView)).unzip();
-              //var contents = unescape( (new JXG.Util.Unzip(data)).unzip()[0][0]);
-
-              console.log('WARNING - gzipped models not supported yet!', url);
-            }) });
-          }
-        }
-      }));
-
-    },
-    handleLoadCollada: function(data) {
-      console.log('collada loaded:', data);
-      this.removePlaceholders();
-      this._model.userData.loaded = true;
-      this._model.add(data.scene);
-      this.instances.forEach(elation.bind(this, function(n) { 
-        n.userData.loaded = true;
-        n.add(data.scene.clone()); 
-        this.assignTextures(n);
-        elation.events.fire({type: 'asset_load', element: n});
-      }));
-    },
     handleLoadJSON: function(json) {
 console.log('json loaded', json);
-      var parser = new THREE.ObjectLoader();
-      var scene = parser.parse(json);
-      
-      this.removePlaceholders();
-      this._model.userData.loaded = true;
-      this._model.add(scene);
-      this.instances.forEach(elation.bind(this, function(n) { 
-        n.userData.loaded = true;
-        n.add(scene.clone()); 
-        this.assignTextures(n);
-        elation.events.fire({type: 'asset_load', element: n});
-      }));
-    },
-    loadOBJ: function(url) {
-      this._model = new THREE.Group();
-      this._model.userData.loaded = false;
-/*
-      elation.require(['engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader'], elation.bind(this, function() {
-        var loader = (this.mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
-        loader.setCrossOrigin('');
-        //console.log('load obj model!', this, loader);
-        if (this.src) {
-          if (this.corsproxy) {
-            url = '/engine/cors.raw?url=' + encodeURIComponent(url);
-          }
-          //var mtlurl = url.replace('.obj', '.mtl');
-          if (this.mtl) {
-            loader.load(url, this.getFullURL(this.mtl), elation.bind(this, this.handleLoadOBJ), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
-          } else {
-            loader.load(url, elation.bind(this, this.handleLoadOBJ), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
-          }
-        }
-      }));
-*/
-    },
-    handleLoadOBJ: function(data) {
-      //console.log('obj loaded:', data);
-      this.removePlaceholders();
-      this._model.userData.loaded = true;
-      while (data.children.length > 0) {
-        var obj = data.children[0];
-        data.remove(obj);
-        this._model.add(obj);
+      if (json) {
+        var parser = new THREE.ObjectLoader();
+        var scene = parser.parse(json);
+        
+        this.removePlaceholders();
+        this._model.userData.loaded = true;
+        this._model.add(scene);
+
+        this.extractTextures(scene);
 
         this.instances.forEach(elation.bind(this, function(n) { 
-          n.add(obj.clone()); 
           n.userData.loaded = true;
+          n.add(scene.clone()); 
           this.assignTextures(n);
           elation.events.fire({type: 'asset_load', element: n});
         }));
       }
+    },
+    extractTextures: function(scene) {
+      var types = ['map', 'lightMap', 'normalMap', 'specularMap'];
+      var textures = {};
+
+      scene.traverse(function(n) { 
+        if (n instanceof THREE.Mesh) {
+          var materials = (n.material instanceof THREE.MultiMaterial || n.material instanceof THREE.MeshFaceMaterial ? n.material.materials : [n.material]);
+
+          materials.forEach(function(material) {
+            types.forEach(function(texname) { 
+              var tex = material[texname];
+              if (tex && tex.image) {
+                var img = tex.image;
+                if (!textures[img.src]) {
+                  textures[img.src] = tex;
+                  elation.events.add(img, 'load', function() { tex.needsUpdate = true; });
+                } else {
+                 material[texname] = textures[img.src];
+                }
+              }
+            });
+          });
+        }
+      });
     },
     handleProgress: function(ev) {
       //console.log('model progress!', ev);
@@ -474,6 +426,35 @@ console.log('json loaded', json);
     }
   }, elation.engine.assets.base);
 
+  elation.define('engine.assets.font', {
+    assettype: 'font',
+    src: false,
+    _font: false,
+
+    _construct: function(args) {
+      elation.class.call(this, args);
+      this.load();
+    },
+    load: function() {
+      var loader = new THREE.FontLoader();
+
+      if (this.src) {
+        loader.load(this.src, 
+                    elation.bind(this, this.handleLoad), 
+                    elation.bind(this, this.handleProgress), 
+                    elation.bind(this, this.handleError));
+      }
+    },
+    handleLoad: function(data) {
+      this._font = data;
+    },
+    getAsset: function() {
+      if (!this._font) {
+        this.load();
+      }
+      return this._font;
+    }
+  }, elation.engine.assets.base);
   /*
     assetpack = [
       { name: 'grass-diffuse', 'assettype: 'image', src: '/textures/grass/diffuse.jpg' },
