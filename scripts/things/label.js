@@ -1,4 +1,11 @@
 elation.require(["engine.things.generic"], function() {
+
+  elation.engine.assets.get({
+    'assettype':'font', 
+    'name':'helvetiker', 
+    'src':'/media/engine/fonts/helvetiker_regular.typeface.js'
+  });
+
   elation.component.add("engine.things.label", function() {
     this.postinit = function() {
       this.defineProperties({
@@ -34,12 +41,15 @@ elation.require(["engine.things.generic"], function() {
       return mesh;
     }
     this.createTextGeometry = function(text) {
+      var font = elation.engine.assets.find('font', this.properties.font);
+      if (!font) font = elation.engine.assets.find('font', 'helvetiker');
+
       var geometry = new THREE.TextGeometry( text, {
         size: this.properties.size,
         height: this.properties.thickness || this.properties.size / 2,
         curveSegments: this.properties.segments,
 
-        font: this.properties.font,
+        font: font,
         weight: "normal",
         style: "normal",
 

@@ -30,7 +30,7 @@ elation.require(['engine.things.generic'], function() {
       }
       var listener = this.engine.systems.sound.getRealListener();
       if (listener) {
-        this.audio = new THREE.Audio(listener);
+        this.audio = new THREE.PositionalAudio(listener);
         this.audio.panner.maxDistance = this.properties.distance;
         this.audio.panner.maxDistance = this.properties.distance;
         this.audio.panner.distanceModel = 'linear';
