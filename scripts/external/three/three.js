@@ -19396,11 +19396,10 @@ THREE.ObjectLoader.prototype = {
 				}
 
 				var texture = new THREE.Texture( images[ data.image ] );
-console.log('durf', images[data.image], images[data.image].complete);
         if (images[data.image].complete) {
 				  texture.needsUpdate = true;
         } else {
-          images[data.image].addEventListener('load', function(ev) {console.log('loaded!', ev, texture); texture.needsUpdate = true; });
+          images[data.image].addEventListener('load', function(ev) { texture.needsUpdate = true; });
         }
 
 				texture.uuid = data.uuid;
