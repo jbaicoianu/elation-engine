@@ -27,7 +27,6 @@
   pointer-events: none;
 }
 .state_cursor .engine_view_crosshair {
-  background-color: red;
 }
 .engine_view_rendermode_oculus .engine_view_crosshair {
   position: absolute;
