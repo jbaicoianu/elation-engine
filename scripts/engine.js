@@ -189,12 +189,17 @@ elation.require(deps, function() {
           rendersystem: this.engine.systems.render,
         });
 
+        /* Sound Settings */
+        var soundpanel = elation.engine.systems.sound.config({
+          client: this.client
+        });
+
         var configtabs = elation.ui.tabbedcontent({
           append: this,
           items: {
             controls: { label: 'Controls', content: controlpanel },
             video: { label: 'Video', content: videopanel },
-            audio: { label: 'Audio', disabled: true },
+            audio: { label: 'Audio', content: soundpanel },
             network: { label: 'Network', disabled: true },
           }
         });
