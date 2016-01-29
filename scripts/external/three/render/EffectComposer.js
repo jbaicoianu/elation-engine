@@ -8,8 +8,10 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 
 	if ( renderTarget === undefined ) {
 
-		var width = window.innerWidth || 1;
-		var height = window.innerHeight || 1;
+		var pixelRatio = renderer.getPixelRatio();
+
+		var width  = Math.floor( renderer.context.canvas.width  / pixelRatio ) || 1;
+		var height = Math.floor( renderer.context.canvas.height / pixelRatio ) || 1;
 		var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false };
 
 		renderTarget = new THREE.WebGLRenderTarget( width, height, parameters );
@@ -19,12 +21,8 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 	this.renderTarget1 = renderTarget;
 	this.renderTarget2 = renderTarget.clone();
 
-	// Keep track if which one is "active" and store it as our primary
-	this.output = this.renderTarget1;
-
 	this.writeBuffer = this.renderTarget1;
 	this.readBuffer = this.renderTarget2;
-	this.output = this.readBuffer;
 
 	this.passes = [];
 
@@ -62,8 +60,6 @@ THREE.EffectComposer.prototype = {
 		this.writeBuffer = this.renderTarget1;
 		this.readBuffer = this.renderTarget2;
 
-		this.output = this.readBuffer;
-
 		var maskActive = false;
 
 		var pass, i, il = this.passes.length;
@@ -72,7 +68,7 @@ THREE.EffectComposer.prototype = {
 
 			pass = this.passes[ i ];
 
-			if ( !pass.enabled ) continue;
+			if ( ! pass.enabled ) continue;
 
 			pass.render( this.renderer, this.writeBuffer, this.readBuffer, delta, maskActive );
 
@@ -114,12 +110,18 @@ THREE.EffectComposer.prototype = {
 
 			renderTarget = this.renderTarget1.clone();
 
-			renderTarget.width = window.innerWidth;
-			renderTarget.height = window.innerHeight;
+			var pixelRatio = this.renderer.getPixelRatio();
+
+			renderTarget.setSize(
+				Math.floor( this.renderer.context.canvas.width  / pixelRatio ),
+				Math.floor( this.renderer.context.canvas.height / pixelRatio )
+			);
 
 		}
 
+		this.renderTarget1.dispose();
 		this.renderTarget1 = renderTarget;
+		this.renderTarget2.dispose();
 		this.renderTarget2 = renderTarget.clone();
 
 		this.writeBuffer = this.renderTarget1;
@@ -129,43 +131,9 @@ THREE.EffectComposer.prototype = {
 
 	setSize: function ( width, height ) {
 
-		var renderTarget = this.renderTarget1.clone();
+		this.renderTarget1.setSize( width, height );
+		this.renderTarget2.setSize( width, height );
 
-		renderTarget.width = width;
-		renderTarget.height = height;
-
-		this.reset( renderTarget );
-
-	},
-  
-  getSize: function() {
-    return this.renderer.getSize();
-  },
-
-	setScissor: function ( x, y, width, height ) {
-    return this.renderer.setScissor(x, y, width, height);
-	},
-
-	enableScissorTest: function ( boolean ) {
-
-		this.renderer.enableScissorTest( boolean );
-
-	},
-
-	clear: function ( color, depth, stencil ) {
-    this.renderer.clear(color, depth, stencil);
-  },
-	setViewport: function ( x, y, width, height ) {
-    this.renderer.setViewport(x, y, width, height);
-  }
+	}
 
 };
-
-// shared ortho camera
-
-THREE.EffectComposer.camera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
-
-THREE.EffectComposer.quad = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2 ), null );
-
-THREE.EffectComposer.scene = new THREE.Scene();
-THREE.EffectComposer.scene.add( THREE.EffectComposer.quad );
