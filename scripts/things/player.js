@@ -5,7 +5,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.defineProperties({
         height: { type: 'float', default: 2.0 },
         fatness: { type: 'float', default: .25 },
-        mass: { type: 'float', default: 1.0 },
+        mass: { type: 'float', default: 10.0 },
         movespeed: { type: 'float', default: 300.0 },
         runspeed: { type: 'float', default: 600.0 },
         crouchspeed: { type: 'float', default: 150.0 },
@@ -21,6 +21,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         'move_backward': ['keyboard_s,keyboard_shift_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
         'move_left': ['keyboard_a,keyboard_shift_a', elation.bind(this, this.updateControls)],
         'move_right': ['keyboard_d,keyboard_shift_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
+        'move_up': ['keyboard_r,keyboard_shift_r', elation.bind(this, this.updateControls)],
+        'move_down': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.updateControls)],
         'turn_left': ['keyboard_left,keyboard_shift_left', elation.bind(this, this.updateControls)],
         'turn_right': ['keyboard_right,keyboard_shift_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
         'look_up': ['keyboard_up,keyboard_shift_up', elation.bind(this, this.updateControls)],
@@ -98,6 +100,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
           console.log('throw it!', this.holding, campos, camdir);
           this.holding = false;
           this.charging = false;
+        }
+      } else {
+        if (ev.value == 1) {
+          this.charging = new Date().getTime();
+        } else if (this.charging) {
+          var campos = this.camera.localToWorld(new THREE.Vector3(0,0,-1));
+          var camdir = this.camera.localToWorld(new THREE.Vector3(0,0,-2)).sub(campos).normalize();
+          var velocity = 1 + this.getCharge() / 10;
+          camdir.multiplyScalar(velocity);
+          camdir.add(this.objects.dynamics.velocity);
+          var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .125, mass: 1, position: campos, velocity: camdir, lifetime: 120, gravity: false, player_id: this.properties.player_id, tags: 'local_sync' }, true);
         }
       }
     }
@@ -215,6 +228,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       return function() {
         if (this.camera && this.enabled) {
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
+          this.moveVector.y = (this.controlstate.move_up - this.controlstate.move_down);
           this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
 
           if (this.engine.systems.controls.pointerLockActive) {

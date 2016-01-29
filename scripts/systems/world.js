@@ -117,17 +117,23 @@ elation.require([
         elation.events.fire({type: 'world_thing_remove', element: this, data: {thing: thing}});
       }
     }
-    this.extract_types = function(thing, types, onlymissing) {
+    this.extract_types = function(things, types, onlymissing) {
       if (!types) {
         types = [];
       } 
-      if (((onlymissing && typeof elation.engine.things[thing.type] == 'undefined') || !onlymissing) && types.indexOf(thing.type) == -1) {
-        types.push(thing.type);
-        elation.engine.things[thing.type] = null;
+      if (!elation.utils.isArray(things)) {
+        things = [things];
       }
-      if (thing.things) {
-        for (var k in thing.things) {
-          this.extract_types(thing.things[k], types, onlymissing);
+      for (var i = 0; i < things.length; i++) {
+        var thing = things[i];
+        if (((onlymissing && typeof elation.engine.things[thing.type] == 'undefined') || !onlymissing) && types.indexOf(thing.type) == -1) {
+          types.push(thing.type);
+          elation.engine.things[thing.type] = null;
+        }
+        if (thing.things) {
+          for (var k in thing.things) {
+            this.extract_types(thing.things[k], types, onlymissing);
+          }
         }
       }
       return types;
@@ -193,21 +199,18 @@ elation.require([
       }
       return overrides;
     }
-    this.load = function(thing, root, logprefix) {
-      if (!thing) return;
+    this.load = function(things, root, logprefix) {
+      if (!things) return;
+      if (!elation.utils.isArray(things)) {
+        things = [things];
+      }
       this.loading = true;
+      
       if (!this.root) {
         this.currentlyloaded = thing;
-        var loadtypes = [];
-        if (elation.utils.isArray(thing)) {
-          for (var i = 0; i < thing.length; i++) {
-            this.extract_types(thing[i], loadtypes, true);
-          }
-        } else {
-          this.extract_types(thing, loadtypes, true);
-        }
+        var loadtypes = this.extract_types(things, [], true);
         if (loadtypes.length > 0) {
-          elation.require(loadtypes.map(function(a) { return 'engine.things.' + a; }), elation.bind(this, function() { this.load(thing, root, logprefix); }));
+          elation.require(loadtypes.map(function(a) { return 'engine.things.' + a; }), elation.bind(this, function() { this.load(things, root, logprefix); }));
           return;
         }
       }
@@ -216,10 +219,13 @@ elation.require([
         //this.rootname = (thing.parentname ? thing.parentname : '') + '/' + thing.name;
         root = this;
       }
-      var currentobj = this.spawn(thing.type, thing.name, thing.properties, root, false);
-      if (thing.things) {
-        for (var k in thing.things) {
-          this.load(thing.things[k], currentobj, logprefix + "\t");
+      for (var i = 0; i < things.length; i++) {
+        var thing = things[i];
+        var currentobj = this.spawn(thing.type, thing.name, thing.properties, root, false);
+        if (thing.things) {
+          for (var k in thing.things) {
+            this.load(thing.things[k], currentobj, logprefix + "\t");
+          }
         }
       }
       if (root === this) {
