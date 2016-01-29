@@ -260,9 +260,12 @@ elation.require(deps, function() {
     this.initWorld = function() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
       var worldurl = elation.utils.arrayget(this.args, 'world.url');
+      var worlddata = elation.utils.arrayget(this.args, 'world.data');
       var parsedurl = elation.utils.parseURL(document.location.hash);
       if (worldurl && !(parsedurl.hashargs && parsedurl.hashargs['world.url'])) {
         this.engine.systems.world.loadSceneFromURL(worldurl);
+      } else if (worlddata) {
+        this.engine.systems.world.load(worlddata);
       }
     }
     this.startEngine = function(engine) {
@@ -507,7 +510,7 @@ elation.require(deps, function() {
       var filename = 'vrcade-' + date + ' ' + time + '.' + extension
       return filename;
     }
-  });
+  }, elation.ui.base);
   
   elation.component.add('engine.server', function() {
     this.init = function() {
