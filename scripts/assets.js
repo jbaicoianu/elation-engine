@@ -142,7 +142,7 @@ THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onErr
       //console.log('load this image!', this);
       if (this.src) {
         var url = this.getFullURL();
-        if (elation.engine.assets.corsproxy) {
+        if (elation.engine.assets.corsproxy && !this.isURLAbsolute(this.src)) {
           url = elation.engine.assets.corsproxy + url;
         }
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
@@ -203,8 +203,12 @@ console.log('fired', this._texture);
     auto_play: false,
     texture: false,
     load: function() {
+      var url = this.getFullURL(this.src);
+      if (elation.engine.assets.corsproxy && !this.isURLAbsolute(this.src)) {
+        url = elation.engine.assets.corsproxy + url;
+      }
       var video = document.createElement('video');
-      video.src = this.src;
+      video.src = url;
       video.autoplay = this.auto_play;
       video.crossOrigin = 'anonymous';
       this._video = video;
