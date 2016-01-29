@@ -143,6 +143,7 @@ elation.require([
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
+      this.container.tabIndex = 1;
       if (!this.args.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
       } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
