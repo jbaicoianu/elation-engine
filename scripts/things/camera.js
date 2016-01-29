@@ -3,13 +3,14 @@ elation.require(['engine.things.generic'], function() {
     this.postinit = function() {
       this.defineProperties({
         fov: { type: 'float', default: 75 },
-        near: { type: 'float', default: .1 },
+        near: { type: 'float', default: .01 },
         far: { type: 'float', default: 1000 },
         aspect: { type: 'float', default: 4/3 },
       });
     }
     this.createObject3D = function() {
       var cam = new THREE.PerspectiveCamera(this.properties.fov, this.properties.aspect, this.properties.near, this.properties.far);
+      this.camera = cam;
       return cam;
     }
     this.createChildren = function() {
