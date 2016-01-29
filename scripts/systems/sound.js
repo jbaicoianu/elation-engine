@@ -77,11 +77,11 @@ elation.require([ ], function() {
           min: 1,
           max: 100,
           snap: 1,
+          label: 'Volume',
           handles: [
             {
               name: 'handle_one_volume',
               value: this.soundsystem.volume,
-              labelprefix: 'Volume:',
               bindvar: [this.soundsystem, 'volume']
             }
           ],
