@@ -3,3 +3,7 @@
   top: 0;
   left: 0;
 }
+.engine_render_bloom,
+.engine_render_scale {
+    width: 50%;
+}
