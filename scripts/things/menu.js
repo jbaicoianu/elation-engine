@@ -38,7 +38,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
 
         itemcfg.position = [0, (fullheight / 2) - (k * size * lineheight), 0];
 
-        var l = this.spawn('menuitem', null, itemcfg);
+        var l = this.spawn('menuitem', 'menuitem_' + itemcfg.text, itemcfg);
         this.menuitems.push(l);
         elation.events.add(l, 'menuitem_select', elation.bind(this, this.updateselected));
         elation.events.add(l, 'menuitem_deselect', elation.bind(this, this.updateselected));
@@ -179,11 +179,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         emissive: emissive,
         align: 'center',
         verticalalign: 'middle',
-        opacity: 0.99,
+        opacity: 0.75,
         depthTest: false,
         'bevel.enabled': true,
-        'bevel.thickness': .005,
-        'bevel.size': .005,
+        'bevel.thickness': .004,
+        'bevel.size': .004,
         collidable: true
       });
       this.label.objects['3d'].renderOrder = 6;
