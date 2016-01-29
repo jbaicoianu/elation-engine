@@ -3,6 +3,7 @@ var global = {};
 importScripts('/scripts/engine/external/pako.js');
 
 elation.require([
+    'engine.assets',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
     'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader'], function() {
 
@@ -11,7 +12,7 @@ elation.require([
 
     this.name = '';
     this.offset = new THREE.Vector2();
-    this.repeat = new THREE.Vector2();
+    this.repeat = new THREE.Vector2(1,1);
     this.image = image;
   }
   THREE.Texture.prototype.constructor = THREE.Texture;
@@ -89,11 +90,17 @@ elation.require([
       }
     },
     load: function(job) {
-      elation.net.get(job.data.src, null, {
+      var corsproxy = elation.engine.assets.corsproxy || '';
+      var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
+      var fullurl = corsproxy + (job.data.src.match(/^https?:/) ? job.data.src :  'http://bai.dev.supcrit.com/' + job.data.src);
+      elation.net.get(fullurl, null, {
         responseType: 'arraybuffer',
         callback: elation.bind(this, this.onload, job),
         onprogress: elation.bind(this, this.onprogress, job),
         onerror: elation.bind(this, this.onerror, job),
+        headers: {
+          'X-Requested-With': 'Elation Engine asset loader'
+        }
       });
     },
     contentIsGzipped: function(databuf) {
@@ -146,7 +153,6 @@ elation.require([
       }    
       if (modeldata) {
         this.parse(modeldata, job).then(function(data) {
-          //console.log('loaded model:', job, data);
           postMessage({message: 'finished', id: job.id, data: data});
         });
       } else {
@@ -159,7 +165,7 @@ elation.require([
   });
   elation.define('engine.assets.loaders.model_obj', {
     parse: function(data, job) {
-      return new Promise(function(resolve, reject) { 
+      return new Promise(elation.bind(this, function(resolve, reject) { 
         var mtl = job.data.mtl || false;
 
         var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
@@ -167,14 +173,17 @@ elation.require([
           var re = /^mtllib (.*)$/im;
           var m = data.match(re);
           if (m) {
-            mtl = baseurl + '/' + m[1];
+            mtl = m[1];
           }
         }
-    
         var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
         var modeldata = loader.parse(data);
 
         if (mtl) {
+          mtl = this.getFullURL(mtl, baseurl); 
+          if (elation.engine.assets.corsproxy) {
+            mtl = elation.engine.assets.corsproxy + mtl;
+          }
           var mtlLoader = new THREE.MTLLoader( );
           mtlLoader.setBaseUrl( mtl.substr( 0, mtl.lastIndexOf( "/" ) + 1 ) );
           mtlLoader.setCrossOrigin( 'anonymous' );
@@ -187,12 +196,31 @@ elation.require([
 
                 if ( object instanceof THREE.Mesh ) {
 
-                  if ( object.material.name ) {
+                  if (object.material instanceof THREE.MeshFaceMaterial) {
+                    var newmaterials = [];
+                    object.material.materials.forEach(function(m) {
+                      if ( m.name ) {
 
-                    var material = materialsCreator.create( object.material.name );
+                        var material = materialsCreator.create( m.name );
 
-                    if ( material ) object.material = material;
+                        if ( material ) {
+                          newmaterials.push(material);
+                        } else {
+                          newmaterials.push(m);
+                        }
+                      } else {
+                        newmaterials.push(m);
+                      }
+                    });
+                    object.material.materials = newmaterials;
+                  } else {
+                    if ( object.material.name ) {
 
+                      var material = materialsCreator.create( object.material.name );
+
+                      if ( material ) object.material = material;
+
+                    }
                   }
 
                 }
@@ -209,9 +237,9 @@ elation.require([
           resolve(modeldata.toJSON());
         }
         return modeldata;
-      });
+      }));
     },
-  });
+  }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_collada', {
     parser: new DOMParser(),
 
@@ -314,9 +342,10 @@ elation.require([
           parsed.scene.traverse(function(n) {
             if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
                 (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
-              //n.geometry.computeFaceNormals();
-              //n.geometry.computeVertexNormals();
+              n.geometry.computeFaceNormals();
+              n.geometry.computeVertexNormals();
             }
+            // Convert to BufferGeometry for better loading efficiency
             if (n.geometry && n.geometry instanceof THREE.Geometry) {
               var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
               n.geometry = bufgeo;
@@ -328,7 +357,7 @@ elation.require([
         resolve(data.scene.toJSON());
       }));
     },
-  });
+  }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_fbx', {
     parse: function(data, job) {
       return new Promise(function(resolve, reject) { 
@@ -338,14 +367,18 @@ elation.require([
         resolve(modeldata.toJSON());
       });
     }
-  });
+  }, elation.engine.assets.base);
 
   var loader = new elation.engine.assets.loaders.model();
 
   onmessage = function(ev) {
-    var job = ev.data;
-    if (job) {
-      loader.load(job);
+    var msg = ev.data;
+    if (msg.type == 'job') {
+      if (msg.data) {
+        loader.load(msg.data);
+      }
+    } else if (msg.type == 'setcorsproxy') {
+      elation.engine.assets.setCORSProxy(msg.data);
     }
   }
 });

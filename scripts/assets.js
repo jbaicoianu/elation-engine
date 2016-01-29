@@ -4,6 +4,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
   elation.extend('engine.assets', {
     assets: {},
     types: {},
+    corsproxy: '',
     loadAssetPack: function(url) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url});
       this.assetroot.load()
@@ -21,12 +22,15 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
       elation.engine.assets.types[type][assetobj.name] = assetobj;
       return assetobj;
     },
-    find: function(type, name) {
+    find: function(type, name, raw) {
       var asset;
       if (elation.engine.assets.types[type]) {
         asset = elation.engine.assets.types[type][name];
       }
       //console.log(asset, type, name, elation.engine.assets.types[type]);
+      if (raw) {
+        return asset;
+      }
       if (asset) {
         return asset.getAsset();
       } else {
@@ -35,8 +39,33 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
       }
       return undefined;
     },
+    setCORSProxy: function(proxy) {
+      elation.engine.assets.corsproxy = proxy;
+      var loader = new THREE.CORSProxyLoader(proxy);
+      THREE.Loader.Handlers.add(/.*/i, loader);
+
+      if (!ENV_IS_WORKER && elation.engine.assets.loaderpool) {
+        elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
+      }
+    },
     loaderpool: new elation.utils.workerpool({src: '/scripts/engine/asset-worker.js', num: 4})
   });
+
+THREE.CORSProxyLoader = function(corsproxy, manager) {
+  this.corsproxy = corsproxy || '';
+	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+};
+THREE.CORSProxyLoader.prototype = Object.create(THREE.TextureLoader);
+THREE.CORSProxyLoader.constructor = THREE.CORSProxyLoader;
+
+THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
+  var fullurl = url;
+  if (this.corsproxy != '' && url.indexOf(this.corsproxy) != 0) {
+    fullurl = this.corsproxy + url;
+  }
+  return THREE.TextureLoader.prototype.load.call(this, fullurl, onLoad, onProgress, onError);
+}
+
 
   elation.define('engine.assets.base', {
     assettype: 'base',
@@ -61,16 +90,25 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
     load: function() {
       console.log('engine.assets.base load() should not be called directly', this);
     },
-    isSrcRelative: function(src) {
+    isURLRelative: function(src) {
       if (src.match(/^https?:/) || src[0] == '/') {
         return false;
       }
       return true;
     },
+    isURLAbsolute: function(src) {
+      return (src[0] == '/' && src[1] != '/');
+    },
     getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
       if (!baseurl) baseurl = this.baseurl;
-      var fullurl = (this.isSrcRelative(url) ? baseurl + url : url);
+      var fullurl = url;
+      if (this.isURLRelative(fullurl)) {
+         fullurl = baseurl + fullurl;
+      } else if (this.isURLAbsolute(fullurl)) {
+         fullurl = window.self.location.origin + fullurl;
+      }
+
       return fullurl;
     },
     getBaseURL: function(url) {
@@ -104,6 +142,9 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
       //console.log('load this image!', this);
       if (this.src) {
         var url = this.getFullURL();
+        if (elation.engine.assets.corsproxy) {
+          url = elation.engine.assets.corsproxy + url;
+        }
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
       }
     },
@@ -158,10 +199,13 @@ console.log('fired', this._texture);
   elation.define('engine.assets.video', {
     assettype: 'video',
     src: false,
+    sbs3d: false,
+    auto_play: false,
     texture: false,
     load: function() {
       var video = document.createElement('video');
       video.src = this.src;
+      video.autoplay = this.auto_play;
       video.crossOrigin = 'anonymous';
       this._video = video;
       this._texture = new THREE.VideoTexture(video);
@@ -266,10 +310,29 @@ console.log('fired', this._texture);
         var mesh = this.createPlaceholder();
         group.add(mesh);
       } else {
-        group.add(this._model.clone());
+        //group.add(this._model.clone());
+        this.fillGroup(group, this._model);
         this.assignTextures(group);
       }
       this.instances.push(group);
+      return group;
+    },
+    fillGroup: function(group, source) {
+      if (!source) source = this._model;
+      if (source) {
+/*
+        group.position.copy(this._model.position);
+        group.quaternion.copy(this._model.quaternion);
+        //group.scale.copy(this._model.scale);
+
+        if (source.children) {
+          source.children.forEach(function(n) {
+            group.add(n.clone());
+          });
+        }
+*/
+        group.add(source.clone());
+      }
       return group;
     },
     assignTextures: function(group) {
@@ -314,27 +377,31 @@ console.log('fired', this._texture);
       }
       return extension.toLowerCase();
     },
-    loadWithWorker: function(url) {
+    loadWithWorker: function(jobdata) {
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
-      elation.engine.assets.loaderpool.addJob(url)
+      elation.engine.assets.loaderpool.addJob(jobdata)
         .then(elation.bind(this, this.handleLoadJSON));
     },
     handleLoadJSON: function(json) {
 console.log('json loaded', json);
       if (json) {
         var parser = new THREE.ObjectLoader();
+        parser.setCrossOrigin('anonymous');
         var scene = parser.parse(json);
         
         this.removePlaceholders();
         this._model.userData.loaded = true;
-        this._model.add(scene);
+        //this._model.add(scene);
+        this.fillGroup(this._model, scene);
 
         this.extractTextures(scene);
+        this.assignTextures(scene);
 
         this.instances.forEach(elation.bind(this, function(n) { 
           n.userData.loaded = true;
-          n.add(scene.clone()); 
+          //n.add(scene.clone()); 
+          this.fillGroup(n, scene);
           this.assignTextures(n);
           elation.events.fire({type: 'asset_load', element: n});
         }));
@@ -370,6 +437,13 @@ console.log('json loaded', json);
     },
     handleError: function(ev) {
       console.log('model uh oh!', ev);
+      if (this.placeholder) {
+        var placeholder = this.placeholder;
+        var mat = new THREE.MeshPhongMaterial({color: 0x990000, emissive: 0x333333});
+        var errorholder = new THREE.Mesh(new THREE.SphereGeometry(1), mat);
+        this.instances.forEach(function(n) { n.remove(placeholder); n.add(errorholder); });
+        
+      }
     },
     removePlaceholders: function() {
       if (this.placeholder) {
