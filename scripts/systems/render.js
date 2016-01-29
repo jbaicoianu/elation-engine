@@ -13,7 +13,7 @@ elation.require([
   "engine.external.three.render.CopyShader",
   "engine.external.three.render.RecordingPass",
 
-  "engine.external.threecap.threecap",
+  //"engine.external.threecap.threecap",
 
   //"engine.external.gifjs.gif",
   //"engine.external.ffmpeg.ffmpeg",
@@ -31,7 +31,7 @@ elation.require([
   "ui.select",
   "ui.slider",
 ], function() {
-  elation.requireCSS('ui.slider');
+  elation.requireCSS('engine.systems.render');
 
   elation.extend("engine.systems.render", function(args) {
     elation.implement(this, elation.engine.systems.system);
@@ -164,7 +164,7 @@ elation.require([
       }
       this.rendersystem.view_add(this.id, this);
 
-      var cam = new THREE.PerspectiveCamera(75, 47/53 * 8, 1e-2, 1e4);
+      var cam = new THREE.PerspectiveCamera(75, 4/3, 1e-2, 1e4);
       this.actualcamera = cam;
 
       this.setcamera(cam);
@@ -187,8 +187,8 @@ elation.require([
       this.depthMaterial.blending = THREE.NoBlending;
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
-      //this.composer = this.createRenderPath([this.rendermode, 'fxaa']);
-      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
+      //this.composer = this.createRenderPath([this.rendermode]);
+      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa'/*, 'recording'*/]);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
 
@@ -229,6 +229,10 @@ elation.require([
       }
 
       this.glcontext = this.rendersystem.renderer.getContext();
+
+      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', function(ev) {
+        console.log('ERROR - context lost!  Can we handle this somehow?');
+      });
 
       if (this.picking) {
         this.mousepos = [0, 0, document.body.scrollTop];
@@ -319,7 +323,7 @@ elation.require([
           pass.renderToScreen = true;
           break;
         case 'bloom':
-          pass = new THREE.BloomPass(0.65, 25, 5);
+          pass = new THREE.BloomPass(0.4, 25, 5);
           break;
         case 'fxaa':
           pass = new THREE.ShaderPass( THREE.FXAAShader );
@@ -411,10 +415,24 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           this.actualcamera.position.copy(this.camera.position);
           this.actualcamera.rotation.copy(this.camera.rotation);
           this.actualcamera.quaternion.copy(this.camera.quaternion);
+
+          if (this.actualcamera.fov != this.camera.fov ||
+              this.actualcamera.near != this.camera.near ||
+              this.actualcamera.far != this.camera.far ||
+              this.actualcamera.aspect != this.camera.aspect) {
+          
+            this.actualcamera.fov = this.camera.fov;
+            this.actualcamera.near = this.camera.near;
+            this.actualcamera.far = this.camera.far;
+
+            this.actualcamera.updateProjectionMatrix();
+          }
+          //this.actualcamera.aspect = this.camera.aspect;
         }
         if (this.skycamera) {
           // Sky camera needs to use our camera's world rotation, and nothing else
           this.camera.matrixWorld.decompose( _position, _quaternion, _scale );
+          this.actualcamera.fov = this.camera.fov;
           this.skycamera.quaternion.copy(_quaternion);
         }
       }
@@ -447,8 +465,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
         this.scene.overrideMaterial = null;
         */
-        //this.composer.render(delta);
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
+        //this.composer.render(delta);
         this.vreffect.render(this.scene, this.camera);
         if (this.rendersystem.cssrenderer) {
           this.rendersystem.cssrenderer.render(this.scene, this.camera);
@@ -639,15 +657,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
       this.rendersystem.renderer.setSize(scaledwidth, scaledheight);  
+      this.composer.setSize(scaledwidth, scaledheight);  
+      this.vreffect.setSize(scaledwidth, scaledheight);  
       if (this.rendersystem.cssrenderer) {
         this.rendersystem.cssrenderer.setSize(width, height);  
       }
-      this.composer.setSize(scaledwidth, scaledheight);
+      //this.composer.setSize(scaledwidth, scaledheight);
       if (this.pickingcomposer) {
         this.pickingcomposer.setSize(scaledwidth, scaledheight);
-      }
-      if (this.effects['FXAA']) {
-        this.effects['FXAA'].uniforms[ 'resolution' ].value.set( 1 / scaledwidth, 1 / scaledheight);
       }
       if (this.effects['SSAO']) {
         this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
@@ -943,24 +960,39 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           append: displaypanel,
           events: { toggle: elation.bind(this.client, this.client.toggleFullscreen) }
         });
-/*
         this.view.scale = 100;
         var scale = elation.ui.slider({
           append: displaypanel,
+          classname: 'engine_render_scale',
           min: 1,
           max: 200,
           snap: 1,
-          handles: [
-            {
-              name: 'handle_one_scale',
-              value: this.view.scale,
-              labelprefix: 'View scale:',
-              bindvar: [this.view, 'scale']
-            }
-          ],
+          label: 'View scale: ',
+          handle: {
+            name: 'handle_one_scale',
+            value: this.view.scale,
+            labelprefix: 'View scale:',
+            bindvar: [this.view, 'scale']
+          },
           events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
         });
-*/
+
+        // FIXME - need a better way of getting the filter passes
+        var bloomfilter = this.view.composer.passes[2];
+        var bloom = elation.ui.slider({
+          append: displaypanel,
+          classname: 'engine_render_bloom',
+          min: 0,
+          max: 2,
+          snap: 0.1,
+          label: 'Bloom: ',
+          handle: {
+            name: 'handle_one_bloom',
+            value: bloomfilter.copyUniforms.opacity.value,
+            bindvar: [bloomfilter.copyUniforms.opacity, 'value']
+          },
+          events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
+        });
 
       // Capture Settings
       var capturelabel = elation.ui.labeldivider({
@@ -1193,8 +1225,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
 
       this.scene.updateMatrixWorld();
-      this.view.camera.updateMatrixWorld();
-      this.raycaster.setFromCamera(this.mousevec, this.view.camera);
+      this.view.actualcamera.updateMatrixWorld();
+      this.raycaster.setFromCamera(this.mousevec, this.view.actualcamera);
 /*
       if (!this.rayviz) {
         this.rayviz = new THREE.ArrowHelper(this.raycaster.ray.direction.clone(), this.raycaster.ray.origin.clone(), 100);
