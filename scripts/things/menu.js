@@ -169,7 +169,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     this.createChildren = function() {
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
       var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
-      this.label = this.spawn('label', null, {
+      this.label = this.spawn('label', this.id + '_label', {
         text: this.properties.text, 
         position: [0,0,this.properties.size/2],
         thickness: .01, 
