@@ -238,9 +238,15 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
 
           if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
           if (this.controlstate.crouch) {
-            this.camera.properties.position.y = this.properties.height * .4 - this.properties.fatness;
+            if (this.flying) {
+              this.moveVector.y -= 1;
+            } else {
+              this.camera.properties.position.y = this.properties.height * .4 - this.properties.fatness;
+            }
           } else {
-            this.camera.properties.position.y = this.properties.height * .8 - this.properties.fatness;
+            if (!this.flying) {
+              this.camera.properties.position.y = this.properties.height * .8 - this.properties.fatness;
+            }
           }
 
           if (this.moveForce) {
