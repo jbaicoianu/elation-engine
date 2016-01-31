@@ -99,6 +99,15 @@ THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onErr
     isURLAbsolute: function(src) {
       return (src[0] == '/' && src[1] != '/');
     },
+    isURLLocal: function(src) {
+      if (src.match(/^https?:/i)) {
+        return (src.indexOf(self.location.origin) == 0);
+      }
+      return (
+        (src[0] == '/' && src[1] != '/') ||
+        (src[0] != '/')
+      );
+    },
     getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
       if (!baseurl) baseurl = this.baseurl;
@@ -142,7 +151,7 @@ THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onErr
       //console.log('load this image!', this);
       if (this.src) {
         var url = this.getFullURL();
-        if (elation.engine.assets.corsproxy && !this.isURLAbsolute(this.src)) {
+        if (elation.engine.assets.corsproxy && !this.isURLLocal(url)) {
           url = elation.engine.assets.corsproxy + url;
         }
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
@@ -173,7 +182,6 @@ THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onErr
       this._texture.needsUpdate = true;
       this._texture.generateMipMaps = false;
       elation.events.fire({type: 'asset_error', element: this._texture});
-console.log('fired', this._texture);
     },
     getAsset: function() {
       if (!this._texture) {
@@ -204,7 +212,7 @@ console.log('fired', this._texture);
     texture: false,
     load: function() {
       var url = this.getFullURL(this.src);
-      if (elation.engine.assets.corsproxy && !this.isURLAbsolute(this.src)) {
+      if (elation.engine.assets.corsproxy && !this.isURLLocal(this.src)) {
         url = elation.engine.assets.corsproxy + url;
       }
       var video = document.createElement('video');
