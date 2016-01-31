@@ -515,6 +515,9 @@ elation.component.add("engine.things.generic", function() {
       if (this.colliders && thing.colliders) {
         this.colliders.remove(thing.colliders);
       }
+      if (thing.colliderhelper) {
+        this.engine.systems.world.scene['colliders'].remove(thing.colliderhelper);
+      }
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
     } else {
@@ -550,7 +553,7 @@ elation.component.add("engine.things.generic", function() {
       //this.engine.systems.physics.add(this.objects['dynamics']);
 
       if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
-        this.updateColliderFromGeometry();
+        setTimeout(elation.bind(this, this.updateColliderFromGeometry), 0);
       }
 
       elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
@@ -612,13 +615,18 @@ elation.component.add("engine.things.generic", function() {
       }
       if (this.collidermesh) {
         this.colliders.remove(this.collidermesh);
+        this.engine.systems.world.scene['colliders'].remove(this.colliderhelper);
         this.collidermesh = false;
       }
       if (collidergeom) {
-        this.collidermesh = new THREE.Mesh(collidergeom, new THREE.MeshLambertMaterial({color: 0x009900, opacity: .5, transparent: true}));
+        var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
+
+        this.collidermesh = new THREE.Mesh(collidergeom, collidermat);
         this.collidermesh.userData.thing = this;
         this.colliders.add(this.collidermesh);
-
+        this.collidermesh.updateMatrixWorld();
+        this.colliderhelper = new THREE.EdgesHelper(this.collidermesh, 0xff0000);
+        this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
       }
   }
   this.physics_collide = function(ev) {
@@ -900,10 +908,13 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
       //meshes[i].bindScale(this.properties.scale);
-      //meshes[i].material = new THREE.MeshBasicMaterial({color: 0xff0000})
       meshes[i].userData.thing = this;
       meshes[i].updateMatrixWorld();
       this.colliders.add(meshes[i]);
+      meshes[i].material = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
+      this.colliderhelper = new THREE.EdgesHelper(meshes[i], 0x00ff00);
+      this.colliders.add(this.colliderhelper);
+      this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
       meshes[i].updateMatrixWorld();
     }
     if (this.objects.dynamics) {
