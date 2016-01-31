@@ -338,6 +338,7 @@ elation.require([
           pass.uniforms[ 'cameraFar' ].value = this.actualcamera.far;
           //pass.clear = true;
       }
+      if (pass) this.effects[name] = pass;
       return pass;
     }
     this.setRenderMode = function(mode) {
@@ -425,16 +426,22 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.actualcamera.fov = this.camera.fov;
             this.actualcamera.near = this.camera.near;
             this.actualcamera.far = this.camera.far;
+            this.actualcamera.aspect = this.camera.aspect;
 
             this.actualcamera.updateProjectionMatrix();
           }
-          //this.actualcamera.aspect = this.camera.aspect;
         }
         if (this.skycamera) {
           // Sky camera needs to use our camera's world rotation, and nothing else
           this.camera.matrixWorld.decompose( _position, _quaternion, _scale );
-          this.actualcamera.fov = this.camera.fov;
+          
           this.skycamera.quaternion.copy(_quaternion);
+
+          if (this.skycamera.fov != this.camera.fov || this.skycamera.aspect != this.camera.aspect) {
+            this.skycamera.fov = this.camera.fov;
+            this.skycamera.aspect = this.camera.aspect;
+            this.skycamera.updateProjectionMatrix();
+          }
         }
       }
     })();
@@ -520,6 +527,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       this.camera = camera;
       this.setscene(this.getscene(camera));
+      this.updateCameras();
+      this.setrendersize(this.size[0], this.size[1]);
   /*
       if (this.composer) {
         this.composer.passes[0].camera = this.camera;
@@ -658,8 +667,12 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
       this.rendersystem.renderer.setSize(scaledwidth, scaledheight);  
-      this.composer.setSize(scaledwidth, scaledheight);  
-      this.vreffect.setSize(scaledwidth, scaledheight);  
+      if (this.composer) {
+        this.composer.setSize(scaledwidth, scaledheight);  
+      }
+      if (this.vreffect) {
+        this.vreffect.setSize(scaledwidth, scaledheight);  
+      }
       if (this.rendersystem.cssrenderer) {
         this.rendersystem.cssrenderer.setSize(width, height);  
       }
@@ -978,8 +991,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
         });
 
-        // FIXME - need a better way of getting the filter passes
-        var bloomfilter = this.view.composer.passes[2];
+        var bloomfilter = this.view.effects['bloom']
         var bloom = elation.ui.slider({
           append: displaypanel,
           classname: 'engine_render_bloom',
@@ -1242,11 +1254,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       
       var intersects = this.raycaster.intersectObjects(this.scene.children, true);
       var hit = false;
-      if (intersects.length > 0) {
-        hit = intersects[0];
-        this.lasthit = hit; // FIXME - hack for demo
+      while (intersects.length > 0) {
+        hit = intersects.shift();
+        if (!(hit.object instanceof THREE.EdgesHelper)) {
+          this.lasthit = hit; // FIXME - hack for demo
+          var foo = this.firePickingEvents(hit, x, y);
+          break;
+        }
       }
-      var foo = this.firePickingEvents(hit, x, y);
     }
     this.firePickingEvents = function(hit, x, y) {
       var pickedthing = false, oldpickedthing = false;
