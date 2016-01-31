@@ -110,10 +110,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       'keyboard_f1'
     ];
 
+    this.initialized = false;
 
     this.system_attach = function(ev) {
       console.log('INIT: controls');
-      this.initcontrols();
       if (this.loadonstart) {
         for (var k in this.loadonstart) {
           this.addContext(k, this.loadonstart[k]);
@@ -121,6 +121,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
     }
     this.engine_frame = function(ev) {
+      if (!this.initialized) {
+        this.initcontrols();
+      }
       //console.log("FRAME: controls");
       this.update(ev.delta);
     }
@@ -138,6 +141,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       if (args) {
         this.addContexts(args);
       }
+      this.initialized = true;
     }
     this.addCommands = function(context, commands) {
       this.contexts[context] = commands;
