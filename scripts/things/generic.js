@@ -963,6 +963,7 @@ elation.component.add("engine.things.generic", function() {
       //meshes[i].bindScale(this.properties.scale);
       meshes[i].userData.thing = this;
       meshes[i].updateMatrixWorld();
+      meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
       this.colliders.add(meshes[i]);
       meshes[i].material = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
       this.colliderhelper = new THREE.EdgesHelper(meshes[i], 0x00ff00);
