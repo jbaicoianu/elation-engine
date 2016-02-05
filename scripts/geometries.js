@@ -65,6 +65,58 @@ elation.require([], function() {
           }
         }
         return geom;
+      },
+      'sphere': function(params) {
+        var radius = params.radius,
+            widthSegments = params.heightSegments || 8,
+            heightSegments = params.widthSegments || 6,
+            phiStart = params.phiStart || 0,
+            phiLength = params.phiLength || Math.PI * 2,
+            thetaStart = params.thetaStart || 0,
+            thetaLength = params.thetaLength || Math.PI;
+        var geo = new THREE.SphereBufferGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
+        return geo;
+      },
+      'box': function(params) {
+        var size = params.size || new THREE.Vector3(1,1,1),
+            offset = params.offset;
+
+        var geo = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
+        
+        if (offset) {
+          geo.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
+        }
+        return geo;
+      },
+      'cylinder': function(params) {
+        var radius = params.radius,
+            height = params.height,
+            radialSegments = params.radialSegments || 8,
+            heightSegments = params.heightSegments || 1;
+        return new THREE.CylinderGeometry(radius, radius, height, radialSegments, heightSegments);
+      },
+      'capsule': function(params) {
+        var capsulegeo = new THREE.Geometry();
+        var radius = params.radius,
+            length = params.length,
+            radialSegments = params.radialSegments || 8,
+            heightSegments = params.heightSegments || 1,
+            offset = params.offset || false;
+
+        var cylgeo = new THREE.CylinderGeometry(radius, radius, length, radialSegments, heightSegments, true);
+        var cap = new THREE.SphereGeometry(radius, radialSegments, radialSegments/2, 0, Math.PI*2, 0, Math.PI/2);
+        var mat4 = new THREE.Matrix4();
+        mat4.makeTranslation(0, length / 2, 0);
+        capsulegeo.merge(cylgeo);
+        capsulegeo.merge(cap, mat4);
+        mat4.makeRotationX(Math.PI).setPosition(new THREE.Vector3(0, -length / 2, 0));
+        capsulegeo.merge(cap, mat4);
+
+        if (offset) {
+          capsulegeo.applyMatrix(mat4.makeTranslation(offset.x, offset.y, offset.z));
+        }
+
+        return capsulegeo;
       }
     };
     this.meshes = {};
