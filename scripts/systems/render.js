@@ -1254,13 +1254,17 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       
       var intersects = this.raycaster.intersectObjects(this.scene.children, true);
       var hit = false;
+      var fired = false;
       while (intersects.length > 0) {
         hit = intersects.shift();
         if (!(hit.object instanceof THREE.EdgesHelper)) {
           this.lasthit = hit; // FIXME - hack for demo
-          var foo = this.firePickingEvents(hit, x, y);
+          fired = this.firePickingEvents(hit, x, y);
           break;
         }
+      }
+      if (!fired) {
+          this.firePickingEvents();
       }
     }
     this.firePickingEvents = function(hit, x, y) {
@@ -1288,6 +1292,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           this.pickingobject = false;
         }
       }
+      return true;
     }
     this.getPickingData = function(obj) {
       return this.lasthit;
