@@ -575,59 +575,111 @@ elation.component.add("engine.things.generic", function() {
   this.updateColliderFromGeometry = function(geom) {
       if (!geom) geom = this.objects['3d'].geometry;
       var collidergeom = false;
-      // Create appropriate collider for the geometry associated with this thing
+      // Determine appropriate collider for the geometry associated with this thing
       var dyn = this.objects['dynamics'];
       if (geom && dyn) {
         if (geom instanceof THREE.SphereGeometry ||
             geom instanceof THREE.SphereBufferGeometry) {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
-          dyn.setCollider('sphere', {radius: geom.boundingSphere.radius});
-          collidergeom = new THREE.SphereBufferGeometry(geom.boundingSphere.radius, 16, 8);
+          this.setCollider('sphere', {radius: geom.boundingSphere.radius});
         } else if (geom instanceof THREE.PlaneGeometry || geom instanceof THREE.PlaneBufferGeometry) {
-          // FIXME - this only works on non-deformed planes, and right now only at the origin
-          var pnorm = new THREE.Vector3(0,1,0);
-          var poffset = 0; // FIXME - need to calculate real offset, given world position and plane normal
-          if (geom.faces) {
-             pnorm = this.localToWorld(pnorm.copy(geom.faces[0].normal)); 
-          } else if (geom.normals) {
-             pnorm = this.localToWorld(pnorm.copy(geom.normals[0])); 
-          }
           if (!geom.boundingBox) geom.computeBoundingBox();
           var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
-          dyn.setCollider('box', geom.boundingBox);
-          collidergeom = new THREE.BoxGeometry(size.x, 1, size.z, 1, 1);
+
+          // Ensure minimum size
+          if (size.x < 1e-6) size.x = .25;
+          if (size.y < 1e-6) size.y = .25;
+          if (size.z < 1e-6) size.z = .25;
+
+          this.setCollider('box', geom.boundingBox);
         } else if (geom instanceof THREE.CylinderGeometry) {
           if (geom.radiusTop == geom.radiusBottom) {
-            dyn.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
-            collidergeom = new THREE.CylinderGeometry(geom.radiusTop, geom.radiusBottom, geom.height, 8, 1);
+            this.setCollider('cylinder', {height: geom.height, radius: geom.radiusTop});
           } else {
             console.log('FIXME - cylinder collider only supports uniform cylinders for now');
           }
-        } else {
+        } else if (!dyn.collider) {
           if (!geom.boundingBox) geom.computeBoundingBox();
-          dyn.setCollider('box', geom.boundingBox);
-          var scale = this.properties.scale;
-          var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
-          var offset = new THREE.Vector3().addVectors(geom.boundingBox.max, geom.boundingBox.min).multiplyScalar(.5);
-          collidergeom = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
-          collidergeom.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
+          this.setCollider('box', geom.boundingBox);
         }
       }
+  }
+  this.setCollider = function(type, args, rigidbody) {
+    if (!rigidbody) rigidbody = this.objects['dynamics'];
+    if (this.properties.collidable) {
+      rigidbody.setCollider(type, args);
+    }
+    if (this.properties.collidable || this.properties.pickable) {
+      var collidergeom = false;
+      if (type == 'sphere') {
+        collidergeom = elation.engine.geometries.generate('sphere', { 
+          radius: args.radius
+        });
+      } else if (type == 'box') {
+        var size = new THREE.Vector3().subVectors(args.max, args.min);
+        var offset = new THREE.Vector3().addVectors(args.max, args.min).multiplyScalar(.5);
+        collidergeom = elation.engine.geometries.generate('box', { 
+          size: size,
+          offset: offset
+        });
+      } else if (type == 'cylinder') {
+        collidergeom = elation.engine.geometries.generate('cylinder', {
+          radius: args.radius,
+          height: args.height,
+          radialSegments: 12
+        });
+      } else if (type == 'capsule') {
+        collidergeom = elation.engine.geometries.generate('capsule', {
+          radius: args.radius,
+          length: args.length,
+          radialSegments: 8,
+          offset: args.offset,
+        });
+      }
+      /*
       if (this.collidermesh) {
         this.colliders.remove(this.collidermesh);
         this.engine.systems.world.scene['colliders'].remove(this.colliderhelper);
         this.collidermesh = false;
       }
+      */
       if (collidergeom) {
         var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
 
-        this.collidermesh = new THREE.Mesh(collidergeom, collidermat);
-        this.collidermesh.userData.thing = this;
-        this.colliders.add(this.collidermesh);
-        this.collidermesh.updateMatrixWorld();
-        this.colliderhelper = new THREE.EdgesHelper(this.collidermesh, 0xff0000);
-        this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
+        var collidermesh = new THREE.Mesh(collidergeom, collidermat);
+        if (rigidbody.position !== this.properties.position) {
+          collidermesh.bindPosition(rigidbody.position);
+          collidermesh.bindQuaternion(rigidbody.orientation);
+          //collidermesh.bindScale(this.properties.scale);
+        }
+        collidermesh.userData.thing = this;
+        this.colliders.add(collidermesh);
+        collidermesh.updateMatrixWorld();
+        var colliderhelper = new THREE.EdgesHelper(collidermesh, 0x999900);
+        this.engine.systems.world.scene['colliders'].add(colliderhelper);
+
+        // TODO - integrate this with the physics debug system
+        /*
+        elation.events.add(rigidbody, 'physics_collide', function() { 
+          collidermat.color.setHex(0x990000); 
+          colliderhelper.material.color.setHex(0x990000); 
+          setTimeout(function() { 
+            collidermat.color.setHex(0x999900); 
+            colliderhelper.material.color.setHex(0x999900); 
+          }, 100); 
+        });
+        elation.events.add(this, 'mouseover,mouseout', elation.bind(this, function(ev) { 
+          var color = 0xffff00;
+          if (ev.type == 'mouseover' && ev.data.object === collidermesh) {
+            color = 0x00ff00;
+          }
+          collidermat.color.setHex(0xffff00); 
+          colliderhelper.material.color.setHex(color); 
+          this.refresh();
+        }));
+        */
       }
+    }
   }
   this.physics_collide = function(ev) {
     var obj1 = ev.data.bodies[0].object, obj2 = ev.data.bodies[1].object;
@@ -862,13 +914,13 @@ elation.component.add("engine.things.generic", function() {
       rigid.position.z *= this.properties.scale.z;
 
       if (shape == 'box') {
-        rigid.setCollider('box', {min: min, max: max});
+        this.setCollider('box', {min: min, max: max}, rigid);
       } else if (shape == 'sphere') {
-        rigid.setCollider('sphere', {radius: Math.max(max.x, max.y, max.z)});
+        this.setCollider('sphere', {radius: Math.max(max.x, max.y, max.z)}, rigid);
       } else if (shape == 'cylinder') {
         var radius = Math.max(max.x - min.x, max.z - min.z) / 2,
             height = max.y - min.y;
-        rigid.setCollider('cylinder', {radius: radius, height: height});
+        this.setCollider('cylinder', {radius: radius, height: height}, rigid);
 
         // FIXME - rotate everything by 90 degrees on x axis to match default orientation
         var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI/2, 0));
@@ -905,6 +957,7 @@ elation.component.add("engine.things.generic", function() {
         });
       }
       meshes[i].parent.remove(meshes[i]);
+/*
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
       //meshes[i].bindScale(this.properties.scale);
@@ -916,6 +969,7 @@ elation.component.add("engine.things.generic", function() {
       this.colliders.add(this.colliderhelper);
       this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
       meshes[i].updateMatrixWorld();
+*/
     }
     if (this.objects.dynamics) {
       this.objects.dynamics.add(root);
@@ -928,7 +982,7 @@ elation.component.add("engine.things.generic", function() {
     this.objects['3d'].add(new3d);
     */
     //this.colliders.bindScale(this.properties.scale);
-    this.colliders.updateMatrixWorld();
+    //this.colliders.updateMatrixWorld();
     return this.colliders;
   }
   this.extractTextures = function(object, useloadhandler) {
