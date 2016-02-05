@@ -13,6 +13,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
       var assetroot = new elation.engine.assets.pack({name: "asdf", baseurl: baseurl, json: json});
     },
     get: function(asset) {
+if (!ENV_IS_BROWSER) return;
       var type = asset.assettype || 'base';
       var assetclass = elation.engine.assets[type] || elation.engine.assets.unknown;
       var assetobj = new assetclass(asset);
@@ -23,6 +24,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three'], function(el
       return assetobj;
     },
     find: function(type, name, raw) {
+if (!ENV_IS_BROWSER) return;
       var asset;
       if (elation.engine.assets.types[type]) {
         asset = elation.engine.assets.types[type][name];
@@ -154,6 +156,7 @@ THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onErr
         if (elation.engine.assets.corsproxy && !this.isURLLocal(url)) {
           url = elation.engine.assets.corsproxy + url;
         }
+console.log(url, this.src, this.isURLAbsolute(this.src));
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
       }
     },

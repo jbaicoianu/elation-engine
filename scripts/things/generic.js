@@ -356,7 +356,7 @@ elation.component.add("engine.things.generic", function() {
       }
     }
     if (!this.properties.visible) {
-      this.objects['3d'].visible = false;
+      this.hide();
     }
     this.refresh();
   }
@@ -538,6 +538,12 @@ elation.component.add("engine.things.generic", function() {
     }
     return false;
   }
+  this.show = function() {
+    this.objects['3d'].visible = true;
+  }
+  this.hide = function() {
+    this.objects['3d'].visible = false;
+  }
   this.createDynamics = function() {
     if (!this.objects['dynamics'] && this.engine.systems.physics) {
       this.objects['dynamics'] = new elation.physics.rigidbody({
@@ -552,7 +558,7 @@ elation.component.add("engine.things.generic", function() {
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
 
-      if (this.properties.collidable && this.objects['3d'] && this.objects['3d'].geometry) {
+      if ((this.properties.collidable || this.properties.pickable) && this.objects['3d'] && this.objects['3d'].geometry) {
         setTimeout(elation.bind(this, this.updateColliderFromGeometry), 0);
       }
 
@@ -861,7 +867,7 @@ elation.component.add("engine.things.generic", function() {
     //this.updateCollisionSize();
   }
   this.extractColliders = function(obj, useParentPosition) {
-    if (!this.properties.collidable) return;
+    if (!(this.properties.collidable || this.properties.pickable)) return;
     var meshes = [];
     if (!obj) obj = this.objects['3d'];
     var re = new RegExp(/^[_\*](collider|trigger)-(.*)$/);

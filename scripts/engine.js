@@ -17,6 +17,7 @@ if (ENV_IS_BROWSER) {
     "share.targets.dropbox",
     "share.targets.googledrive",
     "share.targets.youtube",
+    "share.targets.file",
   ]);
 } else if (ENV_IS_NODE) {
   deps.push("engine.external.three.nodethree");
@@ -431,6 +432,7 @@ elation.require(deps, function() {
       this.sharepicker.addShareTarget(elation.share.targets.dropbox({clientid: 'g5m5xsgqaqmf7jc'}));
       this.sharepicker.addShareTarget(elation.share.targets.googledrive({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
       this.sharepicker.addShareTarget(elation.share.targets.youtube({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
+      this.sharepicker.addShareTarget(elation.share.targets.file({}));
     }
     this.shareScreenshot = function(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
@@ -468,8 +470,8 @@ elation.require(deps, function() {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
-        recorder.captureGIF(512, 512, 75, 100).then(elation.bind(this, function(data) {
-          var img = data.image;
+        recorder.captureGIF(1920, 1080, 1, 200).then(elation.bind(this, function(data) {
+          var img = data.file;
           this.sharepicker.share({
             name: this.getScreenshotFilename('gif'), 
             type: 'image/gif',
@@ -486,8 +488,9 @@ elation.require(deps, function() {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
-        recorder.captureMP4(1280, 720, 25, 20).then(elation.bind(this, function(data) {
-          var img = data.image;
+        recorder.captureMP4(1280, 720, 25, 30).then(elation.bind(this, function(data) {
+console.log('recorder finished', data);
+          var img = data.file;
           this.sharepicker.share({
             name: this.getScreenshotFilename('mp4'), 
             type: 'video/mp4',

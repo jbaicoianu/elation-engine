@@ -13,7 +13,7 @@ elation.require([
   "engine.external.three.render.CopyShader",
   "engine.external.three.render.RecordingPass",
 
-  //"engine.external.threecap.threecap",
+  "engine.external.threecap.threecap",
 
   //"engine.external.gifjs.gif",
   //"engine.external.ffmpeg.ffmpeg",
@@ -189,7 +189,7 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode]);
-      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa'/*, 'recording'*/]);
+      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
 
