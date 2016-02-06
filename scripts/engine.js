@@ -233,7 +233,7 @@ elation.require(deps, function() {
           "physics",
           "world",
           "ai",
-          //"admin", 
+          "admin", 
           "render", 
           "sound", 
           "controls"
@@ -303,7 +303,7 @@ elation.require(deps, function() {
     }
     this.getPlayer = function() {
       if (!this.player) {
-        var players = this.engine.systems.world.getThingsByType('player');
+        var players = this.engine.systems.world.getThingsByTag('player');
         if (players && players.length > 0) {
           this.player = players[0];
         }
@@ -315,7 +315,7 @@ elation.require(deps, function() {
       if (player){
         if (!this.menu) {
           this.menu = player.camera.spawn('menu', null, { 
-            position: [0,0,-2],
+            position: [0,0,-0.2],
             items: [
               { 
                 text: 'Intro',
@@ -342,7 +342,7 @@ elation.require(deps, function() {
   */
             ],
             labelcfg: {
-              size: .1,
+              size: .01,
               lineheight: 1.5,
               color: 0x999999,
               hovercolor: 0x003300,
@@ -489,7 +489,6 @@ elation.require(deps, function() {
         }
         var recorder = this.view.recorder;
         recorder.captureMP4(1280, 720, 25, 30).then(elation.bind(this, function(data) {
-console.log('recorder finished', data);
           var img = data.file;
           this.sharepicker.share({
             name: this.getScreenshotFilename('mp4'), 
