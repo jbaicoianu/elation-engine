@@ -182,8 +182,8 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         opacity: 0.75,
         depthTest: false,
         'bevel.enabled': true,
-        'bevel.thickness': .004,
-        'bevel.size': .004,
+        'bevel.thickness': .0004,
+        'bevel.size': .0004,
         collidable: true
       });
       this.label.objects['3d'].renderOrder = 6;
