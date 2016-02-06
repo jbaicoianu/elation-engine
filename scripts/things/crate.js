@@ -27,7 +27,7 @@ elation.require(['engine.things.generic'], function() {
       }
       //this.objects.dynamics.addForce('friction', .5);
       this.objects.dynamics.setDamping(0.9, 0.9);
-      this.objects.dynamics.restitution = .01;
+      this.objects.dynamics.restitution = .9;
       this.objects['3d'].geometry.computeBoundingBox();
       this.objects['3d'].geometry.computeBoundingSphere();
   /*
