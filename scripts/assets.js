@@ -50,7 +50,7 @@ if (!ENV_IS_BROWSER) return;
         elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
       }
     },
-    loaderpool: new elation.utils.workerpool({src: '/scripts/engine/asset-worker.js', num: 4})
+    loaderpool: (ENV_IS_BROWSER ? new elation.utils.workerpool({src: '/scripts/engine/asset-worker.js', num: 4}) : {})
   });
 
 THREE.CORSProxyLoader = function(corsproxy, manager) {
