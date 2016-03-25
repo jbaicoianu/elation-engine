@@ -96,7 +96,7 @@ elation.require([
     load: function(job) {
       var corsproxy = elation.engine.assets.corsproxy || '';
       var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
-      var fullurl = corsproxy + (job.data.src.match(/^https?:/) ? job.data.src :  'http://bai.dev.supcrit.com/' + job.data.src);
+      var fullurl = (job.data.src.match(/^(https?:)?\/\//) ? corsproxy + job.data.src :  job.data.src);
       elation.net.get(fullurl, null, {
         responseType: 'arraybuffer',
         callback: elation.bind(this, this.onload, job),
