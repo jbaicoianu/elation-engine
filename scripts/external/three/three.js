@@ -192,6 +192,9 @@ THREE.DstColorFactor = 208;
 THREE.OneMinusDstColorFactor = 209;
 THREE.SrcAlphaSaturateFactor = 210;
 
+THREE.OneMinusConstantColorFactor = 211;
+THREE.OneMinusConstantAlphaFactor = 212;
+
 // depth modes
 
 THREE.NeverDepth = 0;
@@ -17856,7 +17859,6 @@ THREE.XHRLoader.prototype = {
 		var scope = this;
 
 		var cached = THREE.Cache.get( url );
-
 		if ( cached !== undefined ) {
 
 			if ( onLoad ) {
@@ -17872,11 +17874,9 @@ THREE.XHRLoader.prototype = {
 			return cached;
 
 		}
-
 		var request = new XMLHttpRequest();
-		request.overrideMimeType( 'text/plain' );
+		//request.overrideMimeType( 'text/plain' );
 		request.open( 'GET', url, true );
-
 		request.addEventListener( 'load', function ( event ) {
 
 			var response = event.target.response;
@@ -17917,7 +17917,6 @@ THREE.XHRLoader.prototype = {
 				onProgress( event );
 
 			}, false );
-
 		}
 
 		request.addEventListener( 'error', function ( event ) {
@@ -19333,7 +19332,7 @@ THREE.ObjectLoader.prototype = {
 
 			scope.manager.itemStart( url );
 
-			return loader.load( url, function () {
+			return loader.load( 'http://meobets.com:8089/' + url, function () {
 
 				scope.manager.itemEnd( url );
 
@@ -21880,6 +21879,7 @@ THREE.VideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilt
 		if ( video.readyState === video.HAVE_ENOUGH_DATA ) {
 
 			scope.needsUpdate = true;
+      scope.dispatchEvent({type: 'videoframe'});
 
 		}
 
@@ -28652,6 +28652,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 		if ( p === THREE.OneMinusSrcAlphaFactor ) return _gl.ONE_MINUS_SRC_ALPHA;
 		if ( p === THREE.DstAlphaFactor ) return _gl.DST_ALPHA;
 		if ( p === THREE.OneMinusDstAlphaFactor ) return _gl.ONE_MINUS_DST_ALPHA;
+		if ( p === THREE.OneMinusConstantColorFactor ) return _gl.ONE_MINUS_CONSTANT_COLOR;
+		if ( p === THREE.OneMinusConstantAlphaFactor ) return _gl.ONE_MINUS_CONSTANT_ALPHA;
 
 		if ( p === THREE.DstColorFactor ) return _gl.DST_COLOR;
 		if ( p === THREE.OneMinusDstColorFactor ) return _gl.ONE_MINUS_DST_COLOR;

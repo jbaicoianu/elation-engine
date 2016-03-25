@@ -112,13 +112,17 @@ function THREEcap(args) {
     inWorker: false,
     scriptbase: '',
     canvas: false,
+    composer: false,
     renderpass: false
   };
 
   // Update settings with passed-in values
   this.settings = this.getSettings(args);
 
-  console.log('new THREEcap instance', this.settings);
+
+  if (this.settings.composer) {
+    this.attachComposer(this.settings.composer);
+  }
 }
 
 THREEcap.prototype.getSettings = function(args) {
@@ -150,6 +154,22 @@ THREEcap.prototype.record = function(settings) {
     video.on('finished', function(d) { console.log('FINISHED', video); resolve(video); });
   });
 }
+THREEcap.prototype.attachComposer = function(composer) {
+ console.log('do it!', composer, this);
+  var capturepass = new THREEcapRenderPass(this.settings.scriptbase);
+
+  this.settings.renderpass = capturepass;
+
+  //composer.passes.forEach(function(pass) { if (pass.renderToScreen) pass.renderToScreen = false; });
+  for (var i = composer.passes.length-1; i >= 0; i--) {
+    if (composer.passes[i].renderToScreen) {
+      composer.passes[i].renderToScreen = false;
+      break;
+    }
+  }
+  composer.addPass( capturepass );
+  capturepass.renderToScreen = true;
+}
 
 THREEcap.prototype.play = function(url) {
   
@@ -160,7 +180,7 @@ THREEcap.prototype.play = function(url) {
  */
 
 
-function THREEcapRenderPass() {
+function THREEcapRenderPass(scriptbase) {
 
 	var vertexShader = [
 		'varying vec2 vUv;',
@@ -217,7 +237,7 @@ function THREEcapRenderPass() {
 	this.quad = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), null );
 	this.scene.add( this.quad );
 
-	this.threecap = new THREEcap({useWorker: true, quality: 'veryfast', fps: 30, scriptbase: '/scripts/engine/external/threecap/', renderpass: this});
+	this.threecap = new THREEcap({useWorker: true, quality: 'veryfast', fps: 30, scriptbase: scriptbase, renderpass: this});
 };
 
 THREEcapRenderPass.prototype = {
@@ -306,35 +326,21 @@ THREEcapRenderPass.prototype = {
 	captureVideo: function(width, height, fps, time, format) {
 		var delay = 1000 / fps;
 		var numframes = time * fps;
-    var threecap = this.threecap;
 		return new Promise(function(resolve, reject) {
 			var framepromises = [];
+      var threecap = this.threecap;
       //var size = this.threecap.getScaledSize([this.lastframe.width, this.lastframe.height], [width, height]);
-      //threecap.setSize(width, height);
+      //threecap.setSize(size[0], size[1]);
 
-console.log(this);
-/*
-      var promises = this.threecap.scheduleFrames(width[0], width[1], fps, time);
-      var startframe = Math.min(10, framepromises.length-1);
-			framepromises[startframe].then(function(f) {
-				var start = performance.now();
-				threecap.on('finished', function(blob) {
-					var end = performance.now();
-					resolve({file: blob, time: end - start});
-				});
-*/
-				threecap.record({
-          //width: f.image.width,
-          //height: f.image.height,
-          width: width,
-          height: height,
-          fps: fps,
-          time: time,
-          quality: 'ultrafast',
-          //srcformat: 'png'
-          format: format
-        }).then(resolve, reject);
-//			});
+      threecap.record({
+        width: width,
+        height: height,
+        fps: fps,
+        time: time,
+        quality: 'ultrafast',
+        //srcformat: 'png'
+        format: format
+      }).then(resolve, reject);
 		}.bind(this));
 	},
 	encodeImage: function(pixeldata, width, height, format) {
@@ -498,7 +504,6 @@ THREEcapVideo.prototype.releaseFrame = function(frame) {
       type: 'release_frame',
       frame: frame
     };
-console.log('release frame');
     postMessage(msg, [msg.frame.buffer]);
   } else {
     this.framepool.freeFrame(frame);
@@ -555,15 +560,12 @@ THREEcapVideo.prototype.handleWorkerResponse = function(ev) {
       break;
   }
 };
-THREEcapVideo.prototype.device_input_open = function(stream) { console.log('INPUT DEVICE OPENED', stream); };
+THREEcapVideo.prototype.device_input_open = function(stream) { 
+  //console.log('INPUT DEVICE OPENED', stream); 
+};
 THREEcapVideo.prototype.device_input_close = function(stream) { 
-  console.log('INPUT DEVICE CLOSED', stream, this.outputsize); 
-  //this.processResults([ { data: this.outputbuffer.subarray(0, this.outputsize) } ]);
-  //var foo = this.FS.readFile('/output/output.' + this.format);
-  var data = this.outputbuffer.subarray(0, this.outputpos);
- 
-console.log('poopy butt farts', this.outputpos, data);
-  this.processResults([ { data: data } ]);
+  //console.log('INPUT DEVICE CLOSED', stream, this.outputpos); 
+  this.processResults([ { data: this.outputbuffer.subarray(0, this.outputpos) } ]);
 };
 THREEcapVideo.prototype.device_input_read = (function() {
     var currframe = 0,
@@ -613,18 +615,17 @@ THREEcapVideo.prototype.device_input_read = (function() {
 })();
 
 THREEcapVideo.prototype.device_output_open = function(stream) { 
-    console.log('OUTPUT DEVICE OPENED', stream); 
-    this.outputpos = 0;
+    //console.log('OUTPUT DEVICE OPENED', stream); 
     if (!this.outputbuffer) {
         this.blocksize = 1024 * 1024 * 10; // 10mb
         this.blockcount = 1;
-        this.outputbuffer = new Uint8Array(this.blocksize); // 60mb output buffer
-        this.outputsize = 0;
+        this.outputbuffer = new Uint8Array(this.blocksize);
+
+        this.outputpos = 0;
     }
 };
 THREEcapVideo.prototype.device_output_close = function(stream) { 
-    console.log('OUTPUT DEVICE CLOSED', stream); 
-    //console.log(this.outputbuffer, this.outputsize);
+    //console.log('OUTPUT DEVICE CLOSED', stream); 
 };
 THREEcapVideo.prototype.device_output_llseek = function(stream, offset, whence) { 
     //console.log('seek!', offset, whence);
@@ -643,7 +644,7 @@ THREEcapVideo.prototype.device_output_llseek = function(stream, offset, whence) 
     return position; 
 };
 THREEcapVideo.prototype.device_output_read = function(stream, buffer, offset, length, position) { 
-    console.log('OUTPUT READ????', offset, length);
+    //console.log('OUTPUT READ????', offset, length);
 };
 THREEcapVideo.prototype.device_output_write = function(stream, buffer, offset, length, position) { 
     //console.log('output write: ' + length + ' bytes, ' + position + ' position, ' + offset + ' offset')
@@ -701,7 +702,7 @@ THREEcapVideo.prototype.record = function(settings) {
   this.format = format;
   this.canvas = canvas;
 
-  console.log('VIDEO RECORD CALLED', settings, width, height, fps, quality, time);
+  console.log('RECORD CALLED', settings, width, height, fps, quality, time);
   this.expectedframes = fps * time;
 
   if (!this.inWorker) {
@@ -710,7 +711,6 @@ THREEcapVideo.prototype.record = function(settings) {
   
   this.setSize(width, height);
 
-console.log('MAIN', settings);
   if (this.useWorker) {
 //setTimeout(function() {
     this.worker.postMessage({type: 'record', quality: quality, fps: fps, width: width, height: height, time: time, srcformat: srcformat, format: format});
@@ -772,7 +772,6 @@ console.log('MAIN', settings);
       args = args.concat([
         '-c:v', 'gif',
       ]);
-      args[1] = '15';
     } else if (format == 'raw') {
       args = args.concat([
         '-vcodec', 'rawvideo',
@@ -831,13 +830,11 @@ THREEcapVideo.prototype.processResults = function(results) {
     var blob = new Blob([results[0].data], { type: mimetypes[this.format] });
     if (this.inWorker) {
       var msg = {type: 'record_results', data: blob};
-console.log('process the results', results);
       postMessage(msg);
       //this.framepool.cleanup();
       this.compressedpool.cleanup();
     } else {
       this.file = blob;
-console.log('yeah done!', blob, blob.size);
       if (this.events.finished) {
         this.events.finished(blob);
       }
@@ -877,3 +874,186 @@ THREEcapVideo.prototype.saveFile = function(fileName) {
     a.click();
     window.URL.revokeObjectURL(url);
   }
+"use strict";
+/**
+ * THREEcapUI - simple video capture UI
+ */
+function THREEcapUI(capture) {
+  this.capture = capture;
+  this.settings = {
+    resolution: '352x240',
+    framerate: 25,
+    time: 5,
+    format: 'mp4',
+    filename: this.getTimestampedFilename('threecap'),
+  };
+
+  this.panel = this.createPanel();
+}
+
+THREEcapUI.prototype.createPanel = function() {
+  var panel = document.createElement('div');
+  panel.id = 'recordpanel';
+
+  var h2 = document.createElement('h2');
+  h2.innerHTML = 'THREEcap Settings';
+  panel.appendChild(h2);
+
+  var resolutions = {
+        'canvas': 'canvas', 
+        '240p': '352x240', 
+        '360p': '480x360', 
+        '480p': '858x480', 
+        '720p': '1280x720', 
+        '1080p': '1920x1080', 
+      },
+      framerates = {
+        '1 fps': 1,
+        '2 fps': 2,   
+        '5 fps': 5, 
+        '10 fps': 10, 
+        '15 fps': 15, 
+        '25 fps': 25, 
+        '30 fps': 30, 
+        '45 fps': 45, 
+        '60 fps': 60
+      },
+      times = {
+        '5s': 5,
+        '10s': 10, 
+        '15s': 10,
+        '30s': 30, 
+        '45s': 45, 
+        '1m': 60,
+        '1m30s': 90,
+        '2m': 120, 
+        '3m': 180, 
+        '4m': 240, 
+        '5m': 300
+      },
+      formats = {'mp4': 'mp4', 'gif': 'gif', 'webm': 'webm'};
+
+  var select_resolution = this.createDropdown('Resolution', resolutions, this.settings.resolution);
+  var select_framerate = this.createDropdown('Framerate', framerates, this.settings.framerate);
+  var select_time = this.createDropdown('Time', times, this.settings.time);
+  var select_format = this.createDropdown('Format', formats, this.settings.format);
+
+  var input_filename = this.createInput('Filename', this.settings.filename);
+
+  select_resolution.addEventListener('change', this.updateRecordSetting.bind(this, 'resolution'));
+  select_framerate.addEventListener('change', this.updateRecordSetting.bind(this, 'framerate'));
+  select_time.addEventListener('change', this.updateRecordSetting.bind(this, 'time'));
+  select_format.addEventListener('change', this.updateRecordSetting.bind(this, 'format'));
+  input_filename.addEventListener('change', this.updateRecordSetting.bind(this, 'filename'));
+
+  panel.appendChild(select_resolution);
+  panel.appendChild(select_framerate);
+  panel.appendChild(select_time);
+  panel.appendChild(select_format);
+  panel.appendChild(input_filename);
+
+  var button = document.createElement('button');
+  button.addEventListener('click', this.handleButtonClick.bind(this));
+  button.innerHTML = 'Record';
+  panel.appendChild(button);
+
+  document.body.appendChild(panel);
+  return panel;
+}
+
+THREEcapUI.prototype.createDropdown = function(labeltext, options, selected) {
+  var container = document.createElement('div');
+
+  var label = document.createElement('label');
+  var select = document.createElement('select');
+
+  label.innerHTML = labeltext;
+  label.for = select;
+  container.appendChild(label);
+
+  var optionnames = Object.keys(options);
+  
+  optionnames.forEach(function(o) {
+    var option = document.createElement('option');
+    option.value = options[o];
+    option.innerHTML = o;
+    if (selected && selected == options[o]) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+  container.appendChild(select);
+
+  return container;
+}
+THREEcapUI.prototype.createInput = function(labeltext, value) {
+  var container = document.createElement('div');
+
+  var label = document.createElement('label');
+  var input = document.createElement('input');
+
+  label.innerHTML = labeltext;
+  label.for = input;
+  container.appendChild(label);
+
+  input.value = value;
+  container.appendChild(input);
+
+  return container;
+}
+
+THREEcapUI.prototype.updateRecordSetting = function(setting, ev) {
+  this.settings[setting] = ev.target.value;
+}
+THREEcapUI.prototype.handleButtonClick = function(ev) {
+  console.log('bling', this.settings);
+  var button = ev.target;
+  button.innerHTML = 'Recording...';
+  button.className = 'state_recording';
+  var res = this.settings.resolution.split('x'),
+      fps = parseInt(this.settings.framerate),
+      time = parseInt(this.settings.time),
+      format = this.settings.format,
+      fname = this.settings.filename;
+
+  if (this.settings.resolution == 'canvas') {
+    res = [renderer.domElement.width, renderer.domElement.height];
+  }
+
+  this.capture.record({
+      width: res[0], 
+      height: res[1],
+      fps: fps,
+      format: format,
+      time: time
+    }).then(function(video) { 
+      button.innerHTML = 'Record';
+      button.className = '';
+      this.settings['filename'] = this.getTimestampedFilename('threecap');
+      this.saveFile(fname, video.file);
+    }.bind(this));
+  setTimeout(function() {
+    button.innerHTML = 'Encoding...';
+  }, time * 1000);
+}
+
+THREEcapUI.prototype.getTimestampedFilename = function(prefix) {
+  var d = new Date();
+  var ts = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '_' + d.getHours() + '-' + d.getMinutes() + '-' + d.getSeconds();
+  return prefix + '_' + ts;
+}
+
+THREEcapUI.prototype.saveFile = function(fname, data) {
+  var a = document.createElement('A');
+  a.innerHTML = fname;
+  recordpanel.appendChild(a);
+  var url = window.URL.createObjectURL(data);
+
+  a.href = url;
+  a.download = fname;
+  a.click();
+console.log('click click!', a);
+  //window.URL.revokeObjectURL(url);
+  //document.body.removeChild(a);
+}
+

@@ -1,4 +1,4 @@
-elation.require([], function() {
+elation.require(['engine.things.generic'], function() {
   elation.component.add('engine.things.trigger', function() {
     this.postinit = function() {
       this.defineProperties({

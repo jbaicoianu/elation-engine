@@ -1,4 +1,4 @@
-elation.require(["engine.things.generic"], function() {
+elation.require(["engine.things.generic", "engine.assets"], function() {
 
   elation.engine.assets.get({
     'assettype':'font', 

@@ -5,11 +5,18 @@ var deps = [
   "engine.geometries",
   "engine.things.generic",
   "engine.things.menu",
+  "engine.systems.admin",
+  "engine.systems.ai",
+  "engine.systems.controls",
+  "engine.systems.physics",
+  "engine.systems.render",
+  "engine.systems.sound",
+  "engine.systems.world",
   "utils.math",
   "ui.panel"
 ];
 
-if (ENV_IS_BROWSER) {
+if (true && elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
     "share.picker",
@@ -19,7 +26,7 @@ if (ENV_IS_BROWSER) {
     "share.targets.youtube",
     "share.targets.file",
   ]);
-} else if (ENV_IS_NODE) {
+} else if (false && elation.env.isNode) {
   deps.push("engine.external.three.nodethree");
 }
 
@@ -43,10 +50,10 @@ elation.require(deps, function() {
 
     this.init = function() {
       this.client = elation.engine.client(this.name);
-      this.systems = new elation.engine.systems(this);
+      this.systems = new elation.engine.systemmanager(this);
       // shutdown cleanly if the user leaves the page
       var target = null;
-      if (ENV_IS_BROWSER) target = window
+      if (elation.env.isBrowser) target = window
       elation.events.add(target, "unload", elation.bind(this, this.stop)); 
     }
     this.start = function() {
@@ -99,8 +106,12 @@ elation.require(deps, function() {
         }
       }))();
     this.frame = function(fn) {
-      if (ENV_IS_NODE) var window;
-      this.requestAnimationFrame.call(window, fn);
+      if (elation.env.isNode) var window;
+      if (this.systems.render.views.main.vrdisplay) {
+        this.systems.render.views.main.vrdisplay.requestAnimationFrame(fn);
+      } else {
+        this.requestAnimationFrame.call(window, fn);
+      }
     }
 
     // Convenience functions for querying objects from world
@@ -119,7 +130,7 @@ elation.require(deps, function() {
 
     this.init();
   });
-  elation.extend("engine.systems", function(args) {
+  elation.extend("engine.systemmanager", function(args) {
     this._engine = args;
     this.active = {};
     elation.events.add(this._engine, "engine_stop", elation.bind(this, this.shutdown));
@@ -233,7 +244,7 @@ elation.require(deps, function() {
           "physics",
           "world",
           "ai",
-          "admin", 
+          //"admin", 
           "render", 
           "sound", 
           "controls"
@@ -248,6 +259,18 @@ elation.require(deps, function() {
     }
     // Set up engine parameters before creating.  To be overridden by extending class
     this.initEngine = function() {
+      var hashargs = elation.url();
+       
+      this.enginecfg.systems = [];
+      this.enginecfg.systems.push("controls");
+      this.enginecfg.systems.push("physics");
+      this.enginecfg.systems.push("world");
+      this.enginecfg.systems.push("ai");
+      if (hashargs.admin == 1) {
+        this.enginecfg.systems.push("admin");
+      } 
+      this.enginecfg.systems.push("render");
+      this.enginecfg.systems.push("sound");
     }
     // Instantiate the engine
     this.loadEngine = function() {
@@ -299,7 +322,6 @@ elation.require(deps, function() {
       if (thing.ears) {
         this.engine.systems.sound.setActiveListener(thing.ears);
       }
-
     }
     this.getPlayer = function() {
       if (!this.player) {
@@ -395,8 +417,9 @@ elation.require(deps, function() {
     this.toggleVR = function(ev) {
       var view = this.view;
       if (view && (ev.value == 1 || typeof ev.value == 'undefined')) {
-        var mode = (view.rendermode == 'default' ? 'oculus' : 'default');
-        view.setRenderMode(mode);
+        //var mode = (view.rendermode == 'default' ? 'oculus' : 'default');
+        //view.setRenderMode(mode);
+        view.toggleVR();
       }
     }
     this.calibrateVR = function(ev) {
@@ -488,7 +511,7 @@ elation.require(deps, function() {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
-        recorder.captureMP4(1280, 720, 25, 30).then(elation.bind(this, function(data) {
+        recorder.captureMP4(640, 360, 25, 10).then(elation.bind(this, function(data) {
           var img = data.file;
           this.sharepicker.share({
             name: this.getScreenshotFilename('mp4'), 

@@ -98,7 +98,6 @@ THREE.ColladaLoader = function () {
 						if ( length === 0 ) {
 
 							length = request.getResponseHeader( "Content-Length" );
-
 						}
 
 						progressCallback( { total: length, loaded: request.responseText.length } );
@@ -1144,6 +1143,7 @@ THREE.ColladaLoader = function () {
 							if ( !( instance_material.symbol in double_sided_materials ) ) {
 
 								var _copied_material = material3js.clone();
+console.log('copied material', _copied_material);
 								_copied_material.side = THREE.DoubleSide;
 								double_sided_materials[ instance_material.symbol ] = _copied_material;
 
@@ -1165,7 +1165,7 @@ THREE.ColladaLoader = function () {
 				}
 
 				var mesh;
-				var material = first_material || new THREE.MeshLambertMaterial( { color: 0xdddddd, side: geometry.doubleSided ? THREE.DoubleSide : THREE.FrontSide } );
+				var material = first_material || new THREE.MeshPhongMaterial( { color: 0xdddddd, side: geometry.doubleSided ? THREE.DoubleSide : THREE.FrontSide } );
 				var geom = geometry.mesh.geometry3js;
 
 				if ( num_materials > 1 ) {
@@ -3668,7 +3668,7 @@ THREE.ColladaLoader = function () {
 			'diffuse':'map',
 			'ambient':'lightMap' ,
 			'specular':'specularMap',
-			'emission':'emissionMap',
+			'emission':'emissiveMap',
 			'bump':'bumpMap',
 			'normal':'normalMap'
 			};
@@ -3707,21 +3707,20 @@ THREE.ColladaLoader = function () {
 
 										var texture;
 										var loader = THREE.Loader.Handlers.get( url );
-
 										if ( loader !== null ) {
 
 											texture = loader.load( url );
 
-										} else {
-
-											//texture = new THREE.Texture();
-
-											//loadTextureImage( texture, url );
+										} else if (elation && elation.engine && elation.engine.materials) {
 											// FIXME - hack for Elation texture caching
 											texture = elation.engine.materials.getTexture(url);
+										} else {
+
+											texture = new THREE.Texture();
+
+											loadTextureImage( texture, url );
 
 										}
-
 										texture.wrapS = cot.texOpts.wrapU ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
 										texture.wrapT = cot.texOpts.wrapV ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
 										texture.offset.x = cot.texOpts.offsetU;
@@ -3789,6 +3788,11 @@ THREE.ColladaLoader = function () {
 		props[ 'shading' ] = preferredShading;
 		props[ 'side' ] = this.effect.doubleSided ? THREE.DoubleSide : THREE.FrontSide;
 
+    // FIXME - hack for transparent PNGs
+    if (props.map && props.map.sourceFile && props.map.sourceFile.match(/[^0-9]\.(png|tga)$/)) {
+      props['transparent'] = true;
+    }
+
 		switch ( this.type ) {
 
 			case 'constant':
@@ -3808,11 +3812,10 @@ THREE.ColladaLoader = function () {
 			default:
 
 				if (props.diffuse != undefined) props.color = props.diffuse;
-				this.material = new THREE.MeshLambertMaterial( props );
+				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 
 		}
-
 		return this.material;
 
 	};
@@ -5200,7 +5203,7 @@ THREE.ColladaLoader = function () {
 		loader.load( url, function ( image ) {
 
 			texture.image = image;
-			texture.needsUpdate = true;
+			//texture.needsUpdate = true;
 
 		} );
 

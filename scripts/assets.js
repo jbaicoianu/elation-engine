@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three'], function(elation) {
+elation.require(['utils.workerpool', 'engine.external.three.three'], function() {
 
   THREE.Cache.enabled = true;
   elation.extend('engine.assets', {

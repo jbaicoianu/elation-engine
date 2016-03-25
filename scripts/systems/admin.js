@@ -126,6 +126,7 @@ elation.require([
         //this.inspector.hide();
         //view.toggleStats(false);
 
+console.log('enable the active guy?', this.lastactivething);
         if (this.lastactivething) {
           this.engine.client.setActiveThing(this.lastactivething);
           this.lastactivething.enable();
@@ -144,8 +145,12 @@ elation.require([
 
         if (view.activething) {
           this.lastactivething = view.activething;
-          this.lastactivething.disable();
-          this.admincamera.properties.position.copy(this.lastactivething.properties.position);
+console.log('deeeeee', view.activething);
+          //this.lastactivething = this.engine.client.player;
+          if (this.lastactivething) {
+            this.lastactivething.disable();
+            this.admincamera.properties.position.copy(this.lastactivething.properties.position);
+          }
         }
         if (this.manipulator) {
           this.engine.systems.world.scene['world-3d'].add(this.manipulator);

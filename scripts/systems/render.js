@@ -76,8 +76,11 @@ elation.require([
     this.setdirty = function() {
       this.dirty = true;
     }
-    this.system_detach = function(ev) {
+    this.engine_stop = function(ev) {
       console.log('SHUTDOWN: render');
+      for (var k in this.views) {
+        this.views[k].destroy();
+      };
     }
     this.engine_frame = function(ev) {
       this.lastframetime += ev.data.delta;
@@ -125,6 +128,7 @@ elation.require([
       this.showstats = this.args.showstats || false;
       this.fullscreen = false;
       this.renderpasses = {};
+      this.aspectscale = 1;
 
 
       // Used by various render pass shaders
@@ -192,9 +196,51 @@ elation.require([
       this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
+      this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
+        var sbstextures = [];
+        scene.traverse(function(n) {
+          if (n.material) {
+            if (n.material instanceof THREE.MultiMaterial) {
+              n.material.materials.forEach(function(m) {
+                if (m.map instanceof THREE.SBSTexture) {
+                  sbstextures.push(m.map);
+                }
+              });
+            } else if (n.material.map instanceof THREE.SBSTexture) {
+              sbstextures.push(n.material.map);
+            }
+          }
+        });
+        sbstextures.forEach(function(t) {
+          t.setEye('left');
+        });
+        this.sbstextures = sbstextures;
+      });
+      this.vreffect.preRenderRight = elation.bind(this.vreffect, function(scene, camera) {
+        if (this.sbstextures) {
+          this.sbstextures.forEach(function(t) {
+            t.setEye('right');
+          });
+        }
+      });
+      //this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
 
       this.vrdisplay = false;
-      if (navigator.getVRDevices) {
+      if (navigator.getVRDisplays) {
+        // WebVR 1.0 spec
+        navigator.getVRDisplays().then(function(n) {
+          for (var i = 0; i < n.length; i++) {  
+            if (n[i] instanceof VRDisplay) {
+              this.vrdisplay = n[i];
+              setTimeout(elation.bind(this, function() {
+                //this.engine.client.toggleVR({value: 1});
+              }), 1000);
+              break;
+            }
+          }
+        }.bind(this));
+        
+      } else if (navigator.getVRDevices) {
         navigator.getVRDevices().then(function(n) {
           for (var i = 0; i < n.length; i++) {  
             if (n[i] instanceof HMDVRDevice) {
@@ -247,6 +293,12 @@ elation.require([
         this.engine.systems.controls.activateContext('view');
       }
     }
+    this.destroy = function() {
+      if (this.vrdisplay && this.vrdisplay.isPresenting) {
+        // FIXME - doesn't really help...
+        this.vrdisplay.exitPresent();
+      }
+    }
     this.createRenderPath = function(passes, target) {
       // this.createRenderPath(['picking', 'oculus_deform'], depthTarget)
       // this.createRenderPath(['depth', 'oculus_deform'], pickingTarget)
@@ -283,6 +335,19 @@ elation.require([
           break;
         case 'oculus':
           pass = new THREE.OculusRenderPass(this.scene, this.actualcamera, null, null, 0);
+          pass.setOculusParameters({
+            HMD: {
+              hResolution: window.innerWidth,
+              vResolution: window.innerHeight,
+              hScreenSize: 0.14976,
+              vScreenSize: 0.0936,
+              interpupillaryDistance: 0.064,
+              lensSeparationDistance: 0.064,
+              eyeToScreenDistance: 0.041,
+              distortionK : [1.0, 0.0, 0.0, 0.0],
+              chromaAbParameter: [ 1, 0, 1, 0.0]
+            }
+          });
           break;
         case '3dtvsbs':
           pass = new THREE.OculusRenderPass(this.scene, this.actualcamera, null, null, 0);
@@ -307,7 +372,7 @@ elation.require([
           pass = new THREE.FilmPass( 0.35, .75, 2048, false );
           break;
         case 'recording':
-          pass = new THREEcapRenderPass();
+          pass = new THREEcapRenderPass('/scripts/engine/external/threecap/');
           this.recorder = pass;
           break;
         case 'sepia':
@@ -384,7 +449,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         var c = document.body;
         c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
         if (typeof c.requestFullscreen == 'function') {
-          c.requestFullscreen({vrDisplay: this.vrdisplay});
+          //c.requestFullscreen({vrDisplay: this.vrdisplay});
+          c.requestFullscreen();
         }
       } else {
         var fsel = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
@@ -394,6 +460,33 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
       }
       this.fullscreen = fullscreen;
+    }
+    this.toggleVR = function(newstate) {
+      if (this.vrdisplay) {
+        if (typeof newstate == 'undefined') newstate = !this.vrdisplay.isPresenting;
+        if (newstate && !this.vrdisplay.isPresenting) {
+          this.vrdisplay.requestPresent({source: this.rendersystem.renderer.domElement}).then(elation.bind(this, function() {
+            console.log('presenting!');
+            var eyeL = this.vrdisplay.getEyeParameters('left');
+            var eyeR = this.vrdisplay.getEyeParameters('right');
+
+            var fov = eyeL.fieldOfView.leftDegrees + eyeL.fieldOfView.rightDegrees;
+            this.camera.fov = fov;
+            this.aspectscale = 2;
+            this.getsize();
+            this.setrendersize(this.size[0], this.size[1]);
+          }));
+        } else if (this.vrdisplay.isPresenting && !newstate) {
+          this.vrdisplay.exitPresent().then(function() {
+            console.log('stopped presenting');
+            this.camera.fov = 75;
+            this.aspectscale = 1;
+            this.getsize();
+            this.setrendersize(this.size[0], this.size[1]);
+          });
+        }
+      }
+      this.getsize();
     }
     this.updateCameras = (function() {
       // Closure scratch variables
@@ -474,10 +567,18 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.scene.overrideMaterial = null;
         */
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
-        //this.composer.render(delta);
-        this.vreffect.render(this.scene, this.camera);
+
+        if (this.vrdisplay && this.vrdisplay.isPresenting) {
+          this.vreffect.render(this.scene, this.camera);
+          //var pose = this.vrdisplay.getPose();
+          var pose = this.engine.client.player.hmdstate.hmd;
+          this.vrdisplay.submitFrame(pose);
+        } else {
+          this.composer.render(delta);
+        }
+
         if (this.rendersystem.cssrenderer) {
-          this.rendersystem.cssrenderer.render(this.scene, this.camera);
+          //this.rendersystem.cssrenderer.render(this.scene, this.camera);
         }
       }
       /*
@@ -648,6 +749,17 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
       var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : elation.html.dimensions(this.container));
+console.log(this.vrdisplay);
+      if (this.vrdisplay && this.vrdisplay.isPresenting) {
+        var leftEye = this.vrdisplay.getEyeParameters("left");
+        var rightEye = this.vrdisplay.getEyeParameters("right");
+
+        s = {
+          w: Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2,
+          h: Math.max(leftEye.renderHeight, rightEye.renderHeight)
+        };
+      }
+console.log('size', s);
       var domel = this.rendersystem.renderer.domElement;
       if (s.w != domel.width || s.h != domel.height) {
         this.size = [s.w, s.h];
@@ -687,11 +799,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
       }
       if (this.skycamera) {
-        this.skycamera.aspect = width / height;
-        this.skycamera.updateProjectionMatrix();
+        this.skycamera.aspect = width / height / this.aspectscale;
+        this.skycamera.updateProjectionMatrix() / this.aspectscale;
       }
       if (this.camera) {
-        this.camera.aspect = width / height;
+        this.camera.aspect = width / height / this.aspectscale;
         this.camera.updateProjectionMatrix();
       }
       if (this.actualcamera) {
@@ -1225,7 +1337,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.updatePickingObject = function(force) {
       if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
-        var dims = elation.html.dimensions(this.view.container);
+        //var dims = elation.html.dimensions(this.view.container);
+        var dims = {x: 0, y: 0};
         //var dims = {x: this.view.size[0], y: this.view.size[1]};
         this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.view.mousepos[0];

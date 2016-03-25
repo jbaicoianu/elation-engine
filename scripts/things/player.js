@@ -107,7 +107,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         } else if (this.charging) {
           var campos = this.camera.localToWorld(new THREE.Vector3(0,0,-1));
           var camdir = this.camera.localToWorld(new THREE.Vector3(0,0,-2)).sub(campos).normalize();
-          var velocity = 1 + this.getCharge() / 10;
+          var velocity = 1 + this.getCharge() / 4;
           camdir.multiplyScalar(velocity);
           camdir.add(this.objects.dynamics.velocity);
           var foo = this.spawn('ball', 'ball_' + Math.round(Math.random() * 100000), { radius: .125, mass: 1, position: campos, velocity: camdir, lifetime: 120, gravity: false, player_id: this.properties.player_id, tags: 'local_sync' }, true);
@@ -162,7 +162,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     }
     this.createChildren = function() {
       // place camera at head height
-      this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
+      //this.camera.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
       this.reset_position();
     }
     this.createForces = function() {
@@ -265,19 +265,19 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               var scale = 1;///.3048;
               if (this.hmdstate.hmd.position) {
-                this.camera.objects.dynamics.position.copy(this.hmdstate.hmd.position).multiplyScalar(scale);
+                this.camera.objects.dynamics.position.fromArray(this.hmdstate.hmd.position).multiplyScalar(scale);
                 this.camera.objects.dynamics.position.y += this.properties.height * .8 - this.properties.fatness;
               }
               if (this.hmdstate.hmd.linearVelocity) {
-                this.camera.objects.dynamics.velocity.copy(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
+                this.camera.objects.dynamics.velocity.fromArray(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
               }
 
               var o = this.hmdstate.hmd.orientation;
               if (o) {
-                this.camera.objects.dynamics.orientation.set(o.x, o.y, o.z, o.w);
+                this.camera.objects.dynamics.orientation.fromArray(o);
               }
               if (this.hmdstate.hmd.angularVelocity) {
-                this.camera.objects.dynamics.angular.copy(this.hmdstate.hmd.angularVelocity);
+                this.camera.objects.dynamics.angular.fromArray(this.hmdstate.hmd.angularVelocity);
               }
 
               this.camera.objects.dynamics.updateState();
@@ -312,6 +312,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     this.handleCreate = function(ev) {
       console.log('player is new', ev);
       if (this.properties.defaultplayer) {
+console.log('set as active thing', this);
         this.engine.client.setActiveThing(this);
         this.enable();
       }

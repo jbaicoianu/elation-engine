@@ -1,11 +1,16 @@
-importScripts('/scripts/utils/elation.js');
+//importScripts('/scripts/utils/elation.js');
+importScripts('/scripts/engine/asset-worker-pack.js');
 var global = {};
-importScripts('/scripts/engine/external/pako.js');
-
+//importScripts('/scripts/engine/external/pako.js');
+console.log('durka', elation);
 elation.require([
+/*
     'engine.assets',
+    'engine.external.pako',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader'], function() {
+    'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader'
+*/
+  ], function() {
 
   THREE.Texture = function(image) {
     this.uuid = THREE.Math.generateUUID();

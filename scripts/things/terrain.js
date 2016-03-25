@@ -12,6 +12,9 @@ elation.require('engine.things.generic', function() {
         'textures.mapRepeat':       { type: 'vector2', default: [1, 1]},
         'textures.normalMap':       { type: 'texture', default: null},
         'textures.normalMapRepeat': { type: 'vector2', default: [1, 1]},
+        'textures.normalScale':     { type: 'vector2', default: [1, 1]},
+        'textures.specularMap':     { type: 'texture', default: null},
+        'textures.specularMapRepeat': { type: 'vector2', default: [1, 1]},
         'textures.displacementMap': { type: 'texture', default: null},
         'textures.displacementMapRepeat': { type: 'vector2', default: [1, 1]},
       });
@@ -28,10 +31,29 @@ elation.require('engine.things.generic', function() {
       }, { USE_MAP: 1 });
 mat.alphaTest = 0.5;
 
-      var mat = new THREE.MeshPhongMaterial({color: this.properties.color});
+      var mat = new THREE.MeshPhongMaterial({
+        color: this.properties.color, 
+        map: this.properties.textures.map,
+        normalMap: this.properties.textures.normalMap,
+        specularMap: this.properties.textures.specularMap,
+        shininess: 10
+      });
+      if (mat.map) {
+        mat.map.repeat.copy(this.properties.textures.mapRepeat);
+        mat.map.wrapS = mat.map.wrapT = THREE.RepeatWrapping;
+      }
+      if (mat.normalMap) {
+        mat.normalMap.repeat.copy(this.properties.textures.normalMapRepeat);
+        mat.normalMap.wrapS = mat.normalMap.wrapT = THREE.RepeatWrapping;
+        mat.normalScale.copy(this.properties.textures.normalScale);
+      }
+      if (mat.specularMap) {
+        mat.specularMap.repeat.copy(this.properties.textures.specularMapRepeat);
+        mat.specularMap.wrapS = mat.specularMap.wrapT = THREE.RepeatWrapping;
+      }
       var matrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
       geo.applyMatrix(matrix);
-console.log('DURPRRRR', geo, mat, this.properties.size, this.properties.resolution, this.properties.color);
+console.log('DURPRRRR', geo, mat, this.properties.size, this.properties.resolution, this.properties.color, this.properties);
       return new THREE.Mesh(geo, mat);
     }
   }, elation.engine.things.generic);

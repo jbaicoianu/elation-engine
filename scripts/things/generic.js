@@ -2,8 +2,8 @@ elation.require([
   // "engine.external.three.ColladaLoader",
   //"engine.external.three.JSONLoader"
   //"engine.external.three.glTFLoader-combined"
-  "engine.things.trigger"
-]);
+  //"engine.things.trigger"
+], function() {
 
 elation.component.add("engine.things.generic", function() {
   this.init = function() {
@@ -1378,4 +1378,6 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     });
     return bounds; 
   }
+});
+
 });

@@ -14,7 +14,7 @@
 
 		this.depthTest = false;
 		this.depthWrite = false;
-		this.side = THREE.FrontSide;
+		this.side = THREE.DoubleSide;
 		this.transparent = true;
 
 		this.setValues( parameters );
@@ -231,7 +231,7 @@
 		var mesh = new THREE.Mesh( new THREE.CylinderGeometry( 0, 0.05, 0.2, 12, 1, false ) );
 		mesh.position.y = 0.5;
 		mesh.updateMatrix();
-
+    mesh.renderOrder = 10;
 		arrowGeometry.merge( mesh.geometry, mesh.matrix );
 
 		var lineXGeometry = new THREE.BufferGeometry();
@@ -309,6 +309,16 @@
 			]
 
 		};
+		this.handleGizmos.X[0][0].renderOrder = 10;
+		this.handleGizmos.X[1][0].renderOrder = 10;
+		this.handleGizmos.Y[0][0].renderOrder = 10;
+		this.handleGizmos.Y[1][0].renderOrder = 10;
+		this.handleGizmos.Z[0][0].renderOrder = 10;
+		this.handleGizmos.Z[1][0].renderOrder = 10;
+		this.handleGizmos.XY[0][0].renderOrder = 10;
+		this.handleGizmos.XZ[0][0].renderOrder = 10;
+		this.handleGizmos.YZ[0][0].renderOrder = 10;
+		this.handleGizmos.XYZ[0][0].renderOrder = 10;
 
 		this.setActivePlane = function ( axis, eye ) {
 
@@ -640,6 +650,7 @@
 
 			gizmoObj.visible = ( type === _mode );
 			this.add( gizmoObj );
+      gizmoObj.renderOrder = 10;
 
 		}
 

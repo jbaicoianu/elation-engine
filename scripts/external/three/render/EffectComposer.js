@@ -5,6 +5,7 @@
 THREE.EffectComposer = function ( renderer, renderTarget ) {
 
 	this.renderer = renderer;
+  this.domElement = this.renderer.domElement;
 
 	if ( renderTarget === undefined ) {
 
@@ -134,6 +135,24 @@ THREE.EffectComposer.prototype = {
 		this.renderTarget1.setSize( width, height );
 		this.renderTarget2.setSize( width, height );
 
-	}
+	},
+
+  getSize: function () {
+    return this.renderer.getSize();
+  },
+
+  setScissor: function(x, y, width, height) {
+    return this.renderer.setScissor(x, y, width, height);
+  },
+  setScissorTest: function( boolean ) {
+    return this.renderer.setScissorTest( boolean );
+  },
+  setViewport: function( x, y, width, height ) {
+    return this.renderer.setViewport( x, y, width, height );
+  },
+	clear: function ( color, depth, stencil ) {
+    return this.renderer.clear( color, depth, stencil );
+  }
+
 
 };

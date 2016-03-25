@@ -371,16 +371,30 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.updateConnectedHMDs();
       } else if (this.hmds && this.hmds.length > 0) {
         for (var i = 0; i < this.hmds.length; i++) {
-          var hmdstate = this.hmds[i].getState();
-          var bindname = "hmd_" + i;
-          this.changes.push(bindname);
-          this.state[bindname] = hmdstate;
+          if (this.hmds[i] instanceof VRDisplay) {
+            var hmdstate = this.hmds[i].getPose();
+            var bindname = "hmd_" + i;
+            this.changes.push(bindname);
+            this.state[bindname] = hmdstate;
+          } else {
+            var hmdstate = this.hmds[i].getState();
+            hmdstate.position = [hmdstate.position.x, hmdstate.position.y, hmdstate.position.z];
+            hmdstate.linearVelocity = [hmdstate.linearVelocity.x, hmdstate.linearVelocity.y, hmdstate.linearVelocity.z];
+            hmdstate.orientation = [hmdstate.orientation.x, hmdstate.orientation.y, hmdstate.orientation.z, hmdstate.orientation.w];
+            hmdstate.angularVelocity = [hmdstate.angularVelocity.x, hmdstate.angularVelocity.y, hmdstate.angularVelocity.z];
+            hmdstate.angularAcceleration = [hmdstate.angularAcceleration.x, hmdstate.angularAcceleration.y, hmdstate.angularAcceleration.z];
+            var bindname = "hmd_" + i;
+            this.changes.push(bindname);
+            this.state[bindname] = hmdstate;
+          }
         }
       }
     }
     this.updateConnectedHMDs = function() {
       this.hmds = false;
-      if (typeof navigator.getVRDevices == 'function') {
+      if (typeof navigator.getVRDisplays == 'function') {
+        navigator.getVRDisplays().then(elation.bind(this, this.processConnectedHMDs));
+      } else if (typeof navigator.getVRDevices == 'function') {
         navigator.getVRDevices().then(elation.bind(this, this.processConnectedHMDs));
       }
     }
@@ -389,7 +403,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.hmds = [];
         for (var i = 0; i < hmds.length; i++) {
           // We only care about position sensors
-          if (hmds[i] instanceof PositionSensorVRDevice) {
+          if ((typeof PositionSensorVRDevice != 'undefined' && hmds[i] instanceof PositionSensorVRDevice) || 
+              (typeof VRDisplay != 'undefined' && hmds[i] instanceof VRDisplay)) {
             this.hmds.push(hmds[i]);
           }
         }
@@ -398,7 +413,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.calibrateHMDs = function() {
       if (this.hmds) {
         for (var i = 0; i < this.hmds.length; i++) {
-          this.hmds[i].resetSensor();
+          if (this.hmds[i].resetPose) {
+            this.hmds[i].resetPose();
+          } else if (this.hmds[i].resetSensor) {
+            this.hmds[i].resetSensor();
+          }
         }
       }
     }
@@ -463,9 +482,6 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           scaleY = this.settings.mouse.sensitivity * (this.settings.mouse.invertY ? -1 : 1),
           movementX = elation.utils.any(ev.movementX, ev.mozMovementX),
           movementY = elation.utils.any(ev.movementY, ev.mozMovementY);
-
-      // FIXME - works around a chrome bug where pointer lock returns massive values on focus
-      if (Math.abs(movementY) == window.screenY && Math.abs(movementX) - 5 >= window.screenX) return [0, 0];
 
       var deltas = [
             scaleX * movementX / width,
