@@ -2,7 +2,6 @@
 importScripts('/scripts/engine/asset-worker-pack.js');
 var global = {};
 //importScripts('/scripts/engine/external/pako.js');
-console.log('durka', elation);
 elation.require([
 /*
     'engine.assets',
