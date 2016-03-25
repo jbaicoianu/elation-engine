@@ -16,7 +16,7 @@ var deps = [
   "ui.panel"
 ];
 
-if (true && elation.env.isBrowser) {
+if (elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
     "share.picker",
@@ -26,7 +26,7 @@ if (true && elation.env.isBrowser) {
     "share.targets.youtube",
     "share.targets.file",
   ]);
-} else if (false && elation.env.isNode) {
+} else if (elation.env.isNode) {
   deps.push("engine.external.three.nodethree");
 }
 
