@@ -43,31 +43,29 @@ if (!ENV_IS_BROWSER) return;
     },
     setCORSProxy: function(proxy) {
       elation.engine.assets.corsproxy = proxy;
-      var loader = new THREE.CORSProxyLoader(proxy);
+      var loader = new elation.engine.assets.corsproxyloader(proxy);
       THREE.Loader.Handlers.add(/.*/i, loader);
 
-      if (!ENV_IS_WORKER && elation.engine.assets.loaderpool) {
+      if (!elation.env.isWorker && elation.engine.assets.loaderpool) {
         elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
       }
     },
-    loaderpool: (ENV_IS_BROWSER ? new elation.utils.workerpool({src: '/scripts/engine/asset-worker.js', num: 4}) : {})
+    loaderpool: (ENV_IS_BROWSER ? new elation.utils.workerpool({component: 'engine.assetworker', num: 4}) : {})
   });
 
-THREE.CORSProxyLoader = function(corsproxy, manager) {
-  this.corsproxy = corsproxy || '';
-	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
-};
-THREE.CORSProxyLoader.prototype = Object.create(THREE.TextureLoader);
-THREE.CORSProxyLoader.constructor = THREE.CORSProxyLoader;
-
-THREE.CORSProxyLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
-  var fullurl = url;
-  if (this.corsproxy != '' && url.indexOf(this.corsproxy) != 0) {
-    fullurl = this.corsproxy + url;
-  }
-  return THREE.TextureLoader.prototype.load.call(this, fullurl, onLoad, onProgress, onError);
-}
-
+  elation.define('engine.assets.corsproxyloader', {
+    _construct: function(corsproxy, manager) {
+      this.corsproxy = corsproxy || '';
+      this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+    },
+    load: function ( url, onLoad, onProgress, onError ) {
+      var fullurl = url;
+      if (this.corsproxy != '' && url.indexOf(this.corsproxy) != 0) {
+        fullurl = this.corsproxy + url;
+      }
+      return THREE.TextureLoader.prototype.load.call(this, fullurl, onLoad, onProgress, onError);
+    }
+  }, THREE.TextureLoader);
 
   elation.define('engine.assets.base', {
     assettype: 'base',
