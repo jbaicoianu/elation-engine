@@ -226,7 +226,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       var _dir = new THREE.Euler(); // Closure scratch variable
       var _moveforce = new THREE.Vector3();
       return function() {
-        if (this.camera && this.enabled) {
+        if (this.camera && (this.enabled || (this.hmdstate && this.hmdstate.hmd))) {
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
           this.moveVector.y = (this.controlstate.move_up - this.controlstate.move_down);
           this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
