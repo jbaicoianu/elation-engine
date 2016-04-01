@@ -59,6 +59,11 @@ elation.require(['engine.external.md5'], function() {
           }
         }
       }
+      geometry.computeBoundingBox();
+      var bbox = geometry.boundingBox.min.clone().sub(geometry.boundingBox.max);
+      var offset = new THREE.Matrix4().makeTranslation(bbox.x / 2, bbox.y / 2, bbox.z);
+      geometry.applyMatrix(offset);
+      
       return new THREE.Mesh(geometry, mat);
     };
   }, elation.engine.things.generic);
