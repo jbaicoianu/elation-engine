@@ -140,7 +140,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       if (!ev || ev.value == 1) {
         this.properties.position.copy(this.properties.startposition);
         this.properties.orientation.copy(this.properties.startorientation);
-        this.camera.properties.orientation.copy(this.properties.startcameraorientation);
+        this.head.properties.orientation.copy(this.properties.startcameraorientation);
         this.properties.velocity.set(0,0,0);
         this.objects.dynamics.angular.set(0,0,0);
         this.engine.systems.controls.calibrateHMDs();
@@ -173,7 +173,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
-      this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
+      this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
+        'position': [0,1,0]
+      });
+      this.neck = this.torso.spawn('generic', this.properties.player_id + '_neck', {
+        'position': [0,0.6,-0.15]
+      });
+      this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
+        'position': [0,0,0]
+      });
+      //this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
+      this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
     }
     this.getGroundHeight = function() {
@@ -211,9 +221,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         this.objects.dynamics.angular.set(0,0,0);
         this.objects.dynamics.velocity.set(0,0,0);
         this.objects.dynamics.updateState();
-        this.camera.objects.dynamics.velocity.set(0,0,0);
-        this.camera.objects.dynamics.angular.set(0,0,0);
-        this.camera.objects.dynamics.updateState();
+        this.head.objects.dynamics.velocity.set(0,0,0);
+        this.head.objects.dynamics.angular.set(0,0,0);
+        this.head.objects.dynamics.updateState();
       }
       this.lookVector.set(0,0,0);
       this.turnVector.set(0,0,0);
@@ -241,11 +251,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             if (this.flying) {
               this.moveVector.y -= 1;
             } else {
-              this.camera.properties.position.y = this.properties.height * .4 - this.properties.fatness;
+              this.head.properties.position.y = this.properties.height * .4 - this.properties.fatness;
             }
           } else {
             if (!this.flying) {
-              this.camera.properties.position.y = this.properties.height * .8 - this.properties.fatness;
+              this.head.properties.position.y = this.properties.height * .8 - this.properties.fatness;
             }
           }
 
@@ -257,7 +267,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             
             _moveforce.copy(this.moveVector).normalize().multiplyScalar(moveSpeed);
             if (this.flying) {
-              _moveforce.applyQuaternion(this.camera.properties.orientation);
+              _moveforce.applyQuaternion(this.head.properties.orientation);
             }
             this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
@@ -265,40 +275,40 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               var scale = 1;///.3048;
               if (this.hmdstate.hmd.position) {
-                this.camera.objects.dynamics.position.fromArray(this.hmdstate.hmd.position).multiplyScalar(scale);
-                this.camera.objects.dynamics.position.y += this.properties.height * .8 - this.properties.fatness;
+                this.head.objects.dynamics.position.fromArray(this.hmdstate.hmd.position).multiplyScalar(scale);
+                this.head.objects.dynamics.position.y += this.properties.height * .8 - this.properties.fatness;
               }
               if (this.hmdstate.hmd.linearVelocity) {
-                this.camera.objects.dynamics.velocity.fromArray(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
+                this.head.objects.dynamics.velocity.fromArray(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
               }
 
               var o = this.hmdstate.hmd.orientation;
               if (o) {
-                this.camera.objects.dynamics.orientation.fromArray(o);
+                this.head.objects.dynamics.orientation.fromArray(o);
               }
               if (this.hmdstate.hmd.angularVelocity) {
-                this.camera.objects.dynamics.angular.fromArray(this.hmdstate.hmd.angularVelocity);
+                this.head.objects.dynamics.angular.fromArray(this.hmdstate.hmd.angularVelocity);
               }
 
-              this.camera.objects.dynamics.updateState();
+              this.head.objects.dynamics.updateState();
             } else if (this.hmdstate.orientation) {
-              //this.camera.objects.dynamics.orientation.setFromEuler(new THREE.Euler(this.hmdstate.orientation.beta, this.hmdstate.orientation.gamma, this.hmdstate.orientation.alpha, 'ZYX'));
+              //this.head.objects.dynamics.orientation.setFromEuler(new THREE.Euler(this.hmdstate.orientation.beta, this.hmdstate.orientation.gamma, this.hmdstate.orientation.alpha, 'ZYX'));
             }
 
             if (true) {
 /*
-              _dir.setFromQuaternion(this.camera.properties.orientation);
+              _dir.setFromQuaternion(this.head.properties.orientation);
               // Constrain camera angle to +/- 90 degrees
               // Only zero-out look velocity if it's the same sign as our rotation
               if (Math.abs(_dir.x) > Math.PI/2 && _dir.x * this.lookVector.x > 0) {
                 this.lookVector.x = 0;
               }
 */
-              this.camera.objects.dynamics.setAngularVelocity(this.lookVector);
-              //this.camera.objects.dynamics.processConstraints([]);
-              this.camera.objects.dynamics.updateState();
+              this.head.objects.dynamics.setAngularVelocity(this.lookVector);
+              //this.head.objects.dynamics.processConstraints([]);
+              this.head.objects.dynamics.updateState();
             }
-            this.camera.refresh();
+            this.head.refresh();
           }
 
         }
