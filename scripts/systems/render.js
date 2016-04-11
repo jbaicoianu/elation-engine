@@ -232,6 +232,7 @@ elation.require([
           for (var i = 0; i < n.length; i++) {  
             if (n[i] instanceof VRDisplay) {
               this.vrdisplay = n[i];
+              elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
               setTimeout(elation.bind(this, function() {
                 //this.engine.client.toggleVR({value: 1});
               }), 1000);
@@ -475,15 +476,18 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.aspectscale = 2;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
+
+            elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
-          this.vrdisplay.exitPresent().then(function() {
+          this.vrdisplay.exitPresent().then(elation.bind(this, function() {
             console.log('stopped presenting');
             this.camera.fov = 75;
             this.aspectscale = 1;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
-          });
+            elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
+          }));
         }
       }
       this.getsize();
@@ -540,10 +544,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     })();
     this.render = function(delta) {
       if (this.scene && this.camera) {
-        this.updateCameras();
         if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1] || this.scale != this.scale_old) {
           this.setrendersize(this.size[0], this.size[1]);
         }
+        this.updateCameras();
 
         //this.setcameranearfar();
 
