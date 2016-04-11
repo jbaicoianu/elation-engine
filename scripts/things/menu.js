@@ -69,10 +69,12 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     this.enable = function() {
       this.controlstate._reset();
       this.engine.systems.controls.activateContext('menu');
+      elation.events.fire({type: 'menu_enable', element: this});
     }
     this.disable = function() {
       this.controlstate._reset();
       this.engine.systems.controls.deactivateContext('menu');
+      elation.events.fire({type: 'menu_disable', element: this});
     }
     this.selectfirst = function() {
       if (this.selected) {
@@ -229,6 +231,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
     this.activate = function() {
       if (this.properties.callback && typeof this.properties.callback == 'function') {
         this.properties.callback();
+        elation.events.fire({type: 'menuitem_activate', element: this});
         return true;
       }
       return false;
