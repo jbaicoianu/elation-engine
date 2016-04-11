@@ -313,7 +313,7 @@ elation.require([
       if (callback) { setTimeout(callback, 0); }
     }
     this.spawn = function(type, name, spawnargs, parent, autoload) {
-      if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000);
+      if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000000);
       if (!spawnargs) spawnargs = {};
       if (!parent) parent = this.children['default'] || this;
       if (typeof autoload == 'undefined') autoload = true;
