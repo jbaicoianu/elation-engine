@@ -20,26 +20,28 @@ elation.component.add('engine.things.remoteplayer', function() {
 */
   
   this.createChildren = function() {
-    this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
+    this.torso = this.spawn('generic', this.properties.player_name + '_torso', {
       'position': [0,1,0],
     });
-    this.neck = this.torso.spawn('generic', this.properties.player_id + '_neck', {
+    this.neck = this.torso.spawn('generic', this.properties.player_name + '_neck', {
       'position': [0,0.6,0]
     });
-    this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
+    this.head = this.neck.spawn('generic', this.properties.player_name + '_head', {
       'position': [0,0,0],
     });
-    this.face = this.head.spawn('maskgenerator', this.properties.player_id + '_mask', {
-      'seed': this.properties.player_id.toString(),
-      'position': [0,0,-0.175],
+    this.face = this.head.spawn('maskgenerator', this.properties.player_name + '_mask', {
+      'seed': this.properties.player_name,
+      'position': [0,0,-0.125],
+      collidable: false,
       'tilesize': 0.075,
-      'player_id': this.properties.player_id
+      'player_id': this.properties.player_name
     });
-    this.label = this.spawn('label', this.properties.player_id + '_label', {
+    this.label = this.face.spawn('label', this.properties.player_name + '_label', {
       size: .1,
       align: 'center',
+      collidable: false,
       text: this.properties.player_name,
-      position: [0,2,0],
+      position: [0,0.35,0],
       orientation: [0,1,0,0]
     });
   };
