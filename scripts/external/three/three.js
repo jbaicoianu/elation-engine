@@ -19332,7 +19332,7 @@ THREE.ObjectLoader.prototype = {
 
 			scope.manager.itemStart( url );
 
-			return loader.load( 'http://meobets.com:8089/' + url, function () {
+			return loader.load( url, function () {
 
 				scope.manager.itemEnd( url );
 
