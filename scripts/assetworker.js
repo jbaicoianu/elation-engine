@@ -7,85 +7,81 @@ elation.require([
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
     'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader',
   ], function() {
-/*
-*/
-/*
-*/
 
   elation.define('engine.assetworker', {
     _construct: function() {
-  THREE.Texture = function(image) {
-    this.uuid = THREE.Math.generateUUID();
+      THREE.Texture = function(image) {
+        this.uuid = THREE.Math.generateUUID();
 
-    this.name = '';
-    this.offset = new THREE.Vector2();
-    this.repeat = new THREE.Vector2(1,1);
-    this.image = image;
-  }
-  THREE.Texture.prototype.constructor = THREE.Texture;
-  THREE.Texture.prototype.toJSON = function(meta) {
-		var output = {
-			metadata: {
-				version: 4.4,
-				type: 'Texture',
-				generator: 'Texture.toJSON'
-			},
+        this.name = '';
+        this.offset = new THREE.Vector2();
+        this.repeat = new THREE.Vector2(1,1);
+        this.image = image;
+      }
+      THREE.Texture.prototype.constructor = THREE.Texture;
+      THREE.Texture.prototype.toJSON = function(meta) {
+        var output = {
+          metadata: {
+            version: 4.4,
+            type: 'Texture',
+            generator: 'Texture.toJSON'
+          },
 
-			uuid: this.uuid,
-			name: this.name,
+          uuid: this.uuid,
+          name: this.name,
 
-			mapping: this.mapping,
+          mapping: this.mapping,
 
-			repeat: [ this.repeat.x, this.repeat.y ],
-			offset: [ this.offset.x, this.offset.y ],
-			wrap: [ this.wrapS, this.wrapT ],
+          repeat: [ this.repeat.x, this.repeat.y ],
+          offset: [ this.offset.x, this.offset.y ],
+          wrap: [ this.wrapS, this.wrapT ],
 
-			minFilter: this.minFilter,
-			magFilter: this.magFilter,
-			anisotropy: this.anisotropy
-		};
+          minFilter: this.minFilter,
+          magFilter: this.magFilter,
+          anisotropy: this.anisotropy
+        };
 
-		if ( this.image !== undefined ) {
+        if ( this.image !== undefined ) {
 
-			// TODO: Move to THREE.Image
+          // TODO: Move to THREE.Image
 
-			var image = this.image;
+          var image = this.image;
 
-			if ( image.uuid === undefined ) {
+          if ( image.uuid === undefined ) {
 
-				image.uuid = THREE.Math.generateUUID(); // UGH
+            image.uuid = THREE.Math.generateUUID(); // UGH
 
-			}
+          }
 
-			if ( meta.images[ image.uuid ] === undefined ) {
+          if ( meta.images[ image.uuid ] === undefined ) {
 
-				meta.images[ image.uuid ] = {
-					uuid: image.uuid,
-					url: image.src
-				};
+            meta.images[ image.uuid ] = {
+              uuid: image.uuid,
+              url: image.src
+            };
 
-			}
+          }
 
-			output.image = image.uuid;
+          output.image = image.uuid;
 
-		}
+        }
 
-		meta.textures[ this.uuid ] = output;
+        meta.textures[ this.uuid ] = output;
 
-		return output;
-  }
-  THREE.ImageLoader = function() {
-  }
-  THREE.ImageLoader.prototype.load = function(url, onLoad) {
-    var img = { src: url };
-    if ( onLoad ) {
-      onLoad( img );
-    }
-  }
-  THREE.ImageLoader.prototype.setPath = function(path) {
-  }
-  THREE.ImageLoader.prototype.setCrossOrigin = function(origin) {
-  }
+        return output;
+      }
+      THREE.ImageLoader = function() {
+      }
+      THREE.ImageLoader.prototype.load = function(url, onLoad) {
+        var img = { src: url };
+        if ( onLoad ) {
+          onLoad( img );
+        }
+      }
+      THREE.ImageLoader.prototype.setPath = function(path) {
+      }
+      THREE.ImageLoader.prototype.setCrossOrigin = function(origin) {
+      }
       this.loader = new elation.engine.assets.loaders.model();
     },
     onmessage: function(ev) {
@@ -181,6 +177,9 @@ elation.require([
     },
     onprogress: function(job, ev) {
       //console.log('progress', job, ev);
+    },
+    onerror: function(job, ev) {
+      console.log('error', job, ev);
     },
   });
   elation.define('engine.assets.loaders.model_obj', {
