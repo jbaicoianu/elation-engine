@@ -753,7 +753,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
       var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : elation.html.dimensions(this.container));
-console.log(this.vrdisplay);
       if (this.vrdisplay && this.vrdisplay.isPresenting) {
         var leftEye = this.vrdisplay.getEyeParameters("left");
         var rightEye = this.vrdisplay.getEyeParameters("right");
@@ -763,7 +762,6 @@ console.log(this.vrdisplay);
           h: Math.max(leftEye.renderHeight, rightEye.renderHeight)
         };
       }
-console.log('size', s);
       var domel = this.rendersystem.renderer.domElement;
       if (s.w != domel.width || s.h != domel.height) {
         this.size = [s.w, s.h];
