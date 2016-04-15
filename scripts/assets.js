@@ -154,13 +154,13 @@ if (!ENV_IS_BROWSER) return;
         if (elation.engine.assets.corsproxy && !this.isURLLocal(url)) {
           url = elation.engine.assets.corsproxy + url;
         }
-console.log(url, this.src, this.isURLAbsolute(this.src));
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
       }
     },
     handleLoad: function(data) {
       //console.log('loaded image', data);
       this._texture = data;
+      data.sourceFile = data.image.src;
       data.image = this.scalePowerOfTwo(data.image);
       data.needsUpdate = true;
       data.wrapS = data.wrapT = THREE.RepeatWrapping;
@@ -209,6 +209,7 @@ console.log(url, this.src, this.isURLAbsolute(this.src));
     assettype: 'video',
     src: false,
     sbs3d: false,
+    ou3d: false,
     auto_play: false,
     texture: false,
     load: function() {
@@ -366,7 +367,15 @@ console.log(url, this.src, this.isURLAbsolute(this.src));
     },
     createPlaceholder: function() {
       //var geo = new THREE.TextGeometry('loading...', { size: 1, height: .1, font: 'helvetiker' });
-      var geo = new THREE.SphereGeometry(1);
+      var font = elation.engine.assets.find('font', 'helvetiker');
+
+      var geo = new THREE.TextGeometry( 'loading...', {
+        size: 1,
+        height: 0.1,
+
+        font: font,
+      });                                                
+      //var geo = new THREE.SphereGeometry(1);
       var mat = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x333333});
       this.placeholder = new THREE.Mesh(geo, mat);
       return this.placeholder;
@@ -397,7 +406,6 @@ console.log(url, this.src, this.isURLAbsolute(this.src));
         .then(elation.bind(this, this.handleLoadJSON));
     },
     handleLoadJSON: function(json) {
-console.log('json loaded', json);
       if (json) {
         var parser = new THREE.ObjectLoader();
         parser.setCrossOrigin('anonymous');
