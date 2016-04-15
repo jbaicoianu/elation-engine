@@ -5,7 +5,7 @@ elation.require([
     'engine.assets',
     'engine.external.pako',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader',
+    'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader',
   ], function() {
 
   elation.define('engine.assetworker', {
@@ -103,6 +103,7 @@ elation.require([
         'collada': new elation.engine.assets.loaders.model_collada(),
         'obj': new elation.engine.assets.loaders.model_obj(),
         'fbx': new elation.engine.assets.loaders.model_fbx(),
+        'wrl': new elation.engine.assets.loaders.model_wrl(),
       }
     },
     load: function(job) {
@@ -136,7 +137,8 @@ elation.require([
       var tests = [
         [/<COLLADA/im, 'collada'],
         [/^\s*v\s+-?[\d\.]+\s+-?[\d\.]+\s+-?[\d\.]+\s*$/im, 'obj'],
-        [/FBXHeader/i, 'fbx']
+        [/FBXHeader/i, 'fbx'],
+        [/^\#VRML/, 'wrl']
       ];
 
       var type = false;
@@ -164,8 +166,18 @@ elation.require([
         modeldata = window.pako.inflate(databuf, {to: 'string'});
       } else {
         var dataview = new DataView(rawdata);
-        var decoder = new TextDecoder('utf-8');
-        modeldata = decoder.decode(dataview);
+        if (false && typeof TextDecoder !== 'undefined') {
+          var decoder = new TextDecoder('utf-8');
+          modeldata = decoder.decode(dataview);
+        } else {
+          var str = '';
+          var bufview = new Uint8Array(rawdata);
+          var l = bufview.length;
+          for (var i = 0; i < l; i++) {
+            str += String.fromCharCode(bufview[i]);
+          }
+          modeldata = decodeURIComponent(escape(str));
+        }
       }    
       if (modeldata) {
         this.parse(modeldata, job).then(function(data) {
@@ -376,6 +388,16 @@ elation.require([
         resolve(data.scene.toJSON());
       }));
     },
+  }, elation.engine.assets.base);
+  elation.define('engine.assets.loaders.model_wrl', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) { 
+        var loader = new THREE.VRMLLoader();
+        var modeldata = loader.parse(data);
+
+        resolve(modeldata.toJSON());
+      });
+    }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_fbx', {
     parse: function(data, job) {
