@@ -19,7 +19,9 @@ elation.require(['engine.things.generic'], function() {
       return new THREE.Object3D();
     }
     this.createChildren = function() {
-      this.createAudio(this.properties.src);
+      if (!this.audio) {
+        this.createAudio(this.properties.src);
+      }
     }
     this.createAudio = function() {
       if (this.audio) {
@@ -37,7 +39,9 @@ elation.require(['engine.things.generic'], function() {
         this.audio.autoplay = this.properties.autoplay;
         this.audio.setLoop(this.properties.loop);
         this.audio.setVolume(this.properties.volume);
-        this.audio.load(this.properties.src);
+        if (this.properties.src) {
+          this.audio.load(this.properties.src);
+        }
         this.objects['3d'].add(this.audio);
       }
     }
