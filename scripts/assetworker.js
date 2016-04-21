@@ -10,77 +10,11 @@ elation.require([
 
   elation.define('engine.assetworker', {
     _construct: function() {
-      THREE.Texture = function(image) {
-        this.uuid = THREE.Math.generateUUID();
-
-        this.name = '';
-        this.offset = new THREE.Vector2();
-        this.repeat = new THREE.Vector2(1,1);
-        this.image = image;
-      }
-      THREE.Texture.prototype.constructor = THREE.Texture;
-      THREE.Texture.prototype.toJSON = function(meta) {
-        var output = {
-          metadata: {
-            version: 4.4,
-            type: 'Texture',
-            generator: 'Texture.toJSON'
-          },
-
-          uuid: this.uuid,
-          name: this.name,
-
-          mapping: this.mapping,
-
-          repeat: [ this.repeat.x, this.repeat.y ],
-          offset: [ this.offset.x, this.offset.y ],
-          wrap: [ this.wrapS, this.wrapT ],
-
-          minFilter: this.minFilter,
-          magFilter: this.magFilter,
-          anisotropy: this.anisotropy
-        };
-
-        if ( this.image !== undefined ) {
-
-          // TODO: Move to THREE.Image
-
-          var image = this.image;
-
-          if ( image.uuid === undefined ) {
-
-            image.uuid = THREE.Math.generateUUID(); // UGH
-
-          }
-
-          if ( meta.images[ image.uuid ] === undefined ) {
-
-            meta.images[ image.uuid ] = {
-              uuid: image.uuid,
-              url: image.src
-            };
-
-          }
-
-          output.image = image.uuid;
-
-        }
-
-        meta.textures[ this.uuid ] = output;
-
-        return output;
-      }
-      THREE.ImageLoader = function() {
-      }
       THREE.ImageLoader.prototype.load = function(url, onLoad) {
         var img = { src: url };
         if ( onLoad ) {
           onLoad( img );
         }
-      }
-      THREE.ImageLoader.prototype.setPath = function(path) {
-      }
-      THREE.ImageLoader.prototype.setCrossOrigin = function(origin) {
       }
       this.loader = new elation.engine.assets.loaders.model();
     },
