@@ -21656,7 +21656,7 @@ THREE.Texture.prototype = {
 
 				meta.images[ image.uuid ] = {
 					uuid: image.uuid,
-					url: getDataURL( image )
+					url: image.src
 				};
 
 			}
