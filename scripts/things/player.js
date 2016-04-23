@@ -6,11 +6,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         height: { type: 'float', default: 2.0 },
         fatness: { type: 'float', default: .25 },
         mass: { type: 'float', default: 10.0 },
-        movespeed: { type: 'float', default: 300.0 },
+        movespeed: { type: 'float', default: 400.0 },
         runspeed: { type: 'float', default: 600.0 },
         crouchspeed: { type: 'float', default: 150.0 },
         turnspeed: { type: 'float', default: 2.0 },
-        movefriction: { type: 'float', default: 4.0 },
+        movefriction: { type: 'float', default: 8.0 },
         defaultplayer: { type: 'boolean', default: true },
         startposition: { type: 'vector3', default: new THREE.Vector3() },
         startorientation: { type: 'quaternion', default: new THREE.Quaternion() },
@@ -251,11 +251,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             if (this.flying) {
               this.moveVector.y -= 1;
             } else {
-              this.head.properties.position.y = this.properties.height * .4 - this.properties.fatness;
+              //this.head.properties.position.y = this.properties.height * .4 - this.properties.fatness;
             }
           } else {
             if (!this.flying) {
-              this.head.properties.position.y = this.properties.height * .8 - this.properties.fatness;
+              //this.head.properties.position.y = this.properties.height * .8 - this.properties.fatness;
             }
           }
 
@@ -310,9 +310,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.refresh();
     }
     this.handleCreate = function(ev) {
-      console.log('player is new', ev);
       if (this.properties.defaultplayer) {
-console.log('set as active thing', this);
         this.engine.client.setActiveThing(this);
         this.enable();
       }
