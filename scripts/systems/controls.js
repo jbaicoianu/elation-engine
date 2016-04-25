@@ -100,7 +100,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       },
       gamepad: {
         sensitivity: 1,
-        deadzone: 0.075
+        deadzone: 0.2
       },
       hmd: {
       }
@@ -331,12 +331,19 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         for (var i = 0; i < this.gamepads.length; i++) {
           if (this.gamepads[i] != null) {
             var gamepad = this.gamepads[i];
-            for (var a = 0; a < gamepad.axes.length; a++) {
-              var bindname = this.getBindingName('gamepad', i, 'axis_' + a);
-              if (this.state[bindname] != gamepad.axes[a]) {
-                this.changes.push(bindname);
-                this.state[bindname] = (Math.abs(gamepad.axes[a]) < this.settings.gamepad.deadzone ? 0 : gamepad.axes[a]);
-                this.state[bindname + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
+            for (var a = 0; a < gamepad.axes.length; a+=2) {
+              var bindname_x = this.getBindingName('gamepad', i, 'axis_' + a);
+              var bindname_y = this.getBindingName('gamepad', i, 'axis_' + (a+1));
+              var values = this.deadzone(gamepad.axes[a], gamepad.axes[a+1]);
+              if (this.state[bindname_x] != values[0]) {
+                this.changes.push(bindname_x);
+                this.state[bindname_x] = values[0];
+                this.state[bindname_x + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
+              }
+              if (this.state[bindname_y] != values[1]) {
+                this.changes.push(bindname_y);
+                this.state[bindname_y] = values[1];
+                this.state[bindname_y + '_full'] = THREE.Math.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
               }
             }
             for (var b = 0; b < gamepad.buttons.length; b++) {
@@ -371,21 +378,34 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.updateConnectedHMDs();
       } else if (this.hmds && this.hmds.length > 0) {
         for (var i = 0; i < this.hmds.length; i++) {
-          if (this.hmds[i] instanceof VRDisplay) {
+          if (typeof VRDisplay != 'undefined' && this.hmds[i] instanceof VRDisplay) {
             var hmdstate = this.hmds[i].getPose();
             var bindname = "hmd_" + i;
             this.changes.push(bindname);
             this.state[bindname] = hmdstate;
           } else {
             var hmdstate = this.hmds[i].getState();
-            hmdstate.position = [hmdstate.position.x, hmdstate.position.y, hmdstate.position.z];
-            hmdstate.linearVelocity = [hmdstate.linearVelocity.x, hmdstate.linearVelocity.y, hmdstate.linearVelocity.z];
-            hmdstate.orientation = [hmdstate.orientation.x, hmdstate.orientation.y, hmdstate.orientation.z, hmdstate.orientation.w];
-            hmdstate.angularVelocity = [hmdstate.angularVelocity.x, hmdstate.angularVelocity.y, hmdstate.angularVelocity.z];
-            hmdstate.angularAcceleration = [hmdstate.angularAcceleration.x, hmdstate.angularAcceleration.y, hmdstate.angularAcceleration.z];
+            var realhmdstate = {
+              position: [0,0,0],
+              orientation: [0,0,0,1],
+              linearVelocity: [0,0,0],
+              linearAcceleration: [0,0,0],
+              angularVelocity: [0,0,0],
+              angularAcceleration: [0,0,0],
+            }
+            if (hmdstate.hasPosition) {
+              realhmdstate.position = [hmdstate.position.x, hmdstate.position.y, hmdstate.position.z];
+            }
+            if (hmdstate.hasOrientation) {
+              realhmdstate.orientation = [hmdstate.orientation.x, hmdstate.orientation.y, hmdstate.orientation.z, hmdstate.orientation.w];
+            }
+            realhmdstate.linearVelocity = [hmdstate.linearVelocity.x, hmdstate.linearVelocity.y, hmdstate.linearVelocity.z];
+            realhmdstate.linearAcceleration = [hmdstate.linearAcceleration.x, hmdstate.linearAcceleration.y, hmdstate.linearAcceleration.z];
+            realhmdstate.angularVelocity = [hmdstate.angularVelocity.x, hmdstate.angularVelocity.y, hmdstate.angularVelocity.z];
+            realhmdstate.angularAcceleration = [hmdstate.angularAcceleration.x, hmdstate.angularAcceleration.y, hmdstate.angularAcceleration.z];
             var bindname = "hmd_" + i;
             this.changes.push(bindname);
-            this.state[bindname] = hmdstate;
+            this.state[bindname] = realhmdstate;
           }
         }
       }
@@ -502,7 +522,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.mousedown = function(ev) {
       if (ev.button === 0 && !this.getPointerLockElement()) {
         this.requestPointerLock();
-        ev.stopPropagation();
+        //ev.stopPropagation();
         ev.preventDefault();
       }
       var bindid = "mouse_button_" + ev.button;
@@ -649,10 +669,12 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         pageY: ev.touches[0].pageY,
         clientX: ev.touches[0].clientX,
         clientY: ev.touches[0].clientY,
+        stopPropagation: elation.bind(ev, ev.stopPropagation),
+        preventDefault: elation.bind(ev, ev.preventDefault),
       };
       this.lasttouchpos = [newev.clientX, newev.clientY];
       this.mousedown(newev);
-      ev.preventDefault();
+      //ev.preventDefault();
     }
     this.touchmove = function(ev) {
       if (ev.touches.length == 1) {
@@ -664,6 +686,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           pageY: ev.touches[0].pageY,
           clientX: ev.touches[0].clientX,
           clientY: ev.touches[0].clientY,
+          stopPropagation: elation.bind(ev, ev.stopPropagation),
+          preventDefault: elation.bind(ev, ev.preventDefault),
         };
         newev.movementX = (this.lasttouchpos[0] - newev.clientX) / devicePixelRatio;
         newev.movementY = (this.lasttouchpos[1] - newev.clientY) / devicePixelRatio;
@@ -685,6 +709,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         clientX: ev.touches[0].clientX,
         clientY: ev.touches[0].clientY,
   */
+        stopPropagation: elation.bind(ev, ev.stopPropagation),
+        preventDefault: elation.bind(ev, ev.preventDefault),
       };
       this.mouseup(newev);
     }
@@ -758,7 +784,21 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       var viewer = elation.engine.systems.controls.gamepadviewer({controlsystem: this, gamepad: this.gamepads[0]});
       viewerwindow.setcontent(viewer)
     }
+    this.deadzone = function(x, y) {
+      var deadzone = this.settings.gamepad.deadzone;
 
+      var magnitude = Math.sqrt(x*x + y*y);
+
+      var adjusted = magnitude;
+      if (magnitude > deadzone) {
+        if (magnitude > 1) magnitude = 1;
+        adjusted = (magnitude - deadzone) / (1 - deadzone);
+      } else {
+        adjusted = 0;
+      } 
+      return [x * adjusted, y * adjusted];
+      //return (Math.abs(value) < this.settings.gamepad.deadzone ? 0 : value);
+    }
   });
   elation.component.add('engine.systems.controls.config', function() {
     this.init = function() {
