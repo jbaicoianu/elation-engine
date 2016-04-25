@@ -311,6 +311,7 @@ if (!ENV_IS_BROWSER) return;
     tex1: false,
     tex2: false,
     tex3: false,
+    tex_linear: true,
     modeltype: '',
     compression: 'none',
 
@@ -350,6 +351,9 @@ if (!ENV_IS_BROWSER) return;
       return group;
     },
     assignTextures: function(group) {
+      var minFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearMipMapLinearFilter : THREE.NearestFilter);
+      var magFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearFilter : THREE.NearestFilter);
+
       if (this.tex) this.tex0 = this.tex;
       if (this.tex0) {
         var tex0 = elation.engine.assets.find('image', this.tex0);
@@ -362,8 +366,24 @@ if (!ENV_IS_BROWSER) return;
           });
           tex0 = asset.getAsset();
         }
-        group.traverse(function(n) { if (n.material) { n.material.transparent = true; n.material.map = tex0; if (n.material.color) n.material.color.setHex(0xffffff);} });
       }
+      group.traverse(function(n) { 
+        if (n.material) {
+          var materials = (n.material instanceof THREE.MeshFaceMaterial ? n.material.materials : [n.material]);
+          materials.forEach(function(m) {
+            if (tex0) {
+              m.transparent = true; 
+              m.map = tex0; 
+            }
+            if (m.map) {
+              m.map.minFilter = minFilter;
+              m.map.magFilter = magFilter;
+            }
+            //m.needsUpdate = true;
+            //if (m.color) m.color.setHex(0xffffff);
+          });
+        } 
+      });
     },
     createPlaceholder: function() {
       //var geo = new THREE.TextGeometry('loading...', { size: 1, height: .1, font: 'helvetiker' });
