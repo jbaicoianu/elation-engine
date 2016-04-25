@@ -107,7 +107,7 @@ elation.require(deps, function() {
       }))();
     this.frame = function(fn) {
       if (elation.env.isNode) var window;
-      if (this.systems.render.views.main.vrdisplay) {
+      if (this.systems.render.views.main.vrdisplay && this.systems.render.views.main.vrdisplay.requestAnimationFrame) {
         this.systems.render.views.main.vrdisplay.requestAnimationFrame(fn);
       } else {
         this.requestAnimationFrame.call(window, fn);
@@ -309,8 +309,8 @@ elation.require(deps, function() {
     this.initControls = function() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
         'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
-        'share_screenshot': ['keyboard_comma', elation.bind(this, this.shareScreenshot)],
-        'share_gif': ['keyboard_period', elation.bind(this, this.shareMP4)],
+        //'share_screenshot': ['keyboard_comma', elation.bind(this, this.shareScreenshot)],
+        //'share_gif': ['keyboard_period', elation.bind(this, this.shareMP4)],
         'pointerlock': ['pointerlock', elation.bind(this, this.togglePointerLock)],
         'vr_toggle': ['keyboard_ctrl_rightsquarebracket', elation.bind(this, this.toggleVR)],
         'vr_calibrate': ['keyboard_ctrl_leftsquarebracket', elation.bind(this, this.calibrateVR)],
