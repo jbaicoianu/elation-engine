@@ -22,13 +22,13 @@ THREE.VREffect = function ( renderer, onError ) {
 
 		for ( var i = 0; i < devices.length; i ++ ) {
 
-			if ( devices[ i ] instanceof VRDisplay ) {
+			if ( typeof VRDisplay != 'undefined' && devices[ i ] instanceof VRDisplay ) {
 
 				vrHMD = devices[ i ];
 				deprecatedAPI = false;
 				break; // We keep the first we encounter
 
-			} else if ( devices[ i ] instanceof HMDVRDevice ) {
+			} else if ( typeof HMDVRDevice != 'undefined' && devices[ i ] instanceof HMDVRDevice ) {
 
 				vrHMD = devices[ i ];
 				deprecatedAPI = true;
