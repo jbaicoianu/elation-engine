@@ -78,7 +78,9 @@ elation.require([
         var view = render.views['main'];
 
         this.manipulator = new THREE.TransformControls(view.actualcamera, view.container);
-        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { this.manipulator.object.userData.thing.refresh(); render.setdirty(); }));
+        elation.events.add(this.manipulator, 'mouseDown', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_start', element: this, data: this.manipulator.object.userData.thing}); }));
+        elation.events.add(this.manipulator, 'mouseUp', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_end', element: this, data: this.manipulator.object.userData.thing}); }));
+        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_change', element: this, data: this.manipulator.object.userData.thing});  this.manipulator.object.userData.thing.refresh(); render.setdirty(); }));
 
 /*
         this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
@@ -776,7 +778,7 @@ console.log('deeeeee', view.activething);
         } else if (properties[k] instanceof THREE.Mesh) {
           root[k]['value'] = '[mesh]';
         } else if (properties[k] instanceof Object && !elation.utils.isArray(properties[k])) {
-          root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + ".");
+          //root[k]['children'] = this.buildPropertyTree(properties[k], prefix + k + ".");
         } else if (elation.utils.isArray(properties[k]) || elation.utils.isObject(properties[k])) {
           root[k]['value'] = JSON.stringify(properties[k]);
         } else {
