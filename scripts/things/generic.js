@@ -358,6 +358,7 @@ elation.component.add("engine.things.generic", function() {
     if (!this.properties.visible) {
       this.hide();
     }
+    elation.events.fire({type: 'thing_init3d', element: this});
     this.refresh();
   }
   this.initDOM = function() {
