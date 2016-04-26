@@ -5,6 +5,7 @@ elation.require(['engine.things.generic'], function() {
         src: { type: 'string' },
         autoplay: { type: 'boolean', default: true },
         loop: { type: 'boolean', default: true },
+        distanceModel: { type: 'string' },
         distance: { type: 'float', default: 100 },
         volume: { type: 'float', default: 1 },
       });
@@ -33,8 +34,15 @@ elation.require(['engine.things.generic'], function() {
       var listener = this.engine.systems.sound.getRealListener();
       if (listener) {
         this.audio = new THREE.PositionalAudio(listener);
+        if (this.properties.distanceModel) {
+          this.audio.panner.distanceModel = this.properties.distanceModel;
+        }
         //this.audio.panner.maxDistance = this.properties.distance;
-        this.audio.setRefDistance(this.properties.distance);
+        if (this.properties.distance) {
+          this.audio.setRefDistance(this.properties.distance);
+        } else {
+          this.audio.panner.distanceModel = 'linear';
+        }
         this.audio.autoplay = this.properties.autoplay;
         this.audio.setLoop(this.properties.loop);
         this.audio.setVolume(this.properties.volume);
