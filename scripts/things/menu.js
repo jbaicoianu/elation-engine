@@ -7,7 +7,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       });
       this.controlstate = this.engine.systems.controls.addContext('menu', {
         'menu_up': ['keyboard_up,gamepad_0_button_12', elation.bind(this, this.updateControls)],
-        'menu_down': ['keyboard_down,gamepad_0_axis_1,gamepad_0_button_13', elation.bind(this, this.updateControls)],
+        'menu_down': ['keyboard_down,gamepad_0_axis_1,gamepad_0_axis_3,gamepad_0_button_13', elation.bind(this, this.updateControls)],
         'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
       });
       this.selected = false;
@@ -208,6 +208,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         view.addclass('state_cursor');
       }
 
+      var gamepads = this.engine.systems.controls.gamepads;
+      if (gamepads && gamepads[0] && gamepads[0].vibrate) {
+        gamepads[0].vibrate(80);
+      }
+
       this.refresh();
       elation.events.fire({type: 'menuitem_select', element: this});
     }
@@ -232,6 +237,11 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       if (this.properties.callback && typeof this.properties.callback == 'function') {
         this.properties.callback();
         elation.events.fire({type: 'menuitem_activate', element: this});
+
+        var gamepads = this.engine.systems.controls.gamepads;
+        if (gamepads && gamepads[0] && gamepads[0].vibrate) {
+          gamepads[0].vibrate(120);
+        }
         return true;
       }
       return false;
