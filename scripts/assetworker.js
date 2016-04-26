@@ -319,6 +319,7 @@ elation.require([
           data = parsed;        
         }, job.data.src);
 
+        data.scene.updateMatrix();
         resolve(data.scene.toJSON());
       }));
     },
