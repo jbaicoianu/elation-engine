@@ -1,6 +1,6 @@
 elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressbar', 'engine.things.ball'], function() {
   elation.component.add('engine.things.player', function() {
-    this.targetrange = 1.8;
+    this.targetrange = 5;
     this.postinit = function() {
       this.defineProperties({
         height: { type: 'float', default: 2.0 },
@@ -24,9 +24,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         'move_up': ['keyboard_r,keyboard_shift_r', elation.bind(this, this.updateControls)],
         'move_down': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.updateControls)],
         'turn_left': ['keyboard_left,keyboard_shift_left', elation.bind(this, this.updateControls)],
-        'turn_right': ['keyboard_right,keyboard_shift_right,mouse_delta_x,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+        'turn_right': ['keyboard_right,keyboard_shift_right,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+        'mouse_turn': ['mouse_delta_x', elation.bind(this, this.updateControls)],
+        'mouse_pitch': ['mouse_delta_y', elation.bind(this, this.updateControls)],
         'look_up': ['keyboard_up,keyboard_shift_up', elation.bind(this, this.updateControls)],
-        'look_down': ['keyboard_down,keyboard_shift_down,mouse_delta_y,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
+        'look_down': ['keyboard_down,keyboard_shift_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
         'crouch': ['keyboard_c,keyboard_shift_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
@@ -57,15 +59,15 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.target = false;
       this.addTag('player');
 
-      //elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updateHUD));
-      //elation.events.add(this.objects.dynamics, 'physics_update', elation.bind(this, this.handleTargeting));
+      elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
+      //elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
       elation.events.add(this, 'thing_create', elation.bind(this, this.handleCreate));
     }
     this.createForces = function() {
       this.objects.dynamics.setDamping(1,1);
     }
     this.createObjectDOM = function() {
-      this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
+      //this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
     }
     this.getCharge = function() {
       return Math.max(0, Math.min(100, Math.pow((new Date().getTime() - this.charging) / 1000 * 5, 2)));
@@ -182,7 +184,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
         'position': [0,0,0]
       });
-      //this.camera = this.spawn('camera', this.name + '_camera', { position: [0,this.properties.height * .8 - this.properties.fatness,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
     }
@@ -232,18 +233,22 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.enabled = false;
       this.refresh();
     }
-    this.refresh = (function() {
+    this.engine_frame = (function() {
       var _dir = new THREE.Euler(); // Closure scratch variable
       var _moveforce = new THREE.Vector3();
-      return function() {
+      return function(ev) {
         if (this.camera && (this.enabled || (this.hmdstate && this.hmdstate.hmd))) {
+          var diff = ev.data.delta;
+              fps = Math.max(1/diff, 20);
           this.moveVector.x = (this.controlstate.move_right - this.controlstate.move_left);
           this.moveVector.y = (this.controlstate.move_up - this.controlstate.move_down);
           this.moveVector.z = -(this.controlstate.move_forward - this.controlstate.move_backward);
 
+          this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.properties.turnspeed;
+          this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.properties.turnspeed;
           if (this.engine.systems.controls.pointerLockActive) {
-            this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.properties.turnspeed;
-            this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.properties.turnspeed;
+            this.turnVector.y -= this.controlstate.mouse_turn * this.properties.turnspeed;
+            this.lookVector.x -= this.controlstate.mouse_pitch * this.properties.turnspeed;
           }
 
           if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
@@ -270,9 +275,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
               _moveforce.applyQuaternion(this.head.properties.orientation);
             }
             this.moveForce.update(_moveforce);
-            this.objects.dynamics.setAngularVelocity(this.turnVector);
+            //this.objects.dynamics.setAngularVelocity(this.turnVector);
+            var blah = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.turnVector.x/fps, this.turnVector.y/fps, this.turnVector.z/fps));
+            this.properties.orientation.multiply(blah);
 
-            if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
+            if (this.engine.systems.render.views.main.mode == 'oculus' && this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               if (this.headconstraint) this.headconstraint.enabled = false;
               var scale = 1;
               if (this.hmdstate.hmd.position) {
@@ -295,15 +302,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             //} else if (this.hmdstate.orientation) {
               //this.head.objects.dynamics.orientation.setFromEuler(new THREE.Euler(this.hmdstate.orientation.beta, this.hmdstate.orientation.gamma, this.hmdstate.orientation.alpha, 'ZYX'));
             } else {
-              this.head.objects.dynamics.setAngularVelocity(this.lookVector);
+              //this.head.objects.dynamics.setAngularVelocity(this.lookVector);
+              var blah = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.lookVector.x/fps, this.lookVector.y/fps, this.lookVector.z/fps));
+              this.head.properties.orientation.multiply(blah);
             }
             this.head.objects.dynamics.updateState();
-            this.head.refresh();
+            //this.head.refresh();
           }
-
         }
+        this.handleTargeting();
 
-        elation.events.fire({type: 'thing_change', element: this});
+        //elation.events.fire({type: 'thing_change', element: this});
       }
     })();
     this.updateControls = function() {
