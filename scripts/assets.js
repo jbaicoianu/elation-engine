@@ -19,8 +19,10 @@ if (!ENV_IS_BROWSER) return;
       var assetobj = new assetclass(asset);
 
       if (!elation.engine.assets.types[type]) elation.engine.assets.types[type] = {};
-      elation.engine.assets.assets[assetobj.name] = assetobj;
-      elation.engine.assets.types[type][assetobj.name] = assetobj;
+      if (assetobj.name) {
+        elation.engine.assets.assets[assetobj.name] = assetobj;
+        elation.engine.assets.types[type][assetobj.name] = assetobj;
+      }
       return assetobj;
     },
     find: function(type, name, raw) {
@@ -158,7 +160,7 @@ if (!ENV_IS_BROWSER) return;
       }
     },
     handleLoad: function(data) {
-      //console.log('loaded image', data);
+      //console.log('loaded image', data.sourceFile, data.image, data);
       this._texture = data;
       data.sourceFile = data.image.src;
       data.image = this.scalePowerOfTwo(data.image);
@@ -373,6 +375,7 @@ if (!ENV_IS_BROWSER) return;
           materials.forEach(function(m) {
             if (tex0) {
               m.transparent = true; 
+              m.alphaTest = 0.4;
               m.map = tex0; 
             }
             if (m.map) {
@@ -386,7 +389,8 @@ if (!ENV_IS_BROWSER) return;
       });
     },
     createPlaceholder: function() {
-      //var geo = new THREE.TextGeometry('loading...', { size: 1, height: .1, font: 'helvetiker' });
+/*
+      var geo = new THREE.TextGeometry('loading...', { size: 1, height: .1, font: 'helvetiker' });
       var font = elation.engine.assets.find('font', 'helvetiker');
 
       var geo = new THREE.TextGeometry( 'loading...', {
@@ -395,7 +399,9 @@ if (!ENV_IS_BROWSER) return;
 
         font: font,
       });                                                
-      //var geo = new THREE.SphereGeometry(1);
+*/
+      var geo = new THREE.SphereGeometry(1);
+      //geo.applyMatrix(new THREE.Matrix4().makeScale(1,1,.1));
       var mat = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x333333});
       this.placeholder = new THREE.Mesh(geo, mat);
       return this.placeholder;
@@ -568,6 +574,80 @@ if (!ENV_IS_BROWSER) return;
         this.load();
       }
       return this._font;
+    }
+  }, elation.engine.assets.base);
+
+  elation.define('engine.assets.label', {
+    assettype: 'label',
+    text: '',
+    canvas: false,
+    font: 'sans-serif',
+    fontSize: 128,
+    color: '#ffffff',
+    outline: '#000000',
+    outlineSize: 1,
+    
+    aspect: 1,
+    _texture: false,
+
+    _construct: function(args) {
+      elation.class.call(this, args);
+      this.load();
+    },
+    getNextPOT: function(x) {
+      return Math.pow(2, Math.ceil(Math.log(x) / Math.log(2)));
+    },
+    load: function() {
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+
+      if (this.text) {
+        var fontSize = this.fontSize,
+            color = this.color,
+            outlineSize = this.outlineSize,
+            outline = this.outline,
+            font = this.font;
+
+        ctx.font = fontSize + 'px ' + font;
+        ctx.lineWidth = outlineSize + 'px ';
+        ctx.strokeStyle = outline;
+
+        var size = ctx.measureText(this.text);
+        var w = size.width, //this.getNextPOT(size.width),
+            h = fontSize; //this.getNextPOT(fontSize);
+
+        canvas.width = w;
+        canvas.height = h;
+
+        ctx.textBaseline = 'top';
+        ctx.font = fontSize + 'px ' + font;
+        ctx.lineWidth = outlineSize + 'px ';
+        ctx.strokeStyle = outline;
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = color;
+
+        this.aspect = size.width / fontSize;
+
+        ctx.fillText(this.text, 0, 0);
+        ctx.strokeText(this.text, 0, 0);
+
+        var scaledcanvas = document.createElement('canvas');
+        scaledcanvas.width = this.getNextPOT(w);
+        scaledcanvas.height = this.getNextPOT(h);
+        var scaledctx = scaledcanvas.getContext('2d');
+        scaledctx.drawImage(canvas, 0, 0, scaledcanvas.width, scaledcanvas.height);
+        canvas = scaledcanvas;
+      }
+      this._texture = new THREE.Texture(canvas);
+      this._texture.needsUpdate = true;
+    },
+    getAsset: function() {
+      if (!this._texture) {
+        this.load();
+      }
+      return this._texture;
     }
   }, elation.engine.assets.base);
   /*
