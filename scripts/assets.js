@@ -577,14 +577,14 @@ if (!ENV_IS_BROWSER) return;
     }
   }, elation.engine.assets.base);
 
-  elation.define('engine.assets.label', {
+  elation.define('engine.assets.labelgen', {
     assettype: 'label',
     text: '',
     canvas: false,
     font: 'sans-serif',
-    fontSize: 128,
+    fontSize: 64,
     color: '#ffffff',
-    outline: '#000000',
+    outline: 'rgba(0,0,0,0.5)',
     outlineSize: 1,
     
     aspect: 1,
@@ -592,16 +592,22 @@ if (!ENV_IS_BROWSER) return;
 
     _construct: function(args) {
       elation.class.call(this, args);
+      this.cache = {};
+      this.canvas = document.createElement('canvas');
+      this.ctx = this.canvas.getContext('2d');
       this.load();
     },
     getNextPOT: function(x) {
       return Math.pow(2, Math.ceil(Math.log(x) / Math.log(2)));
     },
     load: function() {
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
+      
+    },
+    getLabel: function(text) {
+      if (!this.cache[text]) {
+        var canvas = this.canvas,
+            ctx = this.ctx;
 
-      if (this.text) {
         var fontSize = this.fontSize,
             color = this.color,
             outlineSize = this.outlineSize,
@@ -612,9 +618,9 @@ if (!ENV_IS_BROWSER) return;
         ctx.lineWidth = outlineSize + 'px ';
         ctx.strokeStyle = outline;
 
-        var size = ctx.measureText(this.text);
-        var w = size.width, //this.getNextPOT(size.width),
-            h = fontSize; //this.getNextPOT(fontSize);
+        var size = ctx.measureText(text);
+        var w = size.width,
+            h = fontSize;
 
         canvas.width = w;
         canvas.height = h;
@@ -630,18 +636,27 @@ if (!ENV_IS_BROWSER) return;
 
         this.aspect = size.width / fontSize;
 
-        ctx.fillText(this.text, 0, 0);
-        ctx.strokeText(this.text, 0, 0);
+        ctx.fillText(text, 0, 0);
+        ctx.strokeText(text, 0, 0);
 
         var scaledcanvas = document.createElement('canvas');
+        var scaledctx = scaledcanvas.getContext('2d');
         scaledcanvas.width = this.getNextPOT(w);
         scaledcanvas.height = this.getNextPOT(h);
-        var scaledctx = scaledcanvas.getContext('2d');
         scaledctx.drawImage(canvas, 0, 0, scaledcanvas.width, scaledcanvas.height);
-        canvas = scaledcanvas;
+
+        this.cache[text] = new THREE.Texture(scaledcanvas);
+        this.cache[text].needsUpdate = true;
       }
-      this._texture = new THREE.Texture(canvas);
-      this._texture.needsUpdate = true;
+      return this.cache[text];
+    },
+    getAspectRatio: function(text) {
+      var ctx = this.ctx, 
+          font = this.font,
+          fontSize = this.fontSize;
+      ctx.font = fontSize + 'px ' + font;
+      var size = ctx.measureText(text);
+      return size.width / fontSize;
     },
     getAsset: function() {
       if (!this._texture) {
