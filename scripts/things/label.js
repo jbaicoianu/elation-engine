@@ -29,16 +29,20 @@ elation.require(["engine.things.generic", "engine.assets"], function() {
     this.createObject3D = function() {
       var text = this.properties.text || this.name;
       var geometry = this.createTextGeometry(text);
+      this.material = this.createTextMaterial();
 
-      this.material = new THREE.MeshPhongMaterial({color: this.properties.color, emissive: this.properties.emissive, shading: THREE.SmoothShading, depthTest: this.properties.depthTest});
-
-      if (this.properties.opacity < 1.0) {
-        this.material.opacity = this.properties.opacity;
-        this.material.transparent = true;
-      }
       var mesh = new THREE.Mesh(geometry, this.material);
       
       return mesh;
+    }
+    this.createTextMaterial = function() {
+      var material = new THREE.MeshPhongMaterial({color: this.properties.color, emissive: this.properties.emissive, shading: THREE.SmoothShading, depthTest: this.properties.depthTest});
+
+      if (this.properties.opacity < 1.0) {
+        material.opacity = this.properties.opacity;
+        material.transparent = true;
+      }
+      return material;
     }
     this.createTextGeometry = function(text) {
       var font = elation.engine.assets.find('font', this.properties.font);
@@ -91,14 +95,16 @@ elation.require(["engine.things.generic", "engine.assets"], function() {
       return geometry;
     }
     this.setText = function(text) {
+      this.properties.text = text;
       if (text.indexOf && text.indexOf('\n') != -1) {
         this.setMultilineText(text);
       } else {
         this.objects['3d'].geometry = this.createTextGeometry(text);
       }
+      this.objects['3d'].material = this.material = this.createTextMaterial(text);
       this.refresh();
    }
-    this.setMultilineText = function(text) {
+   this.setMultilineText = function(text) {
       var lines = text.split('\n');
       var geometry = new THREE.Geometry();
       var linematrix = new THREE.Matrix4();
