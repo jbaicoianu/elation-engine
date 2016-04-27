@@ -1,4 +1,4 @@
-elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressbar', 'engine.things.ball'], function() {
+elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressbar', 'engine.things.label2d'], function() {
   elation.component.add('engine.things.player', function() {
     this.targetrange = 5;
     this.postinit = function() {
@@ -279,7 +279,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
             var blah = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.turnVector.x/fps, this.turnVector.y/fps, this.turnVector.z/fps));
             this.properties.orientation.multiply(blah);
 
-            if (this.engine.systems.render.views.main.mode == 'oculus' && this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
+            if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               if (this.headconstraint) this.headconstraint.enabled = false;
               var scale = 1;
               if (this.hmdstate.hmd.position) {
@@ -391,18 +391,35 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
     }.bind(this))();
 
     this.showUseDialog = function(verb, noun) {
-      if (!this.usedialog) {
-        this.usedialog = elation.ui.window({append: document.body, bottom: true, center: true});
-      }
-
       var useable = this.target.canUse(this);
 
       if (useable) {
         var verb = useable.verb || 'use';
         var noun = useable.noun || '';
-        this.usedialog.show();
-        var content = 'Press E or click to ' + verb + ' ' + noun;
-        this.usedialog.setcontent(content);
+        var content = 'Press E or click to ' + verb + '\n' + noun;
+
+        if (!this.uselabel) {
+          this.uselabel = this.head.spawn('generic', null, {
+            position: [0,-.15,-.5],
+            scale: [0.5,0.5,0.5]
+          });
+          var toplabel = this.uselabel.spawn('label2d', null, {
+            text: 'Press E or click to ' + verb,
+            size: 16,
+            scale: [.5,.5,.5],
+          });
+          this.uselabelnoun = this.uselabel.spawn('label2d', null, {
+            position: [0,-0.1,0],
+            text: noun,
+            size: 64
+          });
+        } else {
+          this.uselabelnoun.setText(noun);
+          if (!this.uselabel.parent) {
+            this.head.add(this.uselabel);
+          }
+        }
+
       }
 
 /*
@@ -414,8 +431,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
 
     }
     this.hideUseDialog = function() {
-      if (this.usedialog) {
-        this.usedialog.hide();
+      if (this.uselabel && this.uselabel.parent) {
+        this.uselabel.parent.remove(this.uselabel);
       }
     }
     this.pickup = function(object, force) {
