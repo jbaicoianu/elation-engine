@@ -93,7 +93,7 @@ if (!ENV_IS_BROWSER) return;
       console.log('engine.assets.base load() should not be called directly', this);
     },
     isURLRelative: function(src) {
-      if (src.match(/^https?:/) || src[0] == '/') {
+      if (src && src.match(/^(https?:)?\/\//) || src[0] == '/') {
         return false;
       }
       return true;
@@ -102,7 +102,7 @@ if (!ENV_IS_BROWSER) return;
       return (src[0] == '/' && src[1] != '/');
     },
     isURLLocal: function(src) {
-      if (src.match(/^https?:/i)) {
+      if (src.match(/^(https?:)?\/\//i)) {
         return (src.indexOf(self.location.origin) == 0);
       }
       return (
