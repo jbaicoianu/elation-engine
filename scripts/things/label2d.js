@@ -49,12 +49,12 @@ elation.require(['engine.things.label'], function() {
           asset = elation.engine.assets.get({
             assettype: 'labelgen',
             assetname: genname,
-            color: '#' + color.getHexString()
+            color: '#' + color.getHexString(),
+            outline: 4
           });
         }
         this.labelgen = asset;
       }
-console.log('fododo', this.labelgen);
       return this.labelgen;
     }
   }, elation.engine.things.label);
