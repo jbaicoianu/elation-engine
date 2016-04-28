@@ -405,11 +405,13 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
           });
           var toplabel = this.uselabel.spawn('label2d', null, {
             text: 'Press E or click to ' + verb,
+            color: 0x00ff00,
             size: 16,
             scale: [.5,.5,.5],
           });
           this.uselabelnoun = this.uselabel.spawn('label2d', null, {
             position: [0,-0.1,0],
+            color: 0x000099,
             text: noun,
             size: 64
           });
