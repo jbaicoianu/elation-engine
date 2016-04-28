@@ -521,6 +521,7 @@ elation.component.add("engine.things.generic", function() {
       }
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
+      thing.parent = false;
     } else {
       console.log("Couldn't remove ", thing.name, " doesn't exist in ", this.name);
     }
