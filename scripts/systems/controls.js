@@ -517,7 +517,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           ret += (ret.length > 0 ? "_" : "") + modifiers[k];
         }
       }
-      return ret;
+      if (ret != "") 
+        return ret;
+      return "nomod";
     }
     this.mousedown = function(ev) {
       if (ev.button === 0 && !this.getPointerLockElement()) {
@@ -636,27 +638,32 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       //ev.preventDefault();
     }
     this.keydown = function(ev) {
-      var keyname = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
-      //console.log(keyname + ' down', ev.value);
+      // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
+      var keynamemod = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
+          keyname = this.getBindingName("keyboard", ev.keyCode);
       if (!this.state[keyname]) {
         this.changes.push(keyname);
       }
+      if (!this.state[keynamemod]) {
+        this.changes.push(keynamemod);
+      }
       this.state[keyname] = 1;
-      if (this.capturekeys.indexOf(keyname) != -1) {
+      this.state[keynamemod] = 1;
+
+      if (this.capturekeys.indexOf(keyname) != -1 ||
+          this.capturekeys.indexOf(keynamemod) != -1) {
         ev.preventDefault();
       }
     }
     this.keyup = function(ev) {
-      var keymod = this.getKeyboardModifiers(ev);
-      if (keymod != '') {
-        var keyname = this.getBindingName("keyboard", ev.keyCode, keymod);
-        this.state[keyname] = 0;
-        this.changes.push(keyname);
-      } else {
-        var keyname = this.getBindingName("keyboard", ev.keyCode);
-        this.state[keyname] = 0;
-        this.changes.push(keyname);
-      }
+      // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
+      var keyname = this.getBindingName("keyboard", ev.keyCode);
+      var keynamemod = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
+
+      this.state[keyname] = 0;
+      this.state[keynamemod] = 0;
+      this.changes.push(keyname);
+      this.changes.push(keynamemod);
     }
 
     this.touchstart = function(ev) {
