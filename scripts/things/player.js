@@ -17,25 +17,25 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
         startcameraorientation: { type: 'quaternion', default: new THREE.Quaternion() }
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
-        'move_forward': ['keyboard_w,keyboard_shift_w', elation.bind(this, this.updateControls)],
-        'move_backward': ['keyboard_s,keyboard_shift_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
-        'move_left': ['keyboard_a,keyboard_shift_a', elation.bind(this, this.updateControls)],
-        'move_right': ['keyboard_d,keyboard_shift_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
-        'move_up': ['keyboard_r,keyboard_shift_r', elation.bind(this, this.updateControls)],
-        'move_down': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.updateControls)],
-        'turn_left': ['keyboard_left,keyboard_shift_left', elation.bind(this, this.updateControls)],
-        'turn_right': ['keyboard_right,keyboard_shift_right,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
+        'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
+        'move_backward': ['keyboard_s,gamepad_0_axis_1', elation.bind(this, this.updateControls)],
+        'move_left': ['keyboard_a', elation.bind(this, this.updateControls)],
+        'move_right': ['keyboard_d,gamepad_0_axis_0', elation.bind(this, this.updateControls)],
+        'move_up': ['keyboard_r', elation.bind(this, this.updateControls)],
+        'move_down': ['keyboard_f', elation.bind(this, this.updateControls)],
+        'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
+        'turn_right': ['keyboard_right,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
         'mouse_turn': ['mouse_delta_x', elation.bind(this, this.updateControls)],
         'mouse_pitch': ['mouse_delta_y', elation.bind(this, this.updateControls)],
-        'look_up': ['keyboard_up,keyboard_shift_up', elation.bind(this, this.updateControls)],
-        'look_down': ['keyboard_down,keyboard_shift_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
+        'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
+        'look_down': ['keyboard_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
-        'crouch': ['keyboard_c,keyboard_shift_c', elation.bind(this, this.updateControls)],
-        //'jump': ['keyboard_space,keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
-        //'toss': ['keyboard_space,keyboard_shift_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
+        'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
+        //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
+        //'toss': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
         'use': ['keyboard_space,keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
-        'toggle_flying': ['keyboard_f,keyboard_shift_f', elation.bind(this, this.toggle_flying)],
+        //'toggle_flying': ['keyboard_f', elation.bind(this, this.toggle_flying)],
         'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
@@ -275,9 +275,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
               _moveforce.applyQuaternion(this.head.properties.orientation);
             }
             this.moveForce.update(_moveforce);
-            //this.objects.dynamics.setAngularVelocity(this.turnVector);
-            var blah = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.turnVector.x/fps, this.turnVector.y/fps, this.turnVector.z/fps));
-            this.properties.orientation.multiply(blah);
+            this.objects.dynamics.setAngularVelocity(this.turnVector);
 
             if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
               if (this.headconstraint) this.headconstraint.enabled = false;
@@ -299,12 +297,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
               }
 
               this.head.objects.dynamics.updateState();
-            //} else if (this.hmdstate.orientation) {
-              //this.head.objects.dynamics.orientation.setFromEuler(new THREE.Euler(this.hmdstate.orientation.beta, this.hmdstate.orientation.gamma, this.hmdstate.orientation.alpha, 'ZYX'));
             } else {
-              //this.head.objects.dynamics.setAngularVelocity(this.lookVector);
-              var blah = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.lookVector.x/fps, this.lookVector.y/fps, this.lookVector.z/fps));
-              this.head.properties.orientation.multiply(blah);
+              this.head.objects.dynamics.setAngularVelocity(this.lookVector);
             }
             this.head.objects.dynamics.updateState();
             //this.head.refresh();
