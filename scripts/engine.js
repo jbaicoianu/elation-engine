@@ -107,8 +107,8 @@ elation.require(deps, function() {
       }))();
     this.frame = function(fn) {
       if (elation.env.isNode) var window;
-      if (this.systems.render.views.main.vrdisplay && this.systems.render.views.main.vrdisplay.requestAnimationFrame) {
-        this.systems.render.views.main.vrdisplay.requestAnimationFrame(fn);
+      if (this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
+        this.client.view.vrdisplay.requestAnimationFrame(fn);
       } else {
         this.requestAnimationFrame.call(window, fn);
       }
