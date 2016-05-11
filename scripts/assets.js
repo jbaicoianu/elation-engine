@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three'], function() {
+elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif'], function() {
 
   THREE.Cache.enabled = true;
   elation.extend('engine.assets', {
@@ -147,6 +147,8 @@ if (!ENV_IS_BROWSER) return;
     assettype: 'image',
     src: false,
     texture: false,
+    hasalpha: false,
+
     load: function() {
       var loader = new THREE.TextureLoader();
       loader.setCrossOrigin('');
@@ -163,7 +165,7 @@ if (!ENV_IS_BROWSER) return;
       //console.log('loaded image', data.sourceFile, data.image, data);
       this._texture = data;
       data.sourceFile = data.image.src;
-      data.image = this.scalePowerOfTwo(data.image);
+      data.image = this.processImage(data.image);
       data.needsUpdate = true;
       data.wrapS = data.wrapT = THREE.RepeatWrapping;
       this.loaded = true;
@@ -192,8 +194,10 @@ if (!ENV_IS_BROWSER) return;
       }
       return this._texture;
     },
-    scalePowerOfTwo: function(image) {
-      if (!elation.engine.materials.isPowerOfTwo(image.width) || !elation.engine.materials.isPowerOfTwo(image.height)) {
+    processImage: function(image) {
+      if (image.src.match(/\.gif/)) { // FIXME - really we should be cracking open the file and looking at magic number to determine this
+        return this.convertGif(image); 
+      } else if (!elation.engine.materials.isPowerOfTwo(image.width) || !elation.engine.materials.isPowerOfTwo(image.height)) {
         // Scale up the texture to the next highest power of two dimensions.
         var canvas = document.createElement("canvas");
         canvas.width = elation.engine.materials.nextHighestPowerOfTwo(image.width);
@@ -204,6 +208,38 @@ if (!ENV_IS_BROWSER) return;
       } else {
         return image;
       }
+    },
+    convertGif: function(image) {
+      var gif = new SuperGif({gif: image, draw_while_loading: true});
+      var newcanvas = document.createElement('canvas');
+      newcanvas.width = elation.engine.materials.nextHighestPowerOfTwo(image.width);
+      newcanvas.height = elation.engine.materials.nextHighestPowerOfTwo(image.height);
+      var ctx = newcanvas.getContext('2d');
+      var texture = this._texture;
+      //texture.minFilter = THREE.LinearFilter;
+      //texture.magFilter = THREE.LinearFilter;
+      //texture.generateMipmaps = false;
+      gif.load(function() {
+        var canvas = gif.get_canvas();
+
+        var doGIFFrame = function(static) {
+          newcanvas.width = newcanvas.width;
+          ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, newcanvas.width, newcanvas.height);
+          texture.needsUpdate = true;
+          newcanvas.width = newcanvas.width;
+          ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, newcanvas.width, newcanvas.height);
+          texture.needsUpdate = true;
+          elation.events.fire({type: 'update', target: texture});
+
+          if (!static) {
+            var frame = gif.get_frame(gif.get_current_frame());
+            var delay = (frame ? frame.delay : 10);
+            setTimeout(doGIFFrame, delay * 10);
+          }
+        }
+        doGIFFrame(gif.get_length() == 1);
+      });
+      return newcanvas;
     }
   }, elation.engine.assets.base);
 
