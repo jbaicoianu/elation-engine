@@ -5,6 +5,12 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     assets: {},
     types: {},
     corsproxy: '',
+    init: function() {
+      var corsproxy = elation.config.get('engine.assets.corsproxy', '');
+      if (corsproxy != '') {
+        this.setCORSProxy(corsproxy);
+      }
+    },
     loadAssetPack: function(url) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url});
       this.assetroot.load()
