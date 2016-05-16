@@ -8,7 +8,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         'childorientation': { type: 'quaternion', default: new THREE.Quaternion() },
         'childscale': { type: 'vector3', default: new THREE.Vector3(1,1,1) },
       });
-      elation.events.add(this, 'mouseover,mouseout,click', this);
+      elation.events.add(this, 'mouseover,mousemove,mouseout,click', this);
     }
     this.createObject3D = function() {
       var root = new THREE.Object3D();
