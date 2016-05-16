@@ -140,6 +140,9 @@ elation.require([
       if (this.args.fullsize == 1) {
         elation.html.addclass(this.container, "engine_view_fullsize");
       }
+      if (this.args.resolution) {
+        elation.html.addclass(this.container, "engine_view_fixedsize");
+      }
       if (this.args.crosshair == 1) {
         elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this.container});
       }
@@ -553,7 +556,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
         elation.events.fire({type: 'render_view_prerender', element: this});
 
-        var dims = elation.html.dimensions(this.container);
         if (this.picking && this.pickingactive) {
           //if (this.pickingdebug || this.picknum++ % 3 == 0 || delta > 0.05) {
             this.updatePickingTarget();
@@ -752,7 +754,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.getsize = function() {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
-      var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : elation.html.dimensions(this.container));
+      var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : 
+              (this.args.resolution ? {w: this.args.resolution[0], h: this.args.resolution[1]} : 
+               elation.html.dimensions(this.container)
+              ));
       if (this.vrdisplay && this.vrdisplay.isPresenting) {
         var leftEye = this.vrdisplay.getEyeParameters("left");
         var rightEye = this.vrdisplay.getEyeParameters("right");
