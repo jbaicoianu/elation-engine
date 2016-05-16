@@ -52,7 +52,7 @@ if (!ENV_IS_BROWSER) return;
         elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
       }
     },
-    loaderpool: (ENV_IS_BROWSER ? new elation.utils.workerpool({component: 'engine.assetworker', num: 4}) : {})
+    loaderpool: false
   });
 
   elation.define('engine.assets.corsproxyloader', {
@@ -464,6 +464,9 @@ if (!ENV_IS_BROWSER) return;
     loadWithWorker: function(jobdata) {
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
+      if (!elation.engine.assets.loaderpool) {
+        elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', num: 4});
+      }
       elation.engine.assets.loaderpool.addJob(jobdata)
         .then(elation.bind(this, this.handleLoadJSON));
     },
