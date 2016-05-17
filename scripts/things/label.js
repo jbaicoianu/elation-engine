@@ -1,11 +1,4 @@
 elation.require(["engine.things.generic", "engine.assets"], function() {
-
-  elation.engine.assets.get({
-    'assettype':'font', 
-    'name':'helvetiker', 
-    'src': elation.config.get('engine.assets.font.path', '/media/engine/fonts/') + 'helvetiker_regular.typeface.js'
-  });
-
   elation.component.add("engine.things.label", function() {
     this.postinit = function() {
       this.defineProperties({
