@@ -16,7 +16,7 @@ var deps = [
   "ui.panel"
 ];
 
-if (elation.env.isBrowser) {
+if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
     "share.picker",
@@ -32,6 +32,7 @@ if (elation.env.isBrowser) {
 
 elation.require(deps, function() {
   elation.requireCSS('engine.engine');
+  elation.requireCSS('ui.themes.dark');
 
   elation.extend("engine.instances", {});
   elation.extend("engine.create", function(name, systems, callback) {
@@ -55,6 +56,7 @@ elation.require(deps, function() {
       var target = null;
       if (elation.env.isBrowser) target = window
       elation.events.add(target, "unload", elation.bind(this, this.stop)); 
+      elation.engine.assets.init();
     }
     this.start = function() {
       this.started = this.running = true;
@@ -253,7 +255,9 @@ elation.require(deps, function() {
         stats: true,
         picking: true,
         fullsize: true,
+        resolution: null,
       };
+      this.setEngineConfig(this.args);
       this.initEngine();
       this.loadEngine();
     }
@@ -271,6 +275,17 @@ elation.require(deps, function() {
       } 
       this.enginecfg.systems.push("render");
       this.enginecfg.systems.push("sound");
+    }
+    this.setEngineConfig = function(args) {
+      var cfg = this.enginecfg;
+      if (args.resolution) {
+        cfg.resolution = args.resolution.split('x');;
+        cfg.fullsize = false;
+      } 
+      if (args.fullsize !== undefined) cfg.fullsize = args.fullsize;
+      if (args.crosshair !== undefined) cfg.crosshair = args.crosshair;
+      if (args.picking !== undefined) cfg.picking = args.picking;
+      if (args.stats !== undefined) cfg.stats = args.stats;
     }
     // Instantiate the engine
     this.loadEngine = function() {
@@ -295,7 +310,15 @@ elation.require(deps, function() {
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), { fullsize: this.enginecfg.fullsize, picking: this.enginecfg.picking, engine: this.name, showstats: this.enginecfg.stats, crosshair: this.enginecfg.crosshair } );
+      var cfg = this.enginecfg;
+      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), {
+        fullsize: cfg.fullsize,
+        resolution: cfg.resolution,
+        picking: cfg.picking,
+        engine: this.name,
+        showstats: cfg.stats,
+        crosshair: cfg.crosshair 
+      } );
 
       this.initWorld();
       this.initControls();
@@ -511,7 +534,7 @@ elation.require(deps, function() {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
-        recorder.captureMP4(640, 360, 25, 10).then(elation.bind(this, function(data) {
+        recorder.captureMP4(640, 360, 25, 30).then(elation.bind(this, function(data) {
           var img = data.file;
           this.sharepicker.share({
             name: this.getScreenshotFilename('mp4'), 
