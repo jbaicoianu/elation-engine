@@ -202,6 +202,7 @@ if (!ENV_IS_BROWSER) return;
     },
     processImage: function(image) {
       if (image.src.match(/\.gif/)) { // FIXME - really we should be cracking open the file and looking at magic number to determine this
+        this.hasalpha = true; // FIXME - if we're cracking the gif open already, we should be able to tell if it has alpha or not
         return this.convertGif(image); 
       } else if (!elation.engine.materials.isPowerOfTwo(image.width) || !elation.engine.materials.isPowerOfTwo(image.height)) {
         // Scale up the texture to the next highest power of two dimensions.
@@ -231,6 +232,7 @@ if (!ENV_IS_BROWSER) return;
         var doGIFFrame = function(static) {
           newcanvas.width = newcanvas.width;
           ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, newcanvas.width, newcanvas.height);
+          texture.minFilter = texture.magFilter = THREE.NearestFilter; // FIXME - should this be hardcoded for all gifs?
           texture.needsUpdate = true;
           elation.events.fire({type: 'update', element: texture});
 
@@ -510,8 +512,30 @@ if (!ENV_IS_BROWSER) return;
               if (tex && tex.image) {
                 var img = tex.image;
                 if (!textures[img.src]) {
+                  //elation.engine.assets.loadJSON([{"assettype": "image", name: img.src, "src": img.src}], this.baseurl); 
+                  //tex = elation.engine.assets.find('image', img.src);
+
+                  var asset = elation.engine.assets.find('image', img.src, true);
+                  if (!asset) {
+                    asset = elation.engine.assets.get({
+                      assettype: 'image', 
+                      id: img.src, 
+                      src: img.src,
+                      baseurl: this.baseurl
+                    });
+                  }
+                  
+                  tex = asset.getAsset();
                   textures[img.src] = tex;
-                  elation.events.add(img, 'load', function() { tex.needsUpdate = true; });
+                  elation.events.add(tex, 'asset_load', function() { 
+                    tex.needsUpdate = true;
+                    if (asset.hasalpha) {
+                      material.transparent = true;
+                      material.alphaTest = 0.1;
+                      material.needsUpdate = true;
+                    }
+                  });
+                  material[texname] = tex;
                 } else {
                  material[texname] = textures[img.src];
                 }
