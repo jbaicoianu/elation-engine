@@ -1,7 +1,7 @@
 {
   "name": "elation-engine",
   "description": "WebGL/WebVR engine written in Javascript",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "main": "",
   "author": "James Baicoianu",
   "license": "MIT",
@@ -10,6 +10,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jbaicoianu/elation-engine"
+  },
+  "dependencies": {
+    "elation": ">=2.0.0",
+    "elation-share": "*",
+    "cyclone-physics": "*"
   },
   "keywords": [
     "elation",
