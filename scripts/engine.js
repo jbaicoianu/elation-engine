@@ -66,8 +66,8 @@ elation.require(deps, function() {
       this.run(0);
     }
     this.stop = function() {
-      elation.events.fire({element: this, type: "engine_stop"});
       this.running = false;
+      elation.events.fire({element: this, type: "engine_stop"});
     }
 
     this.run = function(ts) {
