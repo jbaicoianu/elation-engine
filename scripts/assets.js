@@ -441,9 +441,9 @@ if (!ENV_IS_BROWSER) return;
         font: font,
       });                                                
 */
-      var geo = new THREE.SphereGeometry(1);
+      var geo = new THREE.SphereGeometry(0.25);
       //geo.applyMatrix(new THREE.Matrix4().makeScale(1,1,.1));
-      var mat = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x333333});
+      var mat = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x333333, opacity: 0.5, transparent: true});
       this.placeholder = new THREE.Mesh(geo, mat);
       return this.placeholder;
     },
