@@ -41,10 +41,17 @@ elation.require([
         'wrl': new elation.engine.assets.loaders.model_wrl(),
       }
     },
-    load: function(job) {
+    getFullURL: function(src) {
       var corsproxy = elation.engine.assets.corsproxy || '';
-      var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
-      var fullurl = (job.data.src.match(/^(https?:)?\/\//) ? corsproxy + job.data.src :  job.data.src);
+      var baseurl = src.substr( 0, src.lastIndexOf( "/" ) + 1 ) 
+      var fullurl = src;
+      if (src.match(/^(https?:)?\/\//) && !src.match(/^(https?:)?\/\/localhost/)) {
+        fullurl = corsproxy + fullurl;
+      }
+      return fullurl;
+    },
+    load: function(job) {
+      var fullurl = this.getFullURL(job.data.src);
       elation.net.get(fullurl, null, {
         responseType: 'arraybuffer',
         callback: elation.bind(this, this.onload, job),
@@ -116,7 +123,17 @@ elation.require([
       }    
       if (modeldata) {
         this.parse(modeldata, job).then(function(data) {
-          postMessage({message: 'finished', id: job.id, data: data});
+          var transferrables = [];
+          // Convert BufferGeometry arrays back to Float32Arrays so they can be transferred efficiently
+          for (var i = 0; i < data.geometries.length; i++) {
+            var geo = data.geometries[i];
+            for (var k in geo.data.attributes) {
+              var arr = Float32Array.from(geo.data.attributes[k].array);
+              transferrables.push(arr.buffer);
+              geo.data.attributes[k].array = arr;
+            }
+          }
+          postMessage({message: 'finished', id: job.id, data: data}, transferrables);
         });
       } else {
         postMessage({message: 'finished', id: job.id, data: false});
@@ -192,19 +209,29 @@ elation.require([
                 }
 
               } );
-              resolve(modeldata.toJSON());
+              resolve(this.convertToJSON(modeldata));
             }),
             undefined,
             elation.bind(this, function() {
-              resolve(modeldata.toJSON());
+              resolve(this.convertToJSON(modeldata));
             })
           );
         } else {
-          resolve(modeldata.toJSON());
+          resolve(this.convertToJSON(modeldata));
         }
         return modeldata;
       }));
     },
+    convertToJSON: function(scene) {
+      // Convert Geometries to BufferGeometries
+      scene.traverse(function(n) {
+        if (n.geometry && n.geometry instanceof THREE.Geometry) {
+          var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+          n.geometry = bufgeo;
+        }
+      });
+      return scene.toJSON();
+    }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_collada', {
     parser: new DOMParser(),
