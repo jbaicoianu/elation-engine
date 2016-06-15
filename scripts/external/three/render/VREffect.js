@@ -12,7 +12,7 @@
 THREE.VREffect = function ( renderer, onError ) {
 
 	var vrHMD;
-	var deprecatedAPI = false;
+	var isDeprecatedAPI = false;
 	var eyeTranslationL = new THREE.Vector3();
 	var eyeTranslationR = new THREE.Vector3();
 	var renderRectL, renderRectR;
@@ -22,16 +22,16 @@ THREE.VREffect = function ( renderer, onError ) {
 
 		for ( var i = 0; i < devices.length; i ++ ) {
 
-			if ( typeof VRDisplay != 'undefined' && devices[ i ] instanceof VRDisplay ) {
+			if ( 'VRDisplay' in window && devices[ i ] instanceof VRDisplay ) {
 
 				vrHMD = devices[ i ];
-				deprecatedAPI = false;
+				isDeprecatedAPI = false;
 				break; // We keep the first we encounter
 
-			} else if ( typeof HMDVRDevice != 'undefined' && devices[ i ] instanceof HMDVRDevice ) {
+			} else if ( 'HMDVRDevice' in window && devices[ i ] instanceof HMDVRDevice ) {
 
 				vrHMD = devices[ i ];
-				deprecatedAPI = true;
+				isDeprecatedAPI = true;
 				break; // We keep the first we encounter
 
 			}
@@ -61,81 +61,174 @@ THREE.VREffect = function ( renderer, onError ) {
 
 	this.scale = 1;
 
-	this.setSize = function ( width, height ) {
-
-		renderer.setSize( width, height );
-
-	};
-
-  this.preRenderLeft = function(scene, camera) { };
-  this.preRenderRight = function(scene, camera) { };
-
-	// fullscreen
-
 	var isPresenting = false;
 
-	var canvas = renderer.domElement;
-	var fullscreenchange = canvas.mozRequestFullScreen ? 'mozfullscreenchange' : 'webkitfullscreenchange';
+	var rendererSize = renderer.getSize();
+	var rendererPixelRatio = 1;//renderer.getPixelRatio();
 
-	document.addEventListener( fullscreenchange, function () {
+	this.setSize = function ( width, height ) {
 
-		if ( deprecatedAPI ) {
+		rendererSize = { width: width, height: height };
 
-			isPresenting = document.mozFullScreenElement || document.webkitFullscreenElement;
+		if ( isPresenting ) {
 
-		}
+			var eyeParamsL = vrHMD.getEyeParameters( 'left' );
+			renderer.setPixelRatio( 1 );
 
-	}, false );
+			if ( isDeprecatedAPI ) {
 
-	window.addEventListener( 'vrdisplaypresentchange', function () {
-
-		isPresenting = vrHMD.isPresenting;
-
-	}, false );
-
-	this.setFullScreen = function ( boolean ) {
-
-		if ( vrHMD === undefined ) return;
-		if ( isPresenting === boolean ) return;
-
-		if ( !deprecatedAPI ) {
-
-			if ( boolean ) {
-
-				vrHMD.requestPresent( { source: canvas } );
+				renderer.setSize( eyeParamsL.renderRect.width * 2, eyeParamsL.renderRect.height, false );
 
 			} else {
 
-				vrHMD.exitPresent();
+				renderer.setSize( eyeParamsL.renderWidth * 2, eyeParamsL.renderHeight, false );
 
 			}
+
 
 		} else {
 
-			if ( canvas.mozRequestFullScreen ) {
+			renderer.setPixelRatio( rendererPixelRatio );
+			renderer.setSize( width, height );
 
-				canvas.mozRequestFullScreen( { vrDisplay: vrHMD } );
+		}
 
-			} else if ( canvas.webkitRequestFullscreen ) {
+	};
 
-				canvas.webkitRequestFullscreen( { vrDisplay: vrHMD } );
+	// fullscreen
+
+	var canvas = renderer.domElement;
+	var requestFullscreen;
+	var exitFullscreen;
+	var fullscreenElement;
+
+	function onFullscreenChange () {
+
+		var wasPresenting = isPresenting;
+		isPresenting = vrHMD !== undefined && ( vrHMD.isPresenting || ( isDeprecatedAPI && document[ fullscreenElement ] instanceof window.HTMLElement ) );
+
+		if ( wasPresenting === isPresenting ) {
+
+			return;
+
+		}
+
+		if ( isPresenting ) {
+
+			rendererPixelRatio = renderer.getPixelRatio();
+			rendererSize = renderer.getSize();
+
+			var eyeParamsL = vrHMD.getEyeParameters( 'left' );
+			var eyeWidth, eyeHeight;
+
+			if ( isDeprecatedAPI ) {
+
+				eyeWidth = eyeParamsL.renderRect.width;
+				eyeHeight = eyeParamsL.renderRect.height;
 
 			} else {
 
-				console.error( 'No compatible requestFullscreen method found' );
+				eyeWidth = eyeParamsL.renderWidth;
+				eyeHeight = eyeParamsL.renderHeight;
 
 			}
 
+			renderer.setPixelRatio( 1 );
+			renderer.setSize( eyeWidth * 2, eyeHeight, false );
+
+		} else {
+
+			renderer.setPixelRatio( rendererPixelRatio );
+			renderer.setSize( rendererSize.width, rendererSize.height );
+
 		}
+
+	}
+
+	if ( canvas.requestFullscreen ) {
+
+		requestFullscreen = 'requestFullscreen';
+		fullscreenElement = 'fullscreenElement';
+		exitFullscreen = 'exitFullscreen';
+		document.addEventListener( 'fullscreenchange', onFullscreenChange, false );
+
+	} else if ( canvas.mozRequestFullScreen ) {
+
+		requestFullscreen = 'mozRequestFullScreen';
+		fullscreenElement = 'mozFullScreenElement';
+		exitFullscreen = 'mozCancelFullScreen';
+		document.addEventListener( 'mozfullscreenchange', onFullscreenChange, false );
+
+	} else {
+
+		requestFullscreen = 'webkitRequestFullscreen';
+		fullscreenElement = 'webkitFullscreenElement';
+		exitFullscreen = 'webkitExitFullscreen';
+		document.addEventListener( 'webkitfullscreenchange', onFullscreenChange, false );
+
+	}
+
+	window.addEventListener( 'vrdisplaypresentchange', onFullscreenChange, false );
+
+	this.setFullScreen = function ( boolean ) {
+
+		return new Promise( function ( resolve, reject ) {
+
+			if ( vrHMD === undefined ) {
+
+				reject( new Error( 'No VR hardware found.' ) );
+				return;
+
+			}
+			if ( isPresenting === boolean ) {
+
+				resolve();
+				return;
+
+			}
+
+			if ( ! isDeprecatedAPI ) {
+
+				if ( boolean ) {
+
+					resolve( vrHMD.requestPresent( [ { source: canvas } ] ) );
+
+				} else {
+
+					resolve( vrHMD.exitPresent() );
+
+				}
+
+			} else {
+
+				if ( canvas[ requestFullscreen ] ) {
+
+					canvas[ boolean ? requestFullscreen : exitFullscreen ]( { vrDisplay: vrHMD } );
+					resolve();
+
+				} else {
+
+					console.error( 'No compatible requestFullscreen method found.' );
+					reject( new Error( 'No compatible requestFullscreen method found.' ) );
+
+				}
+
+			}
+
+		} );
 
 	};
 
 	this.requestPresent = function () {
-		this.setFullScreen( true );
+
+		return this.setFullScreen( true );
+
 	};
 
 	this.exitPresent = function () {
-		this.setFullScreen( false );
+
+		return this.setFullScreen( false );
+
 	};
 
 	// render
@@ -148,41 +241,33 @@ THREE.VREffect = function ( renderer, onError ) {
 
 	this.render = function ( scene, camera ) {
 
-		if ( vrHMD ) {
+		if ( vrHMD && isPresenting ) {
+
+			var autoUpdate = scene.autoUpdate;
+
+			if ( autoUpdate ) {
+
+				scene.updateMatrixWorld();
+				scene.autoUpdate = false;
+
+			}
 
 			var eyeParamsL = vrHMD.getEyeParameters( 'left' );
 			var eyeParamsR = vrHMD.getEyeParameters( 'right' );
 
-			if ( !deprecatedAPI ) {
+			if ( ! isDeprecatedAPI ) {
 
-				var renderWidth = Math.max(eyeParamsL.renderWidth, eyeParamsR.renderWidth);
-				var renderHeight = Math.max(eyeParamsL.renderHeight, eyeParamsR.renderHeight);
-
-				eyeTranslationL.fromArray(eyeParamsL.offset);
-				eyeTranslationR.fromArray(eyeParamsR.offset);
+				eyeTranslationL.fromArray( eyeParamsL.offset );
+				eyeTranslationR.fromArray( eyeParamsR.offset );
 				eyeFOVL = eyeParamsL.fieldOfView;
 				eyeFOVR = eyeParamsR.fieldOfView;
-				renderRectL = {
-					x: 0,
-					y: 0,
-					width: renderWidth,
-					height: renderHeight
-				};
-				renderRectR =  {
-					x: renderWidth,
-					y: 0,
-					width: renderWidth,
-					height: renderHeight
-				};
 
 			} else {
 
-				eyeTranslationL.copy(eyeParamsL.eyeTranslation);
-				eyeTranslationR.copy(eyeParamsR.eyeTranslation);
+				eyeTranslationL.copy( eyeParamsL.eyeTranslation );
+				eyeTranslationR.copy( eyeParamsR.eyeTranslation );
 				eyeFOVL = eyeParamsL.recommendedFieldOfView;
 				eyeFOVR = eyeParamsR.recommendedFieldOfView;
-				renderRectL = eyeParamsL.renderRect;
-				renderRectR = eyeParamsR.renderRect;
 
 			}
 
@@ -193,7 +278,11 @@ THREE.VREffect = function ( renderer, onError ) {
 
 			}
 
+			// When rendering we don't care what the recommended size is, only what the actual size
+			// of the backbuffer is.
 			var size = renderer.getSize();
+			renderRectL = { x: 0, y: 0, width: size.width / 2, height: size.height };
+			renderRectR = { x: size.width / 2, y: 0, width: size.width / 2, height: size.height };
 
 			renderer.setScissorTest( true );
 			renderer.clear();
@@ -206,35 +295,30 @@ THREE.VREffect = function ( renderer, onError ) {
 			camera.matrixWorld.decompose( cameraL.position, cameraL.quaternion, cameraL.scale );
 			camera.matrixWorld.decompose( cameraR.position, cameraR.quaternion, cameraR.scale );
 
-			cameraL.translateX( eyeTranslationL.x * this.scale );
-			cameraR.translateX( eyeTranslationR.x * this.scale );
+			var scale = this.scale;
+			cameraL.translateOnAxis( eyeTranslationL, scale );
+			cameraR.translateOnAxis( eyeTranslationR, scale );
+
 
 			// render left eye
-			if ( renderRectL === undefined ) {
-
-				renderRectL = { x: 0, y: 0, width: size.width / 2, height: size.height };
-
-			}
 			renderer.setViewport( renderRectL.x, renderRectL.y, renderRectL.width, renderRectL.height );
 			renderer.setScissor( renderRectL.x, renderRectL.y, renderRectL.width, renderRectL.height );
-      this.preRenderLeft(scene, cameraL);
 			renderer.render( scene, cameraL );
 
 			// render right eye
-			if ( renderRectR === undefined ) {
-
-				renderRectR = { x: size.width / 2, y: 0, width: size.width / 2, height: size.height };
-
-			}
-
 			renderer.setViewport( renderRectR.x, renderRectR.y, renderRectR.width, renderRectR.height );
 			renderer.setScissor( renderRectR.x, renderRectR.y, renderRectR.width, renderRectR.height );
-      this.preRenderRight(scene, cameraR);
 			renderer.render( scene, cameraR );
 
 			renderer.setScissorTest( false );
 
-			if ( isPresenting && !deprecatedAPI ) {
+			if ( autoUpdate ) {
+
+				scene.autoUpdate = true;
+
+			}
+
+			if ( ! isDeprecatedAPI ) {
 
 				vrHMD.submitFrame();
 
