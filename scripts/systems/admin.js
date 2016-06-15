@@ -275,6 +275,21 @@ console.log('deeeeee', view.activething);
             click: elation.bind(this, this.createScene)
           }
         });
+
+      var translatebutton = elation.ui.button({
+          append: panel,
+          label: '⬌',
+          events: {
+            click: elation.bind(this, function() { this.admin.manipulator.setMode('translate'); })
+          }
+        });
+      var rotatebutton = elation.ui.button({
+          append: panel,
+          label: '↺',
+          events: {
+            click: elation.bind(this, function() { this.admin.manipulator.setMode('rotate'); })
+          }
+        });
       
 
       //this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: title, controls: false});
