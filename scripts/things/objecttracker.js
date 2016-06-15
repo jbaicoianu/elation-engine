@@ -20,13 +20,14 @@ elation.require('engine.things.generic', function() {
       for (var i = 0; i < this.controllers.length; i++) {
         var c = this.controllers[i];
         if (c && c.data.pose) {
+//console.log(c.data.pose);
           var pose = c.data.pose;
           c.model.position.fromArray(pose.position).multiplyScalar(1);
           c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
-          c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
-          c.model.position.z *= this.vrdisplay.stageParameters.sizeZ;
+          //c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
+          //c.model.position.z *= this.vrdisplay.stageParameters.sizeZ;
 
-          c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
+          //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
           c.model.quaternion.fromArray(pose.orientation);
         }
       }
