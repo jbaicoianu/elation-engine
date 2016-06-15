@@ -1,4 +1,4 @@
-elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressbar', 'engine.things.label2d', 'engine.things.objecttracker'], function() {
+elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things.label2d', 'engine.things.objecttracker'], function() {
   elation.component.add('engine.things.player', function() {
     this.targetrange = 5;
     this.postinit = function() {
@@ -184,7 +184,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
         'position': [0,0,0]
       });
-      var tracker = this.neck.spawn('objecttracker');
+      this.tracker = this.spawn('objecttracker');
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
     }
@@ -282,13 +282,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'ui.progressba
               if (this.headconstraint) this.headconstraint.enabled = false;
               var scale = 1;
               var hmd = this.hmdstate.hmd;
-var vrdisplay = this.engine.systems.render.views.main.vrdisplay;
               if (hmd.position) {
                 var pos = this.head.objects.dynamics.position;
                 pos.fromArray(hmd.position).multiplyScalar(scale);
-                pos.y += this.properties.height * .8 - this.properties.fatness;
-                pos.x *= vrdisplay.stageParameters.sizeX;
-                pos.z *= vrdisplay.stageParameters.sizeZ;
+                //pos.y += this.properties.height * .8 - this.properties.fatness;
               }
               if (this.hmdstate.hmd.linearVelocity) {
                 this.head.objects.dynamics.velocity.fromArray(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
