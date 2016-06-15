@@ -470,7 +470,8 @@ if (!ENV_IS_BROWSER) return;
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
       if (!elation.engine.assets.loaderpool) {
-        elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', num: 4});
+        var numworkers = elation.config.get('engine.assets.workers', 4);
+        elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', num: numworkers});
       }
       elation.engine.assets.loaderpool.addJob(jobdata)
         .then(elation.bind(this, this.handleLoadJSON));
