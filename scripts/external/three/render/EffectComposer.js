@@ -141,6 +141,13 @@ THREE.EffectComposer.prototype = {
     return this.renderer.getSize();
   },
 
+  getPixelRatio: function () {
+    return this.renderer.getPixelRatio();
+  },
+  setPixelRatio: function ( value ) {
+    return this.renderer.setPixelRatio(value);
+  },
+
   setScissor: function(x, y, width, height) {
     return this.renderer.setScissor(x, y, width, height);
   },
