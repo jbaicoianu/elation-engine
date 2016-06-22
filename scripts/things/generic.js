@@ -24,6 +24,7 @@ elation.component.add("engine.things.generic", function() {
     this.parttypes = {};
     this.children = {};
     this.tags = [];
+    this.sounds = {};
     
     this.tmpvec = new THREE.Vector3();
     
