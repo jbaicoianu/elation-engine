@@ -741,5 +741,44 @@ if (!ENV_IS_BROWSER) return;
       { name: 'tree', assettype: 'model', modeltype: 'collada', src: '/models/tree.dae' }
     ]
   */
+  elation.define('engine.assets.script', {
+    assettype: 'script',
+    src: false,
+
+    _construct: function(args) {
+      elation.class.call(this, args);
+      //this.load();
+    },
+    load: function() {
+      this._script = document.createElement('script');
+      var url = this.getFullURL(this.src);
+      if (elation.engine.assets.corsproxy) { // && !this.isURLLocal(this.src)) {
+        url = elation.engine.assets.corsproxy + url;
+      }
+      elation.net.get(url, null, { 
+        nocache: true,
+        callback: elation.bind(this, function(data) {
+          console.log('loaded script:', url, data);
+
+          var blob = new Blob([data], {type: 'application/javascript'});
+          var bloburl = URL.createObjectURL(blob);
+          this._script.src = bloburl;
+          elation.events.fire({type: 'asset_load', element: this._script});
+        })
+      });
+
+    },
+    handleProgress: function(ev) {
+    },
+    handleError: function(ev) {
+      this._script = false;
+    },
+    getAsset: function() {
+      if (!this._script) {
+        this.load();
+      }
+      return this._script;
+    }
+  }, elation.engine.assets.base);
 });
 
