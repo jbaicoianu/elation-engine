@@ -129,6 +129,7 @@ elation.require([
       this.fullscreen = false;
       this.renderpasses = {};
       this.aspectscale = 1;
+      this.renderinfo = {render: {}, memory: {}};
 
 
       // Used by various render pass shaders
@@ -198,7 +199,7 @@ elation.require([
       //this.composer = this.createRenderPath([this.rendermode]);
       this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
-      this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
+      this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
       this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
         var sbstextures = [];
         scene.traverse(function(n) {
@@ -468,7 +469,19 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.toggleVR = function(newstate) {
       if (this.vrdisplay) {
         if (typeof newstate == 'undefined') newstate = !this.vrdisplay.isPresenting;
+
+        // FIXME - DEMO HACK 
+        var hmdname = this.vrdisplay.displayName;
+        var vivehack = false;
+        if (hmdname.match('Vive')) {
+          vivehack = true;
+        }
+        var player = this.engine.client.player;
+
         if (newstate && !this.vrdisplay.isPresenting) {
+if (vivehack) {
+  player.head.reparent(player);
+}
           this.vrdisplay.requestPresent({source: this.rendersystem.renderer.domElement}).then(elation.bind(this, function() {
             console.log('presenting!');
             var eyeL = this.vrdisplay.getEyeParameters('left');
@@ -489,6 +502,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.aspectscale = 1;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
+if (vivehack) player.head.reparent(player.neck);
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
         }
@@ -600,6 +614,12 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.updateRenderStats = function() {
       this.renderstats.update(this.rendersystem.renderer);
+      var renderinfo = this.rendersystem.renderer.info;
+
+      elation.utils.merge(renderinfo.render, this.renderinfo.render);
+      elation.utils.merge(renderinfo.memory, this.renderinfo.memory);
+      
+      //this.renderinfo.render.faces = renderinfo.render.faces;
     }
     this.toggleStats = function() {
       if (this.showstats) {
