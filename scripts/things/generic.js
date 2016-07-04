@@ -1076,6 +1076,13 @@ elation.component.add("engine.things.generic", function() {
     this.destroy();
   }
   this.refresh = function() {
+    elation.events.fire({type: 'thing_change_queued', element: this});
+  }
+  this.applyChanges = function() {
+    var s = this.scale;
+    if (s && this.objects['3d']) {
+      this.objects['3d'].visible = this.visible && !(s.x == 0 || s.y == 0 || s.z == 0);
+    }
     elation.events.fire({type: 'thing_change', element: this});
   }
   this.reload = function() {
@@ -1308,6 +1315,24 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     return null;
   }
   this.getObjectsByTag = function(tag) {
+  }
+  this.getChildren = function(collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      collection.push(this.children[k]);
+      this.children[k].getChildren(collection);
+    }
+    return collection;
+  }
+  this.getChildrenByProperty = function(key, value, collection) {
+    if (typeof collection == 'undefined') collection = [];
+    for (var k in this.children) {
+      if (this.children[k][key] === value) {
+        collection.push(this.children[k]);
+      }
+      this.children[k].getChildrenByProperty(key, value, collection);
+    }
+    return collection;
   }
   this.getChildrenByPlayer = function(player, collection) {
     if (typeof collection == 'undefined') collection = [];
