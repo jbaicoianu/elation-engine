@@ -84,6 +84,12 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       this.lastframetime += ev.data.delta;
+      for (var k in this.views) {
+        this.views[k].updatePickingObject();
+        if (this.views[k].stats) {
+          this.views[k].stats.update();
+        }
+      }
       if (this.forcerefresh || this.dirty) {
         //console.log('FRAME: render');
         this.dirty = false;
@@ -92,12 +98,6 @@ elation.require([
           this.views[k].render(this.lastframetime);
         }
         this.lastframetime = 0;
-      }
-      for (var k in this.views) {
-        this.views[k].updatePickingObject();
-        if (this.views[k].stats) {
-          this.views[k].stats.update();
-        }
       }
     }
     this.world_thing_add = function(ev) {
