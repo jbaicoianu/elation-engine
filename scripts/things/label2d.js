@@ -1,7 +1,7 @@
 elation.require(['engine.things.label'], function() {
   elation.component.add('engine.things.label2d', function() {
     this.postinit = function() {
-      elation.engine.things.janustext.extendclass.postinit.call(this);
+      elation.engine.things.label2d.extendclass.postinit.call(this);
       this.defineProperties({
         font: { type: 'string', default: 'sans-serif' },
         fontSize: { type: 'float', default: 64 },
