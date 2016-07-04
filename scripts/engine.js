@@ -126,6 +126,9 @@ elation.require(deps, function() {
     this.getThingByObject = function(obj) {
       return this.systems.world.getThingsByObject(object);
     }
+    this.getThingsByProperty = function(key, value) {
+      return this.systems.world.getThingsByProperty(key, value);
+    }
     this.getThingById = function(id) {
       return this.systems.world.getThingById(id);
     }

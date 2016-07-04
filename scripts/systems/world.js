@@ -13,6 +13,7 @@ elation.require([
     };
     this.persistdelay = 1000;
     this.lastpersist = 0;
+    this.framechanges = [];
 
     //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
     //this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
@@ -42,6 +43,14 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       //console.log('FRAME: world', ev);
+      var uniques = {};
+      while (this.framechanges.length > 0) {
+        var changed = this.framechanges.pop();
+        if (!uniques[changed.id]) {
+          uniques[changed.id] = true;
+          changed.applyChanges();
+        }
+      }
     }
     this.engine_stop = function(ev) {
       console.log('SHUTDOWN: world');
@@ -69,7 +78,7 @@ elation.require([
       return false;
     }
     this.attachEvents = function(thing) {
-      elation.events.add(thing, 'thing_add,thing_remove,thing_change', this);
+      elation.events.add(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
       if (thing.children) {
         for (var k in thing.children) {
           this.attachEvents(thing.children[k]);
@@ -91,6 +100,12 @@ elation.require([
     }
     this.thing_change = function(ev) {
       elation.events.fire({type: 'world_thing_change', element: this, data: ev.data});
+    }
+    this.thing_change_queued = function(ev) {
+      var thing = ev.target;
+      if (thing) {
+        this.framechanges.push(thing);
+      }
     }
     this.world_thing_add = function(ev) {
       //elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
@@ -487,6 +502,18 @@ elation.require([
           things.push(this.children[childname]);
         }
         this.children[childname].getChildrenByType(type, things);
+      }
+      return things;
+    }
+    this.getThingsByProperty = function(key, value) {
+      var things = [];
+      var childnames = Object.keys(this.children);
+      for (var i = 0; i < childnames.length; i++) {
+        var childname = childnames[i];
+        if (this.children[childname][key] === value) {
+          things.push(this.children[childname]);
+        }
+        this.children[childname].getChildrenByProperty(key, value, things);
       }
       return things;
     }
