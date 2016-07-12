@@ -9,7 +9,6 @@ elation.require(['engine.things.light'], function() {
     }
     this.createObject3D = function() {
       this.lightobj = new THREE.DirectionalLight(this.properties.color, this.properties.intensity);
-      this.lightobj.shadowCameraVisible = false;
       if (this.properties.target) {
         this.lightobj.target = this.properties.target.objects['3d'];
       }
