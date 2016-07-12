@@ -134,7 +134,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.initcontrols = function() {
       if (!this.container) this.container = this.engine.systems.render.renderer.domElement;
       elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll,touchstart,touchmove,touchend,gesturestart,gesturechange,gestureend", this);
-      elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected,deviceorientation,devicemotion", this);
+      elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
+      //elation.events.add(window, "deviceorientation,devicemotion", this);
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
       elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
 
@@ -334,7 +335,15 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
             for (var a = 0; a < gamepad.axes.length; a+=2) {
               var bindname_x = this.getBindingName('gamepad', i, 'axis_' + a);
               var bindname_y = this.getBindingName('gamepad', i, 'axis_' + (a+1));
-              var values = this.deadzone(gamepad.axes[a], gamepad.axes[a+1]);
+              // FIXME - Vive hack
+              var axisscale = 1;
+              if (this.hmds && this.hmds.length > 0) {
+                var hmdname = this.hmds[0].displayName;
+                if (hmdname.match('Vive')) {
+                  axisscale = -1;
+                }
+              }
+              var values = this.deadzone(gamepad.axes[a], axisscale * gamepad.axes[a+1]);
               if (this.state[bindname_x] != values[0]) {
                 this.changes.push(bindname_x);
                 this.state[bindname_x] = values[0];
