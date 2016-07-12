@@ -2,21 +2,21 @@ elation.require(["engine.things.generic", "engine.assets"], function() {
   elation.component.add("engine.things.label", function() {
     this.postinit = function() {
       this.defineProperties({
-        'text':            { type: 'string' },
-        'font':            { type: 'string', default: 'helvetiker' },
-        'size':            { type: 'float', default: 1.0 },
-        'color':           { type: 'color', default: 0xcccccc },
-        'align':           { type: 'string', default: 'left' },
-        'verticalalign':   { type: 'string', default: 'bottom' },
-        'zalign':          { type: 'string', default: 'back' },
+        'text':            { type: 'string', refreshGeometry: true },
+        'font':            { type: 'string', default: 'helvetiker', refreshGeometry: true },
+        'size':            { type: 'float', default: 1.0, refreshGeometry: true },
+        'color':           { type: 'color', default: 0xcccccc, refreshGeometry: true },
+        'align':           { type: 'string', default: 'left', refreshGeometry: true },
+        'verticalalign':   { type: 'string', default: 'bottom', refreshGeometry: true },
+        'zalign':          { type: 'string', default: 'back', refreshGeometry: true },
         'emissive':        { type: 'color', default: 0x000000 },
         'opacity':         { type: 'float', default: 1.0 },
         'depthTest':       { type: 'bool', default: true },
-        'thickness':       { type: 'float' },
-        'segments':        { type: 'int', default: 6 },
-        'bevel.enabled':   { type: 'bool', default: false },
-        'bevel.thickness': { type: 'float', default: 0 },
-        'bevel.size':      { type: 'float', default: 0 },
+        'thickness':       { type: 'float', refreshGeometry: true },
+        'segments':        { type: 'int', default: 6, refreshGeometry: true },
+        'bevel.enabled':   { type: 'bool', default: false, refreshGeometry: true },
+        'bevel.thickness': { type: 'float', default: 0, refreshGeometry: true },
+        'bevel.size':      { type: 'float', default: 0, refreshGeometry: true },
       });
     }
     this.createObject3D = function() {
