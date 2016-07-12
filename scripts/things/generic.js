@@ -3,6 +3,7 @@ elation.require([
   //"engine.external.three.JSONLoader"
   //"engine.external.three.glTFLoader-combined"
   //"engine.things.trigger"
+  "utils.proxy"
 ], function() {
 
 elation.component.add("engine.things.generic", function() {
@@ -27,6 +28,7 @@ elation.component.add("engine.things.generic", function() {
     this.sounds = {};
     
     this.tmpvec = new THREE.Vector3();
+    this._proxies = {};
     
     this.interp = {
       rate: 20,
@@ -58,20 +60,20 @@ elation.component.add("engine.things.generic", function() {
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
       //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
-      'shadow':         { type: 'bool', default: true, comment: 'Casts and receives shadows' },
-      'wireframe':      { type: 'bool', default: false, comment: 'Render this object as a wireframe' },
-      'forcereload':    { type: 'bool', default: false, comment: 'Force a full reload of all files' },
+      'shadow':         { type: 'bool', default: true, refreshMaterial: true, comment: 'Casts and receives shadows' },
+      'wireframe':      { type: 'bool', default: false, refreshMaterial: true, comment: 'Render this object as a wireframe' },
+      'forcereload':    { type: 'bool', default: false, refreshGeometry: true, refreshMaterial: true, comment: 'Force a full reload of all files' },
       'mouseevents':    { type: 'bool', default: true, comment: 'Respond to mouse/touch events' },
       'persist':        { type: 'bool', default: false, comment: 'Continues existing across world saves' },
       'pickable':       { type: 'bool', default: true, comment: 'Selectable via mouse/touch events' },
-      'render.mesh':    { type: 'string', comment: 'URL for JSON model file' },
-      'render.meshname':{ type: 'string' },
-      'render.scene':   { type: 'string', comment: 'URL for JSON scene file' },
-      'render.collada': { type: 'string', comment: 'URL for Collada scene file' },
-      'render.model':   { type: 'string', comment: 'Name of model asset' },
-      'render.gltf':    { type: 'string', comment: 'URL for glTF file' },
-      'render.materialname': { type: 'string', comment: 'Material library name' },
-      'render.texturepath': { type: 'string', comment: 'Texture location' },
+      'render.mesh':    { type: 'string', refreshGeometry: true, comment: 'URL for JSON model file' },
+      'render.meshname':{ type: 'string', refreshGeometry: true },
+      'render.scene':   { type: 'string', refreshGeometry: true, comment: 'URL for JSON scene file' },
+      'render.collada': { type: 'string', refreshGeometry: true, comment: 'URL for Collada scene file' },
+      'render.model':   { type: 'string', refreshGeometry: true, comment: 'Name of model asset' },
+      'render.gltf':    { type: 'string', refreshGeometry: true, comment: 'URL for glTF file' },
+      'render.materialname': { type: 'string', refreshMaterial: true, comment: 'Material library name' },
+      'render.texturepath': { type: 'string', refreshMaterial: true, comment: 'Texture location' },
       'player_id':      { type: 'float', default: null, comment: 'Network id of the creator' },
       'tags': { type: 'string', comment: 'Default tags to add to this object' }
     });
@@ -98,7 +100,6 @@ elation.component.add("engine.things.generic", function() {
     if (typeof this.postinit == 'function') {
       this.postinit();
     }
-    //this.migrateProperties();
     this.init3D();
     this.initDOM();
     this.initPhysics();
@@ -119,42 +120,12 @@ elation.component.add("engine.things.generic", function() {
       this.properties = {};
     }
 
-    var props = this.migrateProperties(this.args.properties);
     for (var propname in this._thingdef.properties) {
       var prop = this._thingdef.properties[propname];
-      var propval = elation.utils.arrayget(this.properties, propname, null);
-      if (propval === null) {
-        if (!elation.utils.isNull(props[propname])) {
-          propval = props[propname] 
-        } else if (!elation.utils.isNull(prop.default)) {
-          propval = prop.default;
-        }
-        this.set(propname, propval);
+      if (!this.hasOwnProperty(propname)) {
+        this.defineProperty(propname, prop);
       }
     }
-  }
-  this.migrateProperties = function(props) {
-    return (props && props.generic ? props.generic : props || {});
-    // FIXME - once all entries in the db have been updated, this is no longer necessary
-    if (!this.propargs) {
-      var newprops = {};
-      if (this.args.properties && !this.args.properties.generic) {
-        //this.args.properties = { physical: this.args.properties };
-      }
-      var squash = ['physical', 'generic'];
-      for (var propgroup in this.args.properties) {
-        if (!elation.utils.isArray(this.args.properties[propgroup]) && this.args.properties[propgroup] instanceof Object) {
-          for (var propname in this.args.properties[propgroup]) {
-            var fullpropname = (squash.indexOf(propgroup) != -1 ? propname : propgroup + '.' + propname);
-            newprops[fullpropname] = this.args.properties[propgroup][propname];
-          }
-        } else {
-          newprops[propgroup] = this.args.properties[propgroup];
-        }
-      }
-      this.propargs = newprops;
-    }
-    return this.propargs;
   }
   this.getPropertyValue = function(type, value) {
     if (value === null) {
@@ -165,7 +136,7 @@ elation.component.add("engine.things.generic", function() {
         if (elation.utils.isArray(value)) {
           value = new THREE.Vector2(+value[0], +value[1]);
         } else if (elation.utils.isString(value)) {
-          var split = value.split(',');
+          var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
           value = new THREE.Vector2(+split[0], +split[1]);
         }
         break;
@@ -173,7 +144,7 @@ elation.component.add("engine.things.generic", function() {
         if (elation.utils.isArray(value)) {
           value = new THREE.Vector3(+value[0], +value[1], +value[2]);
         } else if (elation.utils.isString(value)) {
-          var split = value.split(',');
+          var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
           value = new THREE.Vector3(+split[0], +split[1], +split[2]);
         }
         break;
@@ -181,8 +152,26 @@ elation.component.add("engine.things.generic", function() {
         if (elation.utils.isArray(value)) {
           value = new THREE.Quaternion(+value[0], +value[1], +value[2], +value[3]);
         } else if (elation.utils.isString(value)) {
-          var split = value.split(',');
+          var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
           value = new THREE.Quaternion(+split[0], +split[1], +split[2], +split[3]);
+        }
+        break;
+      case 'color':
+        if (value instanceof THREE.Vector3) {
+          value = new THREE.Color(value.x, value.y, value.z);
+        } else if (elation.utils.isString(value)) {
+          var splitpos = value.indexOf(' ');
+          if (splitpos == -1) splitpos = value.indexOf(',');
+          if (splitpos == -1) {
+            value = new THREE.Color(value);
+          } else {
+            var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
+            value = new THREE.Color(+split[0], +split[1], +split[2]);
+          }
+        } else if (elation.utils.isArray(value)) {
+          value = new THREE.Color(+value[0], +value[1], +value[2]);
+        } else if (!(value instanceof THREE.Color)) {
+          value = new THREE.Color(value);
         }
         break;
       case 'bool':
@@ -219,6 +208,67 @@ elation.component.add("engine.things.generic", function() {
     elation.utils.merge(properties, this._thingdef.properties);
     this.initProperties();
   }
+  this.defineProperty = function(propname, prop) {
+    var propval = elation.utils.arrayget(this.properties, propname, null);
+    Object.defineProperty(this, propname, { 
+      configurable: true,
+      enumerable: true,
+      get: function() { 
+        var proxy = this._proxies[propname]; 
+        if (proxy) {
+          return proxy;
+        }
+        return elation.utils.arrayget(this.properties, propname); 
+      }, 
+      set: function(v) { 
+        this.set(propname, v, prop.refreshGeometry);
+        //this.refresh();
+        //console.log('set ' + propname + ' to ', v); 
+      } 
+    });
+    if (propval === null) {
+      if (!elation.utils.isNull(this.args.properties[propname])) {
+        propval = this.args.properties[propname] 
+      } else if (!elation.utils.isNull(prop.default)) {
+        propval = prop.default;
+      }
+      this.set(propname, propval);
+    }
+    if (prop.type == 'vector2' || prop.type == 'vector3' || prop.type == 'quaternion' || prop.type == 'color') {
+      if (propval && !this._proxies[propname]) {
+        // Create proxy objects for these special types
+        var proxydef = {
+            x: ['property', 'x'],
+            y: ['property', 'y'],
+            z: ['property', 'z'],
+        };
+        if (prop.type == 'quaternion') {
+          proxydef.w = ['property', 'w'];
+        } else if (prop.type == 'color') {
+          // We want to support color.xyz as well as color.rgb
+          proxydef.r = ['property', 'r'];
+          proxydef.g = ['property', 'g'];
+          proxydef.b = ['property', 'b'];
+          proxydef.x = ['property', 'r'];
+          proxydef.y = ['property', 'g'];
+          proxydef.z = ['property', 'b'];
+        }
+        var propval = elation.utils.arrayget(this.properties, propname, null);
+        if (propval) {
+          this._proxies[propname] = new elation.proxy(
+            propval, proxydef, true
+          );
+          /*
+          elation.events.add(propval, 'proxy_change', elation.bind(this, function(ev) {
+            //this.refresh();
+            //this.set('exists', this.properties.exists, prop.refreshGeometry);
+            //this[propname] = this[propname];
+          }));
+          */
+        }
+      }
+    }
+  }
   this.defineActions = function(actions) {
     elation.utils.merge(actions, this._thingdef.actions);
   }
@@ -227,53 +277,69 @@ elation.component.add("engine.things.generic", function() {
   }
 
   this.set = function(property, value, forcerefresh) {
-    if (!this._thingdef.properties[property]) {
+    var propdef = this._thingdef.properties[property];
+    if (!propdef) {
       console.warn('Tried to set unknown property', property, value, this);
       return;
     }
-    var propval = this.getPropertyValue(this._thingdef.properties[property].type, value);
+    var changed = false
+    var propval = this.getPropertyValue(propdef.type, value);
     var currval = this.get(property);
     //if (currval !== null) {
-      switch (this._thingdef.properties[property].type) {
+      switch (propdef.type) {
         case 'vector2':
         case 'vector3':
         case 'vector4':
         case 'quaternion':
+        case 'color':
           if (currval === null)  {
             elation.utils.arrayset(this.properties, property, propval);
+            changed = true;
           } else {
-            currval.copy(propval);
+            if (!currval.equals(propval)) {
+              currval.copy(propval);
+              changed = true
+            }
           }
           break;
         case 'texture':
           //console.log('TRY TO SET NEW TEX', property, value, forcerefresh);
         default:
-          elation.utils.arrayset(this.properties, property, propval);
+          if (currval !== propval) {
+            elation.utils.arrayset(this.properties, property, propval);
+            changed = true;
+          }
       }
     //} else {
     //  elation.utils.arrayset(this.properties, property, propval);
     //}
-    if (forcerefresh && this.objects['3d']) {
-      this.initProperties();
-      var parent = this.objects['3d'].parent;
-      parent.remove(this.objects['3d']);
-      this.objects['3d'] = false;
-      this.init3D();
-      parent.add(this.objects['3d']);
-    }
-    if (this.objects.dynamics) {
-      if (forcerefresh) {
-        this.removeDynamics();
-        this.initPhysics();
-      } else {
-        this.objects.dynamics.mass = this.properties.mass;
-        this.objects.dynamics.updateState();
-        if (this.objects.dynamics.collider) {
-          this.objects.dynamics.collider.getInertialMoment();
+    if (changed) {
+      if (propdef.set) {
+        propdef.set.apply(this, [property, propval]);
+      }
+
+      if (forcerefresh && this.objects['3d']) {
+        this.initProperties();
+        var parent = this.objects['3d'].parent;
+        parent.remove(this.objects['3d']);
+        this.objects['3d'] = false;
+        this.init3D();
+        parent.add(this.objects['3d']);
+      }
+      if (this.objects.dynamics) {
+        if (forcerefresh) {
+          this.removeDynamics();
+          this.initPhysics();
+        } else {
+          this.objects.dynamics.mass = this.properties.mass;
+          this.objects.dynamics.updateState();
+          if (this.objects.dynamics.collider) {
+            this.objects.dynamics.collider.getInertialMoment();
+          }
         }
       }
+      this.refresh();
     }
-    this.refresh();
   }
   this.setProperties = function(properties, interpolate) {
     for (var prop in properties) {
