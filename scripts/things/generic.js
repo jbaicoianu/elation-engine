@@ -584,7 +584,7 @@ elation.component.add("engine.things.generic", function() {
         this.colliders.remove(thing.colliders);
       }
       if (thing.colliderhelper) {
-        this.engine.systems.world.scene['colliders'].remove(thing.colliderhelper);
+        //this.engine.systems.world.scene['colliders'].remove(thing.colliderhelper);
       }
       elation.events.fire({type: 'thing_remove', element: this, data: {thing: thing}});
       delete this.children[thing.id];
@@ -609,9 +609,11 @@ elation.component.add("engine.things.generic", function() {
   }
   this.show = function() {
     this.objects['3d'].visible = true;
+    if (this.colliderhelper) this.colliderhelper.visible = true;
   }
   this.hide = function() {
     this.objects['3d'].visible = false;
+    if (this.colliderhelper) this.colliderhelper.visible = false;
   }
   this.createDynamics = function() {
     if (!this.objects['dynamics'] && this.engine.systems.physics) {
@@ -680,6 +682,7 @@ elation.component.add("engine.things.generic", function() {
       }
   }
   this.setCollider = function(type, args, rigidbody) {
+    //console.log('set collider', type, args, rigidbody, this.collidable);
     if (!rigidbody) rigidbody = this.objects['dynamics'];
     if (this.properties.collidable) {
       rigidbody.setCollider(type, args);
@@ -721,17 +724,29 @@ elation.component.add("engine.things.generic", function() {
       if (collidergeom) {
         var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
 
-        var collidermesh = new THREE.Mesh(collidergeom, collidermat);
-        if (rigidbody.position !== this.properties.position) {
-          collidermesh.bindPosition(rigidbody.position);
-          collidermesh.bindQuaternion(rigidbody.orientation);
-          //collidermesh.bindScale(this.properties.scale);
+        if (this.collidermesh) {
+          var collidermesh = this.collidermesh;
+          collidermesh.geometry = collidergeom;
+        } else {
+          var collidermesh = this.collidermesh = new THREE.Mesh(collidergeom, collidermat);
+          if (rigidbody.position !== this.properties.position) {
+            collidermesh.bindPosition(rigidbody.position);
+            collidermesh.bindQuaternion(rigidbody.orientation);
+            //collidermesh.bindScale(this.properties.scale);
+          }
+          collidermesh.userData.thing = this;
+          this.colliders.add(collidermesh);
         }
-        collidermesh.userData.thing = this;
-        this.colliders.add(collidermesh);
         collidermesh.updateMatrixWorld();
-        var colliderhelper = new THREE.EdgesHelper(collidermesh, 0x999900);
-        this.engine.systems.world.scene['colliders'].add(colliderhelper);
+        var colliderhelper = this.colliderhelper;
+        if (!colliderhelper) {
+          colliderhelper = this.colliderhelper = new THREE.EdgesHelper(collidermesh, 0x999900);
+          colliderhelper.matrix = collidermesh.matrix;
+          //this.colliders.add(colliderhelper);
+        } else {
+          //THREE.EdgesHelper.call(colliderhelper, collidermesh, 0x990099);
+        }
+        //this.engine.systems.world.scene['colliders'].add(colliderhelper);
 
         // TODO - integrate this with the physics debug system
         /*
@@ -942,10 +957,20 @@ elation.component.add("engine.things.generic", function() {
     var re = new RegExp(/^[_\*](collider|trigger)-(.*)$/);
 
     obj.traverse(function(n) { 
-      if (n instanceof THREE.Mesh && n.material && n.material.name && n.material.name.match(re)) { 
-        n.geometry.computeBoundingBox(); 
-        n.geometry.computeBoundingSphere(); 
-        meshes.push(n); 
+      if (n instanceof THREE.Mesh && n.material) {  
+        var materials = [n.material];
+        if (n.material instanceof THREE.MeshFaceMaterial) {
+          materials = n.material.materials;
+        } 
+        for (var i = 0; i < materials.length; i++) {
+          var m = materials[i];
+          if (m.name && m.name.match(re)) { 
+            n.geometry.computeBoundingBox(); 
+            n.geometry.computeBoundingSphere(); 
+            meshes.push(n); 
+            break;
+          }
+        }
       } 
     });
 
@@ -954,7 +979,7 @@ elation.component.add("engine.things.generic", function() {
 
     //var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
     var flip = new THREE.Quaternion();
-    var root = new elation.physics.rigidbody({orientation: flip});// orientation: obj.quaternion.clone() });
+    var root = new elation.physics.rigidbody({orientation: flip, object: this});// orientation: obj.quaternion.clone() });
     //root.orientation.multiply(flip);
 
     for (var i = 0; i < meshes.length; i++) {
@@ -962,10 +987,10 @@ elation.component.add("engine.things.generic", function() {
           type = m[1],
           shape = m[2];
 
-      var rigid = new elation.physics.rigidbody();
+      var rigid = new elation.physics.rigidbody({object: this});
       var min = meshes[i].geometry.boundingBox.min,
           max = meshes[i].geometry.boundingBox.max;
-      //console.log('type is', type, min, max);
+      //console.log('type is', type, shape, min, max);
 
       var position = meshes[i].position,
           orientation = meshes[i].quaternion;
