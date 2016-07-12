@@ -118,7 +118,11 @@ elation.require([
           for (var i = 0; i < l; i++) {
             str += String.fromCharCode(bufview[i]);
           }
-          modeldata = decodeURIComponent(escape(str));
+          try {
+            modeldata = decodeURIComponent(escape(str));
+          } catch (e) {
+            modeldata = str;
+          }
         }
       }    
       if (modeldata) {
@@ -134,9 +138,11 @@ elation.require([
             }
           }
           postMessage({message: 'finished', id: job.id, data: data}, transferrables);
+        }, function(d) {
+          postMessage({message: 'error', id: job.id, data: d.toString()});
         });
       } else {
-        postMessage({message: 'finished', id: job.id, data: false});
+        postMessage({message: 'error', id: job.id, data: 'no modeldata found'});
       }
     },
     onprogress: function(job, ev) {
@@ -367,7 +373,6 @@ elation.require([
       return new Promise(function(resolve, reject) { 
         var loader = new THREE.FBXLoader();
         var modeldata = loader.parse(data);
-
         resolve(modeldata.toJSON());
       });
     }
