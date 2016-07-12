@@ -198,8 +198,8 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       var color = (this.properties.disabled ? this.properties.disabledhovercolor : this.properties.hovercolor);
       var emissive = (this.properties.disabled ? this.properties.disabledhoveremissive : this.properties.hoveremissive);
       if (this.label) {
-        this.label.material.color.setHex(color);
-        this.label.material.emissive.setHex(emissive);
+        this.label.material.color.copy(color)
+        this.label.material.emissive.copy(emissive);
         this.label.refresh();
       }
 
@@ -220,8 +220,8 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       var color = (this.properties.disabled ? this.properties.disabledcolor : this.properties.color);
       var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
       if (this.label) {
-        this.label.material.color.setHex(color);
-        this.label.material.emissive.setHex(emissive);
+        this.label.material.color.copy(color);
+        this.label.material.emissive.copy(emissive);
         this.label.refresh();
       }
 
