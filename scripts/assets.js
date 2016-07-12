@@ -152,6 +152,9 @@ if (!ENV_IS_BROWSER) return;
   elation.define('engine.assets.image', {
     assettype: 'image',
     src: false,
+    sbs3d: false,
+    ou3d: false,
+    reverse3d: false,
     texture: false,
     hasalpha: false,
 
@@ -174,6 +177,7 @@ if (!ENV_IS_BROWSER) return;
       data.image = this.processImage(data.image);
       data.needsUpdate = true;
       data.wrapS = data.wrapT = THREE.RepeatWrapping;
+      data.anisotropy = 16;
       this.loaded = true;
       elation.events.fire({type: 'asset_load', element: this._texture});
     },
@@ -181,7 +185,7 @@ if (!ENV_IS_BROWSER) return;
       //console.log('image progress!', ev);
     },
     handleError: function(ev) {
-      console.log('image uh oh!', ev, this._texture.image);
+      console.log('image error!', this, this._texture.image, ev);
       var canvas = document.createElement('canvas');
       var size = 16;
       canvas.width = canvas.height = size;
@@ -322,7 +326,7 @@ if (!ENV_IS_BROWSER) return;
 
     load: function() {
       if (this.src) {
-        this._sound = new THREE.Audio(this.src);
+        //this._sound = new THREE.Audio(this.src);
       }
     },
     handleLoad: function(data) {
@@ -338,6 +342,8 @@ if (!ENV_IS_BROWSER) return;
       this._sound = false;
     },
     getAsset: function() {
+      return this;
+
       if (!this._sound) {
         this.load();
       }
@@ -370,7 +376,11 @@ if (!ENV_IS_BROWSER) return;
       } else {
         //group.add(this._model.clone());
         this.fillGroup(group, this._model);
+        //group = this._model.clone();
         this.assignTextures(group);
+        setTimeout(function() {
+          elation.events.fire({type: 'asset_load', element: group});
+        }, 0);
       }
       this.instances.push(group);
       return group;
@@ -379,10 +389,9 @@ if (!ENV_IS_BROWSER) return;
       if (!source) source = this._model;
       if (source) {
 /*
-        group.position.copy(this._model.position);
-        group.quaternion.copy(this._model.quaternion);
-        //group.scale.copy(this._model.scale);
-
+        group.position.copy(source.position);
+        group.quaternion.copy(source.quaternion);
+        //group.scale.copy(source.scale);
         if (source.children) {
           source.children.forEach(function(n) {
             group.add(n.clone());
@@ -403,7 +412,7 @@ if (!ENV_IS_BROWSER) return;
         if (!tex0) {
           var asset = elation.engine.assets.get({
             assettype: 'image', 
-            id: this.tex0, 
+            name: this.tex0, 
             src: this.tex0,
             baseurl: this.baseurl
           });
@@ -474,7 +483,7 @@ if (!ENV_IS_BROWSER) return;
         elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', num: numworkers});
       }
       elation.engine.assets.loaderpool.addJob(jobdata)
-        .then(elation.bind(this, this.handleLoadJSON));
+        .then(elation.bind(this, this.handleLoadJSON), elation.bind(this, this.handleLoadError));
     },
     handleLoadJSON: function(json) {
       if (json) {
@@ -499,6 +508,9 @@ if (!ENV_IS_BROWSER) return;
         }));
       }
     },
+    handleLoadError: function(e) {
+      console.log('Error loading model', this, e);
+    },
     extractTextures: function(scene) {
       var types = ['map', 'lightMap', 'normalMap', 'specularMap'];
       var textures = {};
@@ -520,7 +532,7 @@ if (!ENV_IS_BROWSER) return;
                   if (!asset) {
                     asset = elation.engine.assets.get({
                       assettype: 'image', 
-                      id: img.src, 
+                      name: img.src, 
                       src: img.src,
                       baseurl: this.baseurl
                     });
@@ -758,8 +770,7 @@ if (!ENV_IS_BROWSER) return;
       elation.net.get(url, null, { 
         nocache: true,
         callback: elation.bind(this, function(data) {
-          console.log('loaded script:', url, data);
-
+          //console.log('loaded script:', url, data);
           var blob = new Blob([data], {type: 'application/javascript'});
           var bloburl = URL.createObjectURL(blob);
           this._script.src = bloburl;
