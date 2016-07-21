@@ -237,9 +237,8 @@ elation.require([
             if (n[i] instanceof VRDisplay) {
               this.vrdisplay = n[i];
               elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
-              setTimeout(elation.bind(this, function() {
-                //this.engine.client.toggleVR({value: 1});
-              }), 1000);
+              elation.events.add(window, 'vrdisplayactivated', elation.bind(this, this.toggleVR, true));
+              elation.events.add(window, 'vrdisplaydeactivated', elation.bind(this, this.toggleVR, false));
               break;
             }
           }
