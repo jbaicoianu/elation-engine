@@ -23,7 +23,7 @@ elation.require('engine.things.generic', function() {
 //console.log(c.data.pose);
           var pose = c.data.pose;
           c.model.position.fromArray(pose.position).multiplyScalar(1);
-          c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
+          //c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
           //c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
           //c.model.position.z *= this.vrdisplay.stageParameters.sizeZ;
 
@@ -69,6 +69,16 @@ elation.require('engine.things.generic', function() {
         geo,
         new THREE.MeshLambertMaterial({color: 0xffffff * Math.random()})
       );
+    }
+    this.hasHands = function() {
+      // TODO - this should also work with leap motion
+      return this.controllers.length > 0;
+    }
+    this.getHands = function() {
+      return {
+        left: this.controllers[0].data.pose,
+        right: this.controllers[1].data.pose
+      };
     }
   }, elation.engine.things.generic);
 });
