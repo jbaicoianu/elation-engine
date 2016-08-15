@@ -4,19 +4,16 @@ elation.require("engine.things.controller", function() {
 
     this.thinkers = [];
     this.lastthink = 0;
-    this.thinktime = 1000/20;
+    this.thinktime = 1000 / 20;
 
     this.system_attach = function(ev) {
       console.log('INIT: ai');
     }
     this.engine_frame = function(ev) {
-      //console.log('FRAME: ai', this.thinkers);
-
       for (var i = 0; i < this.thinkers.length; i++) {
         if (ev.data.ts > this.thinkers[i].lastthink + this.thinkers[i].thinktime) {
           try {
-            elation.events.fire({type: 'thing_think', element: this.thinkers[i], data: ev.data});
-            this.thinkers[i].lastthink = ev.data.ts;
+            this.performThink(this.thinkers[i], ev.data);
           } catch (e) {
             console.log(e.stack);
           }
@@ -26,9 +23,20 @@ elation.require("engine.things.controller", function() {
     this.engine_stop = function(ev) {
       console.log('SHUTDOWN: ai');
     }
+    this.performThink = function(thinker, data) {
+      elation.events.fire({type: 'thing_think', element: thinker, data: data});
+      thinker.lastthink = data.ts;
+    }
     this.add = function(thing) {
       if (this.thinkers.indexOf(thing) == -1) {
         this.thinkers.push(thing);
+        //elation.events.add(thing, 'thing_remove', elation.bind(this, this.remove, thing));
+      }
+    }
+    this.remove = function(thing) {
+      var idx = this.thinkers.indexOf(thing);
+      if (idx != -1) {
+        this.thinkers.splice(idx, 1);
       }
     }
   });
