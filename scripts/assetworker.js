@@ -5,13 +5,19 @@ elation.require([
     'engine.assets',
     'engine.external.pako',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.OBJMTLLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader',
+    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader',
   ], function() {
 
   elation.define('engine.assetworker', {
     _construct: function() {
+      var srcmap = {};
+      THREE.Cache.enabled = true;
       THREE.ImageLoader.prototype.load = function(url, onLoad) {
-        var img = { src: url };
+        var uuid = srcmap[url];
+        if (!uuid) {
+          srcmap[url] = uuid = THREE.Math.generateUUID();
+        }
+        var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
         if ( onLoad ) {
           onLoad( img );
         }
@@ -150,6 +156,7 @@ elation.require([
     },
     onerror: function(job, ev) {
       console.log('error', job, ev);
+      postMessage({message: 'error', id: job.id, data: 'unknown error'});
     },
   });
   elation.define('engine.assets.loaders.model_obj', {
@@ -158,6 +165,7 @@ elation.require([
         var mtl = job.data.mtl || false;
 
         var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
+/*
         if (!mtl) {
           var re = /^mtllib (.*)$/im;
           var m = data.match(re);
@@ -165,7 +173,9 @@ elation.require([
             mtl = m[1];
           }
         }
-        var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
+*/
+        //var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
+        var loader = new THREE.OBJLoader();
         var modeldata = loader.parse(data);
 
         if (mtl) {
