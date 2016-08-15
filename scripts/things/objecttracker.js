@@ -10,10 +10,9 @@ elation.require('engine.things.generic', function() {
     }
     this.updatePositions = function() {
       this.updateTrackedObjects();
-      if (this.vrdisplay) {
-        var foo = new THREE.Matrix4().fromArray(this.vrdisplay.stageParameters.sittingToStandingTransform);
-        //console.log(foo.toArray());
-      } else return;
+      if (!this.vrdisplay) {
+        return;
+      }
 
       var player = this.engine.client.player,
           stage = this.vrdisplay.stageParameters;
