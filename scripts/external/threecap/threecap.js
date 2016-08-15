@@ -245,7 +245,7 @@ THREEcapRenderPass.prototype = {
 	render: function ( renderer, writeBuffer, readBuffer, delta ) {
 
     this.renderer = renderer;
-		this.uniforms[ "tDiffuse" ].value = readBuffer;
+		this.uniforms[ "tDiffuse" ].value = readBuffer.texture;
 
 		this.quad.material = this.material;
 
@@ -359,6 +359,9 @@ THREEcapRenderPass.prototype = {
 			};
 			worker.postMessage(workermsg, [workermsg.data]);
 		}.bind(this));
+	},
+	setSize: function(w, h) {
+		console.log('FIXME - set size!');
 	}
 };
 "use strict";
