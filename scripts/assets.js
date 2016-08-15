@@ -5,8 +5,12 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     assets: {},
     types: {},
     corsproxy: '',
+    placeholders: {},
+
     init: function() {
       var corsproxy = elation.config.get('engine.assets.corsproxy', '');
+      //THREE.Loader.Handlers.add(/.*/i, loader);
+      //THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
       if (corsproxy != '') {
         this.setCORSProxy(corsproxy);
       }
@@ -42,10 +46,10 @@ if (!ENV_IS_BROWSER) return;
         return asset;
       }
       if (asset) {
-        return asset.getAsset();
+        return asset.getInstance();
       } else {
         asset = elation.engine.assets.get({assettype: type, name: name});
-        return asset.getAsset();
+        return asset.getInstance();
       }
       return undefined;
     },
@@ -57,6 +61,9 @@ if (!ENV_IS_BROWSER) return;
       if (!elation.env.isWorker && elation.engine.assets.loaderpool) {
         elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
       }
+    },
+    setPlaceholder: function(type, name) {
+      this.placeholders[type] = this.find(type, name);
     },
     loaderpool: false
   });
@@ -123,10 +130,17 @@ if (!ENV_IS_BROWSER) return;
       if (this.isURLRelative(fullurl)) {
          fullurl = baseurl + fullurl;
       } else if (this.isURLAbsolute(fullurl)) {
-         fullurl = window.self.location.origin + fullurl;
+         fullurl = self.location.origin + fullurl;
       }
 
       return fullurl;
+    },
+    getProxiedURL: function(url, baseurl) {
+      var proxiedurl = this.getFullURL(url, baseurl);
+      if (elation.engine.assets.corsproxy && !this.isURLLocal(proxiedurl)) {
+        proxiedurl = elation.engine.assets.corsproxy + proxiedurl;
+      }
+      return proxiedurl;
     },
     getBaseURL: function(url) {
       var url = url || this.getFullURL();
@@ -134,7 +148,7 @@ if (!ENV_IS_BROWSER) return;
       parts.pop();
       return parts.join('/') + '/';
     },
-    getAsset: function() {
+    getInstance: function(args) {
       return undefined;
     }
   }, elation.class);
@@ -156,6 +170,7 @@ if (!ENV_IS_BROWSER) return;
     ou3d: false,
     reverse3d: false,
     texture: false,
+    imagetype: '',
     hasalpha: false,
 
     load: function() {
@@ -163,23 +178,33 @@ if (!ENV_IS_BROWSER) return;
       loader.setCrossOrigin('');
       //console.log('load this image!', this);
       if (this.src) {
-        var url = this.getFullURL();
-        if (elation.engine.assets.corsproxy && !this.isURLLocal(url)) {
-          url = elation.engine.assets.corsproxy + url;
-        }
+        var url = this.getProxiedURL();
+
         this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
+        this._texture.image = this.createCanvas();
+        this._texture.needsUpdate = true;
       }
+    },
+    createCanvas: function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#999';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      return canvas;
     },
     handleLoad: function(data) {
       //console.log('loaded image', data.sourceFile, data.image, data);
       this._texture = data;
-      data.sourceFile = data.image.src;
+      data.sourceFile = this.src;
       data.image = this.processImage(data.image);
-      data.needsUpdate = true;
+      //data.needsUpdate = true;
       data.wrapS = data.wrapT = THREE.RepeatWrapping;
       data.anisotropy = 16;
       this.loaded = true;
       elation.events.fire({type: 'asset_load', element: this._texture});
+      elation.events.fire({type: 'asset_load', element: this});
     },
     handleProgress: function(ev) {
       //console.log('image progress!', ev);
@@ -194,30 +219,32 @@ if (!ENV_IS_BROWSER) return;
       ctx.fillRect(0,0,size,size);
       
       this._texture.image = canvas;
-      this._texture.needsUpdate = true;
+      //this._texture.needsUpdate = true;
       this._texture.generateMipMaps = false;
       elation.events.fire({type: 'asset_error', element: this._texture});
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._texture) {
         this.load();
       }
       return this._texture;
     },
     processImage: function(image) {
-      if (image.src.match(/\.gif/)) { // FIXME - really we should be cracking open the file and looking at magic number to determine this
+      this.imagetype = this.detectImageType();
+      if (this.imagetype == 'gif') {
         this.hasalpha = true; // FIXME - if we're cracking the gif open already, we should be able to tell if it has alpha or not
         return this.convertGif(image); 
-      } else if (!elation.engine.materials.isPowerOfTwo(image.width) || !elation.engine.materials.isPowerOfTwo(image.height)) {
+      } else { //if (!elation.engine.materials.isPowerOfTwo(image.width) || !elation.engine.materials.isPowerOfTwo(image.height)) {
         // Scale up the texture to the next highest power of two dimensions.
         var canvas = document.createElement("canvas");
         canvas.width = elation.engine.materials.nextHighestPowerOfTwo(image.width);
         canvas.height = elation.engine.materials.nextHighestPowerOfTwo(image.height);
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+        this.hasalpha = this.canvasHasAlpha(canvas);
         return canvas;
-      } else {
-        return image;
+      //} else {
+      //  return image;
       }
     },
     convertGif: function(image) {
@@ -249,7 +276,31 @@ if (!ENV_IS_BROWSER) return;
         doGIFFrame(gif.get_length() == 1);
       });
       return newcanvas;
+    },
+    detectImageType: function() {
+      // FIXME - really we should be cracking open the file and looking at magic number to determine this
+      var type = 'jpg';
+      if (this.src.match(/\.(.*?)$/)) {
+        var parts = this.src.split('.');
+        type = parts.pop();
+      }
+      return type;
+    },
+    canvasHasAlpha: function(canvas) {
+      if (!(this.imagetype == 'gif' || this.imagetype == 'png')) {
+        return false;
+      }
+      var ctx = canvas.getContext('2d');
+      var pixeldata = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var hasalpha = false;
+      for (var i = 3; i < pixeldata.data.length; i+=4) {
+        if (pixeldata.data[i] != 255) {
+          return true;
+        }
+      }
+      return false;
     }
+    
   }, elation.engine.assets.base);
 
   elation.define('engine.assets.video', {
@@ -260,10 +311,7 @@ if (!ENV_IS_BROWSER) return;
     auto_play: false,
     texture: false,
     load: function() {
-      var url = this.getFullURL(this.src);
-      if (elation.engine.assets.corsproxy && !this.isURLLocal(this.src)) {
-        url = elation.engine.assets.corsproxy + url;
-      }
+      var url = this.getProxiedURL(this.src);
       var video = document.createElement('video');
       video.src = url;
       video.autoplay = this.auto_play;
@@ -278,7 +326,7 @@ if (!ENV_IS_BROWSER) return;
       console.log('video uh oh!', ev);
       this._texture = false;
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._texture) {
         this.load();
       }
@@ -301,7 +349,7 @@ if (!ENV_IS_BROWSER) return;
       this._material = new THREE.MeshPhongMaterial(matargs);
       console.log('new material!', this._material);
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._material) {
         this.load();
       }
@@ -341,7 +389,7 @@ if (!ENV_IS_BROWSER) return;
       console.log('sound uh oh!', ev);
       this._sound = false;
     },
-    getAsset: function() {
+    getInstance: function(args) {
       return this;
 
       if (!this._sound) {
@@ -361,25 +409,32 @@ if (!ENV_IS_BROWSER) return;
     tex2: false,
     tex3: false,
     tex_linear: true,
+    color: false,
     modeltype: '',
     compression: 'none',
 
     loadworkers: [
     ],
 
-    getAsset: function() {
+    getInstance: function(args) {
       var group = new THREE.Group();
       if (!this._model) {
         this.load();
-        var mesh = this.createPlaceholder();
+        var mesh;
+        if (elation.engine.assets.placeholders.model) {
+          mesh = elation.engine.assets.placeholders.model.clone();
+        } else {
+          mesh = this.createPlaceholder();
+        }
         group.add(mesh);
       } else {
         //group.add(this._model.clone());
         this.fillGroup(group, this._model);
         //group = this._model.clone();
-        this.assignTextures(group);
+        this.assignTextures(group, args);
         setTimeout(function() {
           elation.events.fire({type: 'asset_load', element: group});
+          elation.events.fire({type: 'asset_load', element: this});
         }, 0);
       }
       this.instances.push(group);
@@ -399,10 +454,39 @@ if (!ENV_IS_BROWSER) return;
         }
 */
         group.add(source.clone());
+
+        group.traverse(elation.bind(this, function(n) { 
+          if (n.material) {
+            var oldmat = n.material,
+                newmat = oldmat.clone();//this.copyMaterial(oldmat);
+
+            //n.material = newmat;
+            if (n.material instanceof THREE.MeshFaceMaterial) {
+              for (var i = 0; i < n.material.materials.length; i++) {
+                var oldmat = n.material.materials[i],
+                    newmat = oldmat.clone();//this.copyMaterial(oldmat);
+                //n.material.materials[i] = newmat;
+                console.log('facemat', oldmat.name, oldmat.alphaTest, newmat.alphaTest);
+              }
+            }
+          }
+        }));
       }
       return group;
     },
-    assignTextures: function(group) {
+    copyMaterial: function(oldmat) {
+      var m = new THREE.MeshPhongMaterial();
+      m.anisotropy = 16;
+      m.name = oldmat.name;
+      m.map = oldmat.map;
+      m.normalMap = oldmat.normalMap;
+      m.lightMap = oldmat.lightMap;
+      m.color.copy(oldmat.color);
+      m.transparent = oldmat.transparent;
+      m.alphaTest = oldmat.alphaTest;
+      return m;
+    },
+    assignTextures: function(group, args) {
       var minFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearMipMapLinearFilter : THREE.NearestFilter);
       var magFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearFilter : THREE.NearestFilter);
 
@@ -416,7 +500,7 @@ if (!ENV_IS_BROWSER) return;
             src: this.tex0,
             baseurl: this.baseurl
           });
-          tex0 = asset.getAsset();
+          tex0 = asset.getInstance();
         }
       }
       group.traverse(function(n) { 
@@ -425,14 +509,14 @@ if (!ENV_IS_BROWSER) return;
           materials.forEach(function(m) {
             if (tex0) {
               m.transparent = true; 
-              m.alphaTest = 0.4;
+              m.alphaTest = 0.1;
               m.map = tex0; 
             }
             if (m.map) {
               m.map.minFilter = minFilter;
               m.map.magFilter = magFilter;
             }
-            //m.needsUpdate = true;
+            m.needsUpdate = true;
             //if (m.color) m.color.setHex(0xffffff);
           });
         } 
@@ -450,10 +534,14 @@ if (!ENV_IS_BROWSER) return;
         font: font,
       });                                                
 */
+/*
       var geo = new THREE.SphereGeometry(0.25);
       //geo.applyMatrix(new THREE.Matrix4().makeScale(1,1,.1));
       var mat = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x333333, opacity: 0.5, transparent: true});
       this.placeholder = new THREE.Mesh(geo, mat);
+*/
+      this.placeholder = new THREE.Object3D();
+      
       return this.placeholder;
     },
     load: function() {
@@ -487,6 +575,7 @@ if (!ENV_IS_BROWSER) return;
     },
     handleLoadJSON: function(json) {
       if (json) {
+        this.loaded = true;
         var parser = new THREE.ObjectLoader();
         parser.setCrossOrigin('anonymous');
         var scene = parser.parse(json);
@@ -506,14 +595,19 @@ if (!ENV_IS_BROWSER) return;
           this.assignTextures(n);
           elation.events.fire({type: 'asset_load', element: n});
         }));
+        elation.events.fire({type: 'asset_load', element: this});
       }
     },
     handleLoadError: function(e) {
       console.log('Error loading model', this, e);
+      elation.events.fire({type: 'asset_error', element: this});
     },
     extractTextures: function(scene) {
       var types = ['map', 'lightMap', 'normalMap', 'specularMap'];
       var textures = {};
+
+      var minFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearMipMapLinearFilter : THREE.NearestFilter);
+      var magFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearFilter : THREE.NearestFilter);
 
       scene.traverse(function(n) { 
         if (n instanceof THREE.Mesh) {
@@ -522,7 +616,7 @@ if (!ENV_IS_BROWSER) return;
           materials.forEach(function(material) {
             types.forEach(function(texname) { 
               var tex = material[texname];
-              if (tex && tex.image) {
+              if (tex && tex.image instanceof HTMLImageElement) {
                 var img = tex.image;
                 if (!textures[img.src]) {
                   //elation.engine.assets.loadJSON([{"assettype": "image", name: img.src, "src": img.src}], this.baseurl); 
@@ -538,19 +632,23 @@ if (!ENV_IS_BROWSER) return;
                     });
                   }
                   
-                  tex = asset.getAsset();
-                  textures[img.src] = tex;
-                  elation.events.add(tex, 'asset_load', function() { 
-                    tex.needsUpdate = true;
-                    if (asset.hasalpha) {
-                      material.transparent = true;
-                      material.alphaTest = 0.1;
-                      material.needsUpdate = true;
-                    }
-                  });
-                  material[texname] = tex;
+                  tex = asset.getInstance();
+                  if (tex) {
+                    textures[img.src] = tex;
+                    elation.events.add(tex, 'asset_load', function() { 
+                      //tex.needsUpdate = true;
+                      if (asset.hasalpha) {
+                        material.transparent = true;
+                        material.alphaTest = 0.1;
+                        //material.needsUpdate = true;
+                      }
+                    });
+                    tex.minFilter = minFilter;
+                    tex.magFilter = magFilter;
+                    material[texname] = tex;
+                  }
                 } else {
-                 material[texname] = textures[img.src];
+                  material[texname] = textures[img.src];
                 }
               }
             });
@@ -648,7 +746,7 @@ if (!ENV_IS_BROWSER) return;
     handleLoad: function(data) {
       this._font = data;
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._font) {
         this.load();
       }
@@ -737,7 +835,7 @@ if (!ENV_IS_BROWSER) return;
       var size = ctx.measureText(text);
       return size.width / fontSize;
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._texture) {
         this.load();
       }
@@ -763,18 +861,17 @@ if (!ENV_IS_BROWSER) return;
     },
     load: function() {
       this._script = document.createElement('script');
-      var url = this.getFullURL(this.src);
-      if (elation.engine.assets.corsproxy) { // && !this.isURLLocal(this.src)) {
-        url = elation.engine.assets.corsproxy + url;
-      }
+      var url = this.getProxiedURL(this.src);
+
       elation.net.get(url, null, { 
         nocache: true,
         callback: elation.bind(this, function(data) {
           //console.log('loaded script:', url, data);
-          var blob = new Blob([data], {type: 'application/javascript'});
+          var blob = new Blob(['(function(window) { ' + data + '})(self)'], {type: 'application/javascript'});
           var bloburl = URL.createObjectURL(blob);
           this._script.src = bloburl;
           elation.events.fire({type: 'asset_load', element: this._script});
+          elation.events.fire({type: 'asset_load', element: this});
         })
       });
 
@@ -784,7 +881,7 @@ if (!ENV_IS_BROWSER) return;
     handleError: function(ev) {
       this._script = false;
     },
-    getAsset: function() {
+    getInstance: function(args) {
       if (!this._script) {
         this.load();
       }
