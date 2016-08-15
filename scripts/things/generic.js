@@ -319,15 +319,19 @@ elation.component.add("engine.things.generic", function() {
       }
 
       if (forcerefresh && this.objects['3d']) {
-        this.initProperties();
-        var parent = this.objects['3d'].parent;
-        parent.remove(this.objects['3d']);
-        this.objects['3d'] = false;
-        this.init3D();
-        parent.add(this.objects['3d']);
+        var oldobj = this.objects['3d'],
+            parent = oldobj.parent,
+            newobj = this.createObject3D();
+
+        this.objects['3d'] = newobj;
+
+        if (parent) {
+          parent.remove(oldobj);
+          parent.add(newobj);
+        }
       }
       if (this.objects.dynamics) {
-        if (forcerefresh) {
+        if (false && forcerefresh) {
           this.removeDynamics();
           this.initPhysics();
         } else {
@@ -1057,15 +1061,15 @@ elation.component.add("engine.things.generic", function() {
         });
       }
       meshes[i].parent.remove(meshes[i]);
-/*
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
       //meshes[i].bindScale(this.properties.scale);
       meshes[i].userData.thing = this;
       meshes[i].updateMatrixWorld();
-      meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
+      //meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
       this.colliders.add(meshes[i]);
       meshes[i].material = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
+/*
       this.colliderhelper = new THREE.EdgesHelper(meshes[i], 0x00ff00);
       this.colliders.add(this.colliderhelper);
       this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
