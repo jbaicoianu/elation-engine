@@ -109,7 +109,7 @@ elation.require(deps, function() {
       }))();
     this.frame = function(fn) {
       if (elation.env.isNode) var window;
-      if (this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
+      if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
         this.client.view.vrdisplay.requestAnimationFrame(fn);
       } else {
         this.requestAnimationFrame.call(window, fn);
@@ -373,11 +373,13 @@ elation.require(deps, function() {
           this.menu = player.camera.spawn('menu', null, { 
             position: [0,0,-0.2],
             items: [
+/*
               { 
                 text: 'Intro',
                 callback: elation.bind(this, this.startIntro),
                 disabled: true
               },
+*/
               { 
                 text: 'Play',
                 callback: elation.bind(this, this.startGame)
