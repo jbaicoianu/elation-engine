@@ -26,6 +26,7 @@ elation.require([
   "engine.external.three.render.BloomPass",
   "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
+  "engine.external.three.render.ManualMSAARenderPass",
   "engine.materials",
   "engine.geometries",
   "ui.select",
@@ -50,7 +51,7 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
+      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: false, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
@@ -189,7 +190,7 @@ elation.require([
       //console.log(this.engine.systems.world.scene['world-3d']);
 
       // Depth shader, used for SSAO, god rays, etc
-      var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+      var depthShader = THREE.ShaderLib[ "depth" ];
       var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
 
       this.depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
@@ -197,7 +198,8 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode]);
-      this.composer = this.createRenderPath([this.rendermode, 'bloom', 'fxaa', 'recording']);
+      this.composer = this.createRenderPath([this.rendermode, 'fxaa', 'msaa', 'bloom', 'recording']);
+      this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
       this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
@@ -399,6 +401,11 @@ elation.require([
           pass = new THREE.ShaderPass( THREE.FXAAShader );
           pass.uniforms[ 'resolution' ].value = this.sizevecinverse;
           break;
+        case 'msaa':
+          pass = new THREE.ManualMSAARenderPass(this.scene, this.actualcamera);
+          pass.unbiased = true;
+          pass.sampleLevel = 1;
+          break;
         case 'ssao':
           pass = new THREE.ShaderPass( THREE.SSAOShader );
           pass.uniforms[ 'size' ].value = this.sizevec;
@@ -488,7 +495,7 @@ if (vivehack) {
 
             var fov = eyeL.fieldOfView.leftDegrees + eyeL.fieldOfView.rightDegrees;
             this.camera.fov = fov;
-            this.aspectscale = 2;
+            this.aspectscale = 1;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
 
@@ -1103,7 +1110,7 @@ if (vivehack) player.head.reparent(player.neck);
           label: 'Display Settings'
         });
         var oculus = elation.ui.toggle({
-          label: 'Oculus Rift',
+          label: 'VR Mode',
           append: displaypanel,
           events: { toggle: elation.bind(this.client, this.client.toggleVR) }
         });
@@ -1144,6 +1151,39 @@ if (vivehack) player.head.reparent(player.neck);
           },
           events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
         });
+
+        var fxaafilter = this.view.effects['fxaa']
+        var msaafilter = this.view.effects['msaa']
+        var antialiasing = elation.ui.select({
+          append: displaypanel,
+          label: 'Antialiasing',
+          items: ['None', 'FXAA', 'MSAA'],
+          selected: 'FXAA',
+          events: {
+            ui_select_change: function(ev) { 
+              fxaafilter.enabled = false;
+              msaafilter.enabled = false;
+
+              if (ev.data == 'FXAA') fxaafilter.enabled = true;
+              if (ev.data == 'MSAA') msaafilter.enabled = true;
+            }
+          }
+        });
+        var msaa = elation.ui.select({
+          append: displaypanel,
+          label: 'MSAA Samples',
+          items: [0, 1, 2, 4, 8, 16],
+          bindvar: [msaafilter, 'sampleLevel']
+/*
+          events: {
+            ui_select_change: function(ev) { 
+              msaafilter.sampleLevel = parseInt(ev.data);
+console.log('dun it', msaafilter);
+            }
+          }
+*/
+        });
+
 
       // Capture Settings
       var capturelabel = elation.ui.labeldivider({
