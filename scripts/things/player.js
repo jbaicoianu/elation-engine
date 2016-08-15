@@ -6,15 +6,22 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         height: { type: 'float', default: 2.0 },
         fatness: { type: 'float', default: .25 },
         mass: { type: 'float', default: 10.0 },
-        movespeed: { type: 'float', default: 400.0 },
-        runspeed: { type: 'float', default: 600.0 },
+        movestrength: { type: 'float', default: 200.0 },
+        movespeed: { type: 'float', default: 1.8 },
+        runstrength: { type: 'float', default: 250.0 },
+        runspeed: { type: 'float', default: 5.4 },
         crouchspeed: { type: 'float', default: 150.0 },
         turnspeed: { type: 'float', default: 2.0 },
-        movefriction: { type: 'float', default: 8.0 },
+        jumpstrength: { type: 'float', default: 300.0 },
+        jumptime: { type: 'float', default: 150 },
+        movefriction: { type: 'float', default: 4.0 },
         defaultplayer: { type: 'boolean', default: true },
         startposition: { type: 'vector3', default: new THREE.Vector3() },
         startorientation: { type: 'quaternion', default: new THREE.Quaternion() },
-        startcameraorientation: { type: 'quaternion', default: new THREE.Quaternion() }
+        startcameraorientation: { type: 'quaternion', default: new THREE.Quaternion() },
+        walking: { type: 'boolean', default: true },
+        running: { type: 'boolean', default: false },
+        flying: { type: 'boolean', default: false, set: function(key, value) { this.properties.flying = value; this.toggle_flying(value); }},
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
@@ -31,10 +38,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'look_down': ['keyboard_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
         'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
-        //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.updateControls)],
+        'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.handleJump)],
         //'toss': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
-        'use': ['keyboard_space,keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
+        'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
         //'toggle_flying': ['keyboard_f', elation.bind(this, this.toggle_flying)],
         'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
@@ -60,11 +67,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.addTag('player');
 
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
-      //elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
+      elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
       elation.events.add(this, 'thing_create', elation.bind(this, this.handleCreate));
-    }
-    this.createForces = function() {
-      this.objects.dynamics.setDamping(1,1);
     }
     this.createObjectDOM = function() {
       //this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
@@ -131,12 +135,16 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         this.charging = false;
       }
     }
-    this.toggle_flying = function(ev) {
-      if (ev.value == 1) {
-        this.flying = !this.flying;
+    this.toggle_flying = function(value) {
+      if (value === undefined) value = !this.flying;
+      //if (ev.value == 1) {
+        //this.flying = !this.flying;
+        this.properties.flying = value;
         this.usegravity = !this.flying;
-        this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8, 0));
-      }
+        if (this.gravityForce) {
+          this.gravityForce.update(new THREE.Vector3(0,(this.usegravity ? -9.8 : 0), 0));
+        }
+      //}
     }
     this.reset_position = function(ev) {
       if (!ev || ev.value == 1) {
@@ -171,8 +179,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.frictionForce = this.objects.dynamics.addForce("friction", this.properties.movefriction);
       this.gravityForce = this.objects.dynamics.addForce("gravity", new THREE.Vector3(0,0,0));
       this.moveForce = this.objects.dynamics.addForce("static", {});
+      this.jumpForce = this.objects.dynamics.addForce("static", {});
       this.objects.dynamics.restitution = 0.1;
-      this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
+      //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
       this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
@@ -184,7 +193,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
         'position': [0,0,0]
       });
-      this.tracker = this.spawn('objecttracker');
+      this.tracker = this.spawn('objecttracker', null, true);
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
     }
@@ -192,18 +201,20 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       
     }
     this.enable = function() {
-      this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8));
-      this.engine.systems.controls.activateContext('player');
-      this.engine.systems.controls.enablePointerLock(true);
+      var controls = this.engine.systems.controls;
+      this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8 , 0));
+      controls.activateContext('player');
+      
       if (this.engine.systems.render.views.main) {
         //this.engine.systems.render.views.main.disablePicking();
       }
+      controls.enablePointerLock(true);
       this.controlstate._reset();
       this.lookVector.set(0,0,0);
       this.turnVector.set(0,0,0);
       this.enableuse = true;
       this.enabled = true;
-      this.engine.systems.controls.requestPointerLock();
+      controls.requestPointerLock();
 
       // FIXME - quick hack to ensure we don't refresh before everything is initialized
       if (this.objects.dynamics) {
@@ -211,8 +222,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       }
     }
     this.disable = function() {
-      this.engine.systems.controls.deactivateContext('player');
-      this.engine.systems.controls.enablePointerLock(false);
+      var controls = this.engine.systems.controls;
+      controls.deactivateContext('player');
+      controls.enablePointerLock(false);
       if (this.engine.systems.render.views.main) {
         //this.engine.systems.render.views.main.enablePicking();
       }
@@ -252,7 +264,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.lookVector.x -= this.controlstate.mouse_pitch * this.properties.turnspeed;
           }
 
-          if (this.controlstate.jump) this.objects.dynamics.velocity.y = 5;
           if (this.controlstate.crouch) {
             if (this.flying) {
               this.moveVector.y -= 1;
@@ -267,12 +278,39 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
           if (this.moveForce) {
             var moveSpeed = Math.min(1.0, this.moveVector.length());
-            if (this.controlstate.crouch) moveSpeed *= this.properties.crouchspeed;
-            else if (this.controlstate.run) moveSpeed *= this.properties.runspeed;
-            else moveSpeed *= this.properties.movespeed;
-            
+            var dumbhack = false;
+            if (this.flying || this.canJump()) {
+              this.frictionForce.update(this.properties.movefriction);
+              if (this.controlstate['jump']) {
+                this.jumpForce.update(new THREE.Vector3(0, this.jumpstrength, 0));
+                console.log('jump up!', this.jumpForce.force.toArray());
+                setTimeout(elation.bind(this, function() {
+                  this.jumpForce.update(new THREE.Vector3(0, 0, 0));
+                }), this.jumptime);
+              }
+              var velsq = this.velocity.lengthSq();
+              if (this.controlstate.crouch) {
+                moveSpeed *= this.crouchspeed;
+              } else if (this.controlstate.run) {
+                moveSpeed *= this.runstrength;
+              } else {
+                moveSpeed *= this.movestrength;
+              }
+              
+              if (moveSpeed == 0 && velsq > 0) {
+                // The player isn't actively moving via control input, so apply opposing force to stop us
+                this.objects.dynamics.worldToLocalDir(this.moveVector.copy(this.velocity).negate());
+                moveSpeed = Math.min(this.moveVector.length(), 1) * this.movestrength;
+                this.moveVector.normalize();
+                dumbhack = true;
+              }
+            } else {
+              this.frictionForce.update(0);
+              //this.moveVector.set(0,0,0);
+              moveSpeed *= this.movestrength / 32;
+            }
             _moveforce.copy(this.moveVector).normalize().multiplyScalar(moveSpeed);
-            if (this.flying) {
+            if (this.flying && !dumbhack) {
               _moveforce.applyQuaternion(this.head.properties.orientation);
             }
             this.moveForce.update(_moveforce);
@@ -307,7 +345,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             //this.head.refresh();
           }
         }
-        this.handleTargeting();
+        //this.handleTargeting();
 
         //elation.events.fire({type: 'thing_change', element: this});
       }
@@ -323,7 +361,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.handleTargeting = function() {
       if (this.enableuse) {
-        var targetinfo = this.getUsableTarget();
+        var targetinfo = this.getUsableTarget('usable');
         if (targetinfo) {
           var target = this.getThingByObject(targetinfo.object);
           if (target !== this.target) {
@@ -366,9 +404,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       var _pos = new THREE.Vector3(),
           _dir = new THREE.Vector3(),
           _caster = new THREE.Raycaster(_pos, _dir, .01, this.targetrange);
-      return function() {
+      return function(tagname) {
         if (!this.camera) return; // FIXME - hack to make sure we don't try to execute if our camera isn't initialized
-        var things = this.engine.getThingsByTag('usable');
+        var things = (tagname ? this.engine.getThingsByTag(tagname) : this.engine.getThingsByProperty('pickable', true));
         if (things.length > 0) {
           var objects = things.map(function(t) { return t.objects['3d']; });
           // Get my position and direction in world space
@@ -400,7 +438,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             position: [0,-.15,-.5],
             scale: [0.5,0.5,0.5]
           });
-          var toplabel = this.uselabel.spawn('label2d', null, {
+          this.toplabel = this.uselabel.spawn('label2d', null, {
             text: 'Press E or click to ' + verb,
             color: 0x00ff00,
             size: 16,
@@ -413,6 +451,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             size: 64
           });
         } else {
+          this.toplabel.setText('Press E or click to ' + verb);
           this.uselabelnoun.setText(noun);
           if (!this.uselabel.parent) {
             this.head.add(this.uselabel);
@@ -428,6 +467,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       }
 */
 
+    }
+    this.handleJump = function(ev) {
+      var keydown = ev.value;
+      if (!keydown) {
+        this.jumpForce.update(new THREE.Vector3(0, 0, 0));
+      }
     }
     this.hideUseDialog = function() {
       if (this.uselabel && this.uselabel.parent) {
@@ -447,5 +492,32 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       object.properties.angular.set(0,0,0);
       object.properties.orientation.setFromEuler(new THREE.Euler(Math.PI/2,0,0)); // FIXME - probably not the best way to do this
     }
+    this.canJump = (function() {
+      // Cast a ray downwards to see if we're touching a surface and can jump
+      var _pos = new THREE.Vector3(),
+          _dir = new THREE.Vector3(0, -1, 0),
+          _caster = new THREE.Raycaster(_pos, _dir, .01, 1 + this.fatness);
+      return function(tagname) {
+        if (!this.camera) return; // FIXME - hack to make sure we don't try to execute if our camera isn't initialized
+        //var things = this.engine.getThingsByProperty('pickable', true);
+        var objects = [this.engine.systems.world.scene['colliders']];
+        if (objects.length > 0) {
+          //var objects = things.map(function(t) { return t.objects['3d']; });
+          // Get my position and direction in world space
+          var pos = this.localToWorld(_pos.set(0,1,0));
+
+          var intersects = _caster.intersectObjects(objects, true);
+          if (intersects.length > 0) {
+            for (var i = 0; i < intersects.length; i++) {
+              if (intersects[i].distance <= 1 + this.fatness) {
+                return intersects[i];
+              }
+            }
+          }
+        }
+        return false;
+      }
+      return true;
+    })();
   }, elation.engine.things.generic);
 });
