@@ -39,7 +39,7 @@ elation.require(['utils.template', 'engine.external.three.three'], function() {
           var img = document.createElement('IMG');
           img.src = url;
           this.texturecache[url] = new THREE.Texture(img);
-          this.texturecache[url].needsUpdate = true;
+          //this.texturecache[url].needsUpdate = true;
           this.texturecache[url].sourceFile = url;
         } else if (url.match(/\.dds$/)) {
           /*
@@ -60,7 +60,7 @@ elation.require(['utils.template', 'engine.external.three.three'], function() {
               var ctx = canvas.getContext("2d");
               ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
               texture.image = canvas;
-              texture.needsUpdate = true;
+              //texture.needsUpdate = true;
             }
 
             elation.events.fire({element: texture, type: 'engine_texture_load'}); 
