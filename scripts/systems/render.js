@@ -488,7 +488,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 if (vivehack) {
   player.head.reparent(player);
 }
-          this.vrdisplay.requestPresent({source: this.rendersystem.renderer.domElement}).then(elation.bind(this, function() {
+          this.vrdisplay.requestPresent([{source: this.rendersystem.renderer.domElement}]).then(elation.bind(this, function() {
             console.log('presenting!');
             var eyeL = this.vrdisplay.getEyeParameters('left');
             var eyeR = this.vrdisplay.getEyeParameters('right');
