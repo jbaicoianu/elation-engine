@@ -87,6 +87,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.changes = [];
     this.gamepads = [];
     this.viewport = [];
+    this.hmdframes = [];
 
     this.settings = {
       mouse: {
@@ -209,7 +210,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.update = function(t) {
       this.pollGamepads();
-      this.pollHMDs();
+      //this.pollHMDs();
 
       if (this.changes.length > 0) {
         var now = new Date().getTime();
@@ -387,11 +388,21 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.updateConnectedHMDs();
       } else if (this.hmds && this.hmds.length > 0) {
         for (var i = 0; i < this.hmds.length; i++) {
-          if (typeof VRDisplay != 'undefined' && this.hmds[i] instanceof VRDisplay) {
-            var hmdstate = this.hmds[i].getPose();
-            var bindname = "hmd_" + i;
-            this.changes.push(bindname);
-            this.state[bindname] = hmdstate;
+          var hmd = this.hmds[i];
+          if (typeof VRDisplay != 'undefined' && hmd instanceof VRDisplay) {
+            var framedata = this.hmdframes[i];
+            var pose = false;
+            if (hmd.getFrameData && hmd.getFrameData(framedata)) {
+              pose = framedata.pose;
+            } else if (hmd.getPose) {
+              pose = hmd.getPose();
+            }
+            if (pose) {
+              var hmdstate = pose;
+              var bindname = "hmd_" + i;
+              this.changes.push(bindname);
+              this.state[bindname] = hmdstate;
+            }
           } else {
             var hmdstate = this.hmds[i].getState();
             var realhmdstate = {
@@ -435,6 +446,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           if ((typeof PositionSensorVRDevice != 'undefined' && hmds[i] instanceof PositionSensorVRDevice) || 
               (typeof VRDisplay != 'undefined' && hmds[i] instanceof VRDisplay)) {
             this.hmds.push(hmds[i]);
+            if (typeof VRFrameData !== 'undefined') {
+              this.hmdframes[i] = new VRFrameData();
+            }
           }
         }
       }
