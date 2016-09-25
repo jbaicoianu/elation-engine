@@ -56,6 +56,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.lookVector = new THREE.Euler(0, 0, 0);
       //this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.activateContext('playerhmd');
+
+      if (typeof VRFrameData !== 'undefined') {
+        this.framedata = new VRFrameData();
+      }
       this.charging = false;
       this.usegravity = false;
       this.flying = true;
@@ -187,13 +191,16 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
         'position': [0,1,0]
       });
+      this.shoulders = this.torso.spawn('generic', this.properties.player_id + '_shoulders', {
+        'position': [0,0.3,-0.2]
+      });
       this.neck = this.torso.spawn('generic', this.properties.player_id + '_neck', {
         'position': [0,0.6,0]
       });
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
         'position': [0,0,0]
       });
-      this.tracker = this.spawn('objecttracker', null, true);
+      this.tracker = this.spawn('objecttracker', null, {player: this});
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
     }
@@ -316,31 +323,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
-            if (this.hmdstate.hmd && this.hmdstate.hmd.timeStamp !== 0) {
-              if (this.headconstraint) this.headconstraint.enabled = false;
-              var scale = 1;
-              var hmd = this.hmdstate.hmd;
-              if (hmd.position) {
-                var pos = this.head.objects.dynamics.position;
-                pos.fromArray(hmd.position).multiplyScalar(scale);
-                //pos.y += this.properties.height * .8 - this.properties.fatness;
-              }
-              if (this.hmdstate.hmd.linearVelocity) {
-                this.head.objects.dynamics.velocity.fromArray(this.hmdstate.hmd.linearVelocity).multiplyScalar(scale);
-              }
-
-              var o = this.hmdstate.hmd.orientation;
-              if (o) {
-                this.head.objects.dynamics.orientation.fromArray(o);
-              }
-              if (this.hmdstate.hmd.angularVelocity) {
-                //this.head.objects.dynamics.angular.fromArray(this.hmdstate.hmd.angularVelocity);
-              }
-
-              this.head.objects.dynamics.updateState();
-            } else {
-              this.head.objects.dynamics.setAngularVelocity(this.lookVector);
-            }
+            if (this.headconstraint) this.headconstraint.enabled = true;
+            this.head.objects.dynamics.setAngularVelocity(this.lookVector);
             this.head.objects.dynamics.updateState();
             //this.head.refresh();
           }
@@ -350,6 +334,42 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //elation.events.fire({type: 'thing_change', element: this});
       }
     })();
+    this.updateHMD = function(vrdevice) {
+      if (vrdevice) {
+        var pose = false;
+        if (vrdevice.getFrameData && this.framedata) {
+          if (vrdevice.getFrameData(this.framedata)) {
+            pose = this.framedata.pose;
+          }
+        } else if (vrdevice.getPose) {
+          pose = vrdevice.getPose();
+        }
+        if (pose) this.hmdstate.hmd = pose;
+        
+      }
+
+      if (this.headconstraint) this.headconstraint.enabled = !vrdevice.isPresenting;
+      var scale = 1;
+      var hmd = this.hmdstate.hmd;
+      if (hmd.position) {
+        var pos = this.head.objects.dynamics.position;
+        pos.fromArray(hmd.position).multiplyScalar(scale);
+        //pos.y += this.properties.height * .8 - this.properties.fatness;
+      }
+      if (hmd.linearVelocity) {
+        this.head.objects.dynamics.velocity.fromArray(hmd.linearVelocity).multiplyScalar(scale);
+      }
+
+      var o = hmd.orientation;
+      if (o) {
+        this.head.objects.dynamics.orientation.fromArray(o);
+      }
+      if (hmd.angularVelocity) {
+        //this.head.objects.dynamics.angular.fromArray(hmd.angularVelocity);
+      }
+
+      this.head.objects.dynamics.updateState();
+    }
     this.updateControls = function() {
       this.refresh();
     }
