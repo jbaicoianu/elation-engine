@@ -1,11 +1,21 @@
-elation.require('engine.things.generic', function() {
+elation.require(['engine.things.generic', 'engine.things.leapmotion'], function() {
   elation.component.add('engine.things.objecttracker', function() {
     this.postinit = function() {
+      elation.engine.things.objecttracker.extendclass.postinit.call(this);
+      this.defineProperties({
+        player: { type: 'object' }
+      });
       this.controllers = [];
+      this.hands = false;
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updatePositions));
       elation.events.add(window, "webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", elation.bind(this, this.updateTrackedObjects));
     }
     this.createChildren = function() {
+      this.hands = {
+        left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
+        right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
+      };
+      Leap.loop(elation.bind(this, this.handleLeapLoop));
       this.updateTrackedObjects();
     }
     this.updatePositions = function() {
@@ -21,13 +31,17 @@ elation.require('engine.things.generic', function() {
         if (c && c.data.pose) {
 //console.log(c.data.pose);
           var pose = c.data.pose;
-          c.model.position.fromArray(pose.position).multiplyScalar(1);
+          if (pose.position) {
+            c.model.position.fromArray(pose.position).multiplyScalar(1);
+          }
           //c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
           //c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
           //c.model.position.z *= this.vrdisplay.stageParameters.sizeZ;
 
           //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
-          c.model.quaternion.fromArray(pose.orientation);
+          if (pose.orientation) {
+            c.model.quaternion.fromArray(pose.orientation);
+          }
         }
       }
     }
@@ -71,13 +85,34 @@ elation.require('engine.things.generic', function() {
     }
     this.hasHands = function() {
       // TODO - this should also work with leap motion
-      return this.controllers.length > 0;
+      return this.controllers.length > 0 || this.hands;
     }
     this.getHands = function() {
-      return {
-        left: this.controllers[0].data.pose,
-        right: this.controllers[1].data.pose
-      };
+      if (this.controllers.length > 0) {
+        return {
+          left: this.controllers[0].data.pose,
+          right: this.controllers[1].data.pose
+        };
+      } else if (this.hands) {
+        return {
+          left: this.hands.left,
+          right: this.hands.right,
+        };
+      }
+    }
+    this.handleLeapLoop = function(frame) {
+      for (var i = 0; i < frame.hands.length; i++) {
+        var hand = frame.hands[i];
+        var handobj = this.hands[hand.type];
+        if (handobj) {
+          if (hand.valid) {
+            handobj.show();
+            handobj.updateData(hand, 1/1000);
+          } else {
+            handobj.hide();
+          }
+        }
+      }
     }
   }, elation.engine.things.generic);
 });
