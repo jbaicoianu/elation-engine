@@ -24,6 +24,15 @@ elation.require(['engine.external.leapmotion.leap'], function() {
   elation.component.add('engine.things.leapmotion_hand', function() {
     this.postinit = function() {
       this.palmrotation = new THREE.Euler();
+      this.palmPosition = new THREE.Vector3();
+      this.palmOrientation = new THREE.Quaternion();
+      this.fingerTips = [
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+        new THREE.Vector3()
+      ];
     }
     this.createObject3D = function() {
       var hand = new THREE.Object3D();
@@ -32,15 +41,19 @@ elation.require(['engine.external.leapmotion.leap'], function() {
     this.createChildren = function() {
       //var palmsize = [.07,.01,.05];
       var palmsize = [1,.01,1];
-      this.palmmaterial = new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 0.5, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground});
-      this.palm = new THREE.Mesh(new THREE.BoxGeometry(palmsize[0], palmsize[1], palmsize[2]), this.palmmaterial);
+      this.materials = {
+        bones: new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 0.4, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground}),
+        joints: new THREE.MeshPhongMaterial({color: 0xccffcc, transparent: false, opacity: 0.6, blending: THREE.NormalBlending}),
+        tips: new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: false, opacity: 0.3, blending: THREE.NormalBlending})
+      };
+      this.palm = new THREE.Mesh(new THREE.BoxGeometry(palmsize[0], palmsize[1], palmsize[2]), this.materials.bones);
       this.palm.geometry.applyMatrix(new THREE.Matrix4().setPosition(new THREE.Vector3(0, 0, -palmsize[2] / 4)));
       this.palm.scale.set(.01,.01,.01);
       this.palm.updateMatrix();
       this.palm.matrixAutoUpdate = false;
       this.objects['3d'].add(this.palm);
 
-      this.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.5, 1), this.palmmaterial);
+      this.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.5, 1, undefined, undefined, true), this.materials.bones);
       //this.arm.geometry.applyMatrix(new THREE.Matrix4().setPosition(new THREE.Vector3(0, 0, -palmsize[2] / 4)));
       this.arm.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/2));
       this.arm.scale.set(.01,.01,.01);
@@ -48,9 +61,15 @@ elation.require(['engine.external.leapmotion.leap'], function() {
       this.arm.matrixAutoUpdate = false;
       this.objects['3d'].add(this.arm);
 
+      this.wrist = new THREE.Mesh(new THREE.SphereGeometry(0.5), this.materials.joints);
+      this.wrist.scale.set(.01,.01,.01);
+      this.wrist.updateMatrix();
+      //this.wrist.matrixAutoUpdate = false;
+      this.objects['3d'].add(this.wrist);
+
       this.fingers = [];
       for (var i = 0; i < 5; i++) {
-        this.fingers[i] = this.spawn('leapmotion_finger', this.name + '_finger_' + i);
+        this.fingers[i] = this.spawn('leapmotion_finger', this.name + '_finger_' + i, { hand: this });
       }
     }
     this.updateData = (function() {
@@ -68,6 +87,9 @@ elation.require(['engine.external.leapmotion.leap'], function() {
 
         for (var i = 0; i < data.fingers.length; i++) {
           this.fingers[i].updateData(data.fingers[i], scalefactor);
+          if (data.fingers[i].tipPosition) {
+            this.fingerTips[i].fromArray(data.fingers[i].tipPosition).multiplyScalar(scalefactor);
+          }
         }
 
         pos.fromArray(data.palmPosition).multiplyScalar(scalefactor);
@@ -91,22 +113,31 @@ elation.require(['engine.external.leapmotion.leap'], function() {
         );
         this.palm.updateMatrixWorld();
 
-        pos.fromArray(data.arm.center()).multiplyScalar(scalefactor);
-        xdir.fromArray(data.arm.basis[0]);
-        ydir.fromArray(data.arm.basis[1]);
-        zdir.fromArray(data.arm.basis[2]);
-        scale = [
-          data.arm.width * scalefactor,
-          data.arm.width * scalefactor * .75,
-          data.arm.length * scalefactor
-        ];
-        this.arm.matrix.set(
-          xdir.x * scale[0], ydir.x * scale[1], zdir.x * scale[2], pos.x,
-          xdir.y * scale[0], ydir.y * scale[1], zdir.y * scale[2], pos.y,
-          xdir.z * scale[0], ydir.z * scale[1], zdir.z * scale[2], pos.z,
-          0, 0, 0, 1
-        );
-        this.arm.updateMatrixWorld();
+        this.palmPosition.setFromMatrixPosition(this.palm.matrixWorld);
+        this.palmOrientation.setFromRotationMatrix(this.palm.matrixWorld);
+
+        if (data.arm) {
+          pos.fromArray(data.arm.center()).multiplyScalar(scalefactor);
+          xdir.fromArray(data.arm.basis[0]);
+          ydir.fromArray(data.arm.basis[1]);
+          zdir.fromArray(data.arm.basis[2]);
+          scale = [
+            data.arm.width * scalefactor,
+            data.arm.width * scalefactor * .75,
+            data.arm.length * scalefactor
+          ];
+          this.arm.matrix.set(
+            xdir.x * scale[0], ydir.x * scale[1], zdir.x * scale[2], pos.x,
+            xdir.y * scale[0], ydir.y * scale[1], zdir.y * scale[2], pos.y,
+            xdir.z * scale[0], ydir.z * scale[1], zdir.z * scale[2], pos.z,
+            0, 0, 0, 1
+          );
+          this.arm.updateMatrixWorld();
+
+          this.wrist.position.fromArray(data.arm.nextJoint).multiplyScalar(scalefactor);
+          this.wrist.rotation.setFromRotationMatrix(this.arm.matrix);
+          this.wrist.scale.set(scale[0], scale[1], scale[1]/4);
+        }
 
         this.refresh();
       };
@@ -129,62 +160,155 @@ elation.require(['engine.external.leapmotion.leap'], function() {
         };
         for (var j = 0; j < 4; j++) {
           var offset = (i * 4 + j + 1) * 16;
-          var center = pos.fromArray(values.slice(offset + 12, offset + 15)).applyMatrix4(transform).toArray();
+          var center = pos.fromArray(values.slice(offset + 12, offset + 15)).toArray();
           var bone = {
             basis: [
+              // Change order to match native: Y, Z, X
               values.slice(offset + 4, offset + 7),
               values.slice(offset + 8, offset + 11),
               values.slice(offset, offset + 3),
+/*
+              values.slice(offset, offset + 3),
+              values.slice(offset + 4, offset + 7),
+              values.slice(offset + 8, offset + 11),
+*/
             ],
-            length: .0400,
-            center: function() { return center; }
+            centerpos: center,
+            length: .0200,
           };
           (function(c) {
             bone.center = function() { return c; };
           })(center);
-          data.fingers[i].positions[j+1] = center;
           data.fingers[i].bones[j] = bone;
+        }
+        for (j = 0; j < 4; j++) {
+          var bone = data.fingers[i].bones[j];
+          var nextbone = data.fingers[i].bones[j + 1];
+          if (nextbone) {
+            bone.length = pos.fromArray(bone.centerpos).distanceTo(new THREE.Vector3().fromArray(nextbone.centerpos));
+          }
+          var basepos = pos.fromArray(bone.centerpos).add(new THREE.Vector3().fromArray(bone.basis[2]).normalize().multiplyScalar(-bone.length/2));
+          data.fingers[i].positions[j+1] = basepos.toArray();
         };
       }
       this.updateData(data, 1);
     }
+    this.serializeMatrix = (function() {
+      var xdir = new THREE.Vector3(),
+          ydir = new THREE.Vector3(),
+          zdir = new THREE.Vector3(),
+          pos = new THREE.Vector3(),
+          pos2 = new THREE.Vector3();
+      var mat4 = new THREE.Matrix4();
+      var inverse = new THREE.Matrix4();
+
+      return function(matrix, transform) {
+        // Change order to match native: Y, Z, X
+        mat4.copy(matrix);
+        if (false && transform) {
+          inverse.getInverse(transform);
+          mat4.multiplyMatrices(inverse, matrix);
+        }
+/*
+        var m = [];
+        for (var i = 0; i < 16; i++) {
+          m[i] = mat4.elements[i].toFixed(4);
+        }
+        var r = [
+          m[4], m[5], m[6], m[3],
+          m[0], m[1], m[2], m[11],
+          m[8], m[9], m[10], m[7],
+          m[12], m[13], m[14], m[15],
+        ];
+*/
+        pos.setFromMatrixPosition(mat4);
+        if (transform) {
+          //transform.worldToLocal(pos);
+        }
+        mat4.extractBasis(xdir, ydir, zdir);
+        xdir.normalize();
+        ydir.normalize();
+        zdir.normalize();
+
+        //inverse.makeBasis(xdir, ydir, zdir);
+        //inverse.makeBasis(xdir, zdir, ydir);
+        //inverse.makeBasis(ydir, xdir, zdir);
+        //inverse.makeBasis(ydir, zdir, xdir);
+        //inverse.makeBasis(zdir, xdir, ydir);
+        //inverse.makeBasis(zdir, ydir, xdir);
+        //inverse.setPosition(pos);
+//console.log(xdir, ydir, zdir);
+/*
+        inverse.set(
+          xdir.x, ydir.x, zdir.x, pos.x,
+          xdir.y, ydir.y, zdir.y, pos.y,
+          xdir.z, ydir.z, zdir.z, pos.z,
+          0, 0, 0, 1
+        );
+*/
+        inverse.set(
+          xdir.x, xdir.y, xdir.z, 0,
+          ydir.x, ydir.y, ydir.z, 0,
+          zdir.x, zdir.y, zdir.x, 0,
+          pos.x, pos.y, pos.z, 1
+        );
+
+
+        return inverse.toArray().join(' ');
+      };
+    })();
+    this.getState = function(transform) {
+      var state = '';
+      state += this.serializeMatrix(this.palm.matrixWorld, transform);
+
+      for (var i = 0; i < 5; i++) {
+        for (var j = 0; j < 4; j++) {
+          state += ' ' + this.serializeMatrix(this.fingers[i].phalanges[j].matrixWorld, transform);
+        }
+      }
+      return state;
+    }
   }, elation.engine.things.generic);
   elation.component.add('engine.things.leapmotion_finger', function() {
     this.postinit = function() {
+      this.defineProperties({
+        hand: { type: 'object' }
+      });
     }
     this.createObject3D = function() {
       var obj = new THREE.Object3D();
       this.phalanges = [];
       this.joints = [];
+      var material = this.hand.materials.bones;
+      var jointmaterial = this.hand.materials.joints;
+      var tipmaterial = this.hand.materials.tips;
+      var fingersizes = [0.011, 0.011, 0.00985, 0.00806, 0.00481, 0.00388];
       var fingerSize = function(i) {
-        return Math.pow(.075 / (i + 3), 1.1);
+        //return Math.pow(.075 / (i + 3), 1.1);
+        return fingersizes[i];
       }
-      var material = new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 0.5, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground});
-      var knucklematerial = new THREE.MeshPhongMaterial({color: 0xccffcc, transparent: false, opacity: 0.5, blending: THREE.NormalBlending});
-      this.materials = {
-        hand: material,
-        knuckles: knucklematerial
-      };
       for (var i = 0; i < 4; i++) {
-        this.phalanges[i] = new THREE.Mesh(new THREE.CylinderGeometry(fingerSize(i), fingerSize(i+1), 1, 6, 2, false), material);
-        this.joints[i] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize(i+1)), knucklematerial);
+        this.phalanges[i] = new THREE.Mesh(new THREE.CylinderGeometry(fingerSize(i), fingerSize(i+1), 1, 6, 2, true), material);
+        this.joints[i] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize(i+1)), jointmaterial);
         this.phalanges[i].geometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/2));
         this.phalanges[i].scale.z = .01;
         this.phalanges[i].updateMatrix();
         this.phalanges[i].matrixAutoUpdate = false;
         obj.add(this.phalanges[i]);
-        obj.add(this.joints[i]);
+        if (i > 0) {
+          obj.add(this.joints[i]);
+        }
       }
-      this.joints[4] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize(5)), knucklematerial);
+      this.joints[4] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize(5)), tipmaterial);
       this.fingertip = this.joints[4];
-      //obj.add(this.joints[4]);
+      obj.add(this.joints[4]);
       return obj;
     }
     this.updateData = function(data, scalefactor) {
       for (var i = 0; i < data.bones.length; i++) {
         var bone = data.bones[i];
         var center = bone.center();
-        var length = bone.length * scalefactor;
+        var length = Math.abs(bone.length * scalefactor);
 
         if (length > 0) {
           //this.phalanges[i].scale.z = length * scalefactor;
