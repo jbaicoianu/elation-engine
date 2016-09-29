@@ -99,20 +99,31 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           right: this.hands.right,
         };
       }
+      return false;
     }
     this.handleLeapLoop = function(frame) {
+      var framehands = {};
+      
       for (var i = 0; i < frame.hands.length; i++) {
-        var hand = frame.hands[i];
-        var handobj = this.hands[hand.type];
-        if (handobj) {
+        framehands[frame.hands[i].type] = frame.hands[i];
+      }
+      for (var k in this.hands) {
+        var hand = framehands[k];
+        var handobj = this.hands[k];
+        if (hand && handobj) {
           if (hand.valid) {
+            handobj.active = true;
             handobj.show();
             handobj.updateData(hand, 1/1000);
           } else {
+            handobj.active = false;
             handobj.hide();
           }
+        } else if (handobj) {
+          handobj.active = false;
+          handobj.hide();
         }
-      }
+      } 
     }
   }, elation.engine.things.generic);
 });
