@@ -14,7 +14,7 @@ elation.require(['engine.external.three.tween', 'engine.things.controller'], fun
       // TODO - better syntax?
       //this.tracker = this.addPart('ai.pathtracker', { path: this.properties.path });
       var path = new THREE.CurvePath();
-      var linecurve = new THREE.LineCurve3(this.properties.path[0], this.properties.path[1]);
+      var linecurve = new THREE.LineCurve3(new THREE.Vector3().copy(this.properties.path[0]), new THREE.Vector3().copy(this.properties.path[1]));
       path.add(linecurve);
 
       this.parts.tracker.setPath(path, this.properties.tracktime);
