@@ -185,7 +185,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.jumpForce = this.objects.dynamics.addForce("static", {});
       this.objects.dynamics.restitution = 0.1;
-      //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness});
+      //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness, offset: new THREE.Vector3(0, this.fatness, 0)});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
       this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
@@ -369,6 +369,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       }
 
       this.head.objects.dynamics.updateState();
+      this.refresh();
     }
     this.updateControls = function() {
       this.refresh();
