@@ -400,6 +400,10 @@ elation.require(['utils.template', 'engine.external.three.three'], function() {
       if (font === undefined) font = 'serif';
       if (background === undefined) background = 'rgba(0,0,0,0)';
 
+      if (color instanceof THREE.Color) {
+        color = 'rgb(' + color.toArray().map(function(x) { return x * 255; }).join(', ') + ')';
+      }
+
       ctx.font = fontsize + 'px ' + font;
       var size = ctx.measureText(text);
       c.width = size.width;
