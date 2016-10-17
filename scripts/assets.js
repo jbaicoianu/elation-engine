@@ -466,7 +466,7 @@ if (!ENV_IS_BROWSER) return;
                 var oldmat = n.material.materials[i],
                     newmat = oldmat.clone();//this.copyMaterial(oldmat);
                 //n.material.materials[i] = newmat;
-                console.log('facemat', oldmat.name, oldmat.alphaTest, newmat.alphaTest);
+                //console.log('facemat', oldmat.name, oldmat.alphaTest, newmat.alphaTest);
               }
             }
           }
