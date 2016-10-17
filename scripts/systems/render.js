@@ -488,7 +488,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 if (vivehack) {
   player.head.reparent(player);
 }
-          this.vrdisplay.requestPresent({source: this.rendersystem.renderer.domElement}).then(elation.bind(this, function() {
+          this.vrdisplay.requestPresent([{
+            source: this.rendersystem.renderer.domElement,
+            leftBounds: [0.0, 0.0, 0.5, 1.0],
+            rightBounds: [0.5, 0.0, 0.5, 1.0]
+          }]).then(elation.bind(this, function() {
             console.log('presenting!');
             var eyeL = this.vrdisplay.getEyeParameters('left');
             var eyeR = this.vrdisplay.getEyeParameters('right');
@@ -595,10 +599,12 @@ if (vivehack) player.head.reparent(player.neck);
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
+          var player = this.engine.client.player;
+          player.updateHMD(this.vrdisplay);
           this.vreffect.render(this.scene, this.camera);
           //var pose = this.vrdisplay.getPose();
-          var pose = this.engine.client.player.hmdstate.hmd;
-          this.vrdisplay.submitFrame(pose);
+          var pose = player.hmdstate.hmd;
+          this.vrdisplay.submitFrame();
         } else {
           this.composer.render(delta);
         }

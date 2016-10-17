@@ -699,6 +699,9 @@ elation.component.add("engine.things.generic", function() {
         });
       } else if (type == 'box') {
         var size = new THREE.Vector3().subVectors(args.max, args.min);
+        size.x /= this.scale.x;
+        size.y /= this.scale.y;
+        size.z /= this.scale.z;
         var offset = new THREE.Vector3().addVectors(args.max, args.min).multiplyScalar(.5);
         collidergeom = elation.engine.geometries.generate('box', { 
           size: size,
@@ -1472,7 +1475,7 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
       }
       return Infinity;
     } 
-  });
+  })();
   this.canUse = function(object) {
     return false;
   }
@@ -1499,6 +1502,20 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
         }
       }
     });
+    return bounds; 
+  }
+  this.getBoundingBox = function() {
+    // Iterate over all children and expand our bounding box to encompass them.  
+    // This gives us the total size of the whole thing
+
+    var bounds = new THREE.Box3();
+    bounds.setFromObject(this.objects['3d']);
+
+    for (var k in this.children) {
+      var childbounds = this.children[k].getBoundingBox();
+      bounds.expandByPoint(bounds.min);
+      bounds.expandByPoint(bounds.max);
+    }
     return bounds; 
   }
 });

@@ -64,8 +64,13 @@ elation.require(['engine.external.md5'], function() {
       var offset = new THREE.Matrix4().makeTranslation(bbox.x / 2, bbox.y / 2, bbox.z);
       geometry.applyMatrix(offset);
       
+      this.material = mat;
       return new THREE.Mesh(geometry, mat);
     };
+    this.setOpacity = function(opacity) {
+      this.material.opacity = opacity;
+      this.material.transparent = (opacity < 1);
+    }
   }, elation.engine.things.generic);
 
 });

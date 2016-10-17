@@ -453,8 +453,6 @@ elation.require(deps, function() {
     this.toggleVR = function(ev) {
       var view = this.view;
       if (view && (ev.value == 1 || typeof ev.value == 'undefined')) {
-        //var mode = (view.rendermode == 'default' ? 'oculus' : 'default');
-        //view.setRenderMode(mode);
         view.toggleVR();
       }
     }
