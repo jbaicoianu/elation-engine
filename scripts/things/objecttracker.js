@@ -11,12 +11,20 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       elation.events.add(window, "webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", elation.bind(this, this.updateTrackedObjects));
     }
     this.createChildren = function() {
+/*
       this.hands = {
         left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
         right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
       };
+*/
       Leap.loop(elation.bind(this, this.handleLeapLoop));
       this.updateTrackedObjects();
+    }
+    this.createHands = function() {
+      this.hands = {
+        left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
+        right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
+      };
     }
     this.updatePositions = function() {
       this.updateTrackedObjects();
@@ -89,10 +97,14 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     }
     this.getHands = function() {
       if (this.controllers.length > 0) {
-        return {
-          left: this.controllers[0].data.pose,
-          right: this.controllers[1].data.pose
-        };
+        var hands = {};
+        if (this.controllers[0] && this.controllers[0].data) {
+          hands.left = this.controllers[0].data.pose;
+        }
+        if (this.controllers[1] && this.controllers[1].data) {
+          hands.right = this.controllers[1].data.pose;
+        }
+        return hands;
       } else if (this.hands) {
         return {
           left: this.hands.left,
@@ -104,6 +116,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     this.handleLeapLoop = function(frame) {
       var framehands = {};
       
+      if (!this.hands) this.createHands();
       for (var i = 0; i < frame.hands.length; i++) {
         framehands[frame.hands[i].type] = frame.hands[i];
       }
