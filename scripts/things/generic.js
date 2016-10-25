@@ -747,8 +747,8 @@ elation.component.add("engine.things.generic", function() {
         collidermesh.updateMatrixWorld();
         var colliderhelper = this.colliderhelper;
         if (!colliderhelper) {
-          colliderhelper = this.colliderhelper = new THREE.EdgesHelper(collidermesh, 0x999900);
-          colliderhelper.matrix = collidermesh.matrix;
+          //colliderhelper = this.colliderhelper = new THREE.EdgesHelper(collidermesh, 0x999900);
+          //colliderhelper.matrix = collidermesh.matrix;
           //this.colliders.add(colliderhelper);
         } else {
           //THREE.EdgesHelper.call(colliderhelper, collidermesh, 0x990099);
