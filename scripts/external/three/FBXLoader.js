@@ -16,9 +16,9 @@
 
 ( function() {
 
-	THREE.FBXLoader = function ( showStatus, manager ) {
+	THREE.FBXLoader = function ( manager ) {
 
-		THREE.Loader.call( this, showStatus );
+		THREE.Loader.call( this );
 		this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
 		this.textureLoader = null;
 		this.textureBasePath = null;
@@ -934,7 +934,6 @@
 		parseNodeProperty: function ( line, propName, propValue ) {
 
 			var currentNode = this.getCurrentNode();
-if (!currentNode) return;
 			var parentName = currentNode.name;
 
 			// special case parent node's is like "Properties70"

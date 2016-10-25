@@ -12,15 +12,18 @@ elation.require([
     _construct: function() {
       var srcmap = {};
       THREE.Cache.enabled = true;
-      THREE.ImageLoader.prototype.load = function(url, onLoad) {
+      THREE.ImageLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
+
         var uuid = srcmap[url];
         if (!uuid) {
           srcmap[url] = uuid = THREE.Math.generateUUID();
         }
         var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
+console.log('GOT IMAGE', img);
         if ( onLoad ) {
           onLoad( img );
         }
+        //return img;
       }
       this.loader = new elation.engine.assets.loaders.model();
       elation.engine.assets.init();
@@ -337,10 +340,25 @@ elation.require([
         function querySelector(selector) {
           return this.querySelectorAll(selector)[0];
         }
-
+        var fakeindexOf = function(str) { 
+          if (this.textContent) return this.textContent.indexOf(str);
+          return -1;
+        };
+        var fakecharAt = function(num) { 
+console.log(this, num);
+          if (this.textContent) return this.textContent.charAt(num);
+          return '';
+        };
+        var fakesubstr = function(start, end) {
+          if (this.textContent) return this.textContent.substr(start, end);
+          return '';
+        };
         function fakeQuerySelector(node) {
           node.querySelectorAll = querySelectorAll;
           node.querySelector = querySelector;
+          node.indexOf = fakeindexOf;
+          node.charAt = fakecharAt;
+          node.substr = fakesubstr;
 
           if (node.childNodes && node.childNodes.length > 0) {
             for (var i = 0; i < node.childNodes.length; i++) {

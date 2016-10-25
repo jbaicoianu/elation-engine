@@ -5,6 +5,7 @@ elation.require([
   "engine.external.three.render.CSS3DRenderer",
   "engine.external.three.render.EffectComposer",
   "engine.external.three.render.RenderPass",
+  "engine.external.three.render.PortalRenderPass",
   "engine.external.three.render.OculusRiftEffect",
   "engine.external.three.render.OculusRenderPass",
   "engine.external.three.render.VREffect",
@@ -24,6 +25,7 @@ elation.require([
   //"engine.external.three.render.FilmPass",
   "engine.external.three.render.ConvolutionShader",
   "engine.external.three.render.BloomPass",
+  "engine.external.three.render.ClearPass",
   "engine.external.three.render.SSAOShader",
   "engine.external.three.render.FXAAShader",
   "engine.external.three.render.ManualMSAARenderPass",
@@ -198,10 +200,18 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode]);
-      this.composer = this.createRenderPath([this.rendermode, 'fxaa', 'msaa', 'bloom', 'recording']);
-      this.effects['msaa'].enabled = false;
+      var poop = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+          minFilter: THREE.LinearFilter,
+          magFilter: THREE.LinearFilter,
+          format: THREE.RGBAFormat,
+          stencilBuffer: true
+        });
+      this.composer = this.createRenderPath(['clear', 'masktest', this.rendermode, 'fxaa', 'msaa', 'bloom', 'maskclear', 'recording'], poop);
+      this.composer = this.createRenderPath(['clear', 'portals', 'masktest', this.rendermode, 'fxaa', 'msaa', 'bloom', 'maskclear'], poop);
+      //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
+      //this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
       this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
         var sbstextures = [];
         scene.traverse(function(n) {
@@ -262,7 +272,8 @@ elation.require([
       }
 
       if (this.showstats) {
-        elation.events.add(this.composer.passes[0], 'render', elation.bind(this, this.updateRenderStats));
+        // FIXME - not smart!
+        elation.events.add(this.composer.passes[3], 'render', elation.bind(this, this.updateRenderStats));
       }
 
       this.getsize();
@@ -326,10 +337,10 @@ elation.require([
           }
         }
       }
-      if (!target && !renderToScreen) {
+      //if (!target && !renderToScreen) {
         var pass = this.createRenderPass('screenout');
         composer.addPass(pass);
-      }
+      //}
 
       return composer;
     }
@@ -338,6 +349,15 @@ elation.require([
       switch (name) {
         case 'default':
           pass = new THREE.RenderPass(this.scene, this.actualcamera, null, null, 0);
+          pass.clear = false;
+          break;
+        case 'portals':
+          pass = new THREE.PortalRenderPass(this.actualcamera);
+          pass.clear = false;
+          this.portalpass = pass;
+          break;
+        case 'clear':
+          var pass = new THREE.ClearPass();
           break;
         case 'oculus':
           pass = new THREE.OculusRenderPass(this.scene, this.actualcamera, null, null, 0);
@@ -373,6 +393,7 @@ elation.require([
           break;
         case 'sky':
           pass = new THREE.RenderPass(this.skyscene, this.skycamera, null, null, 0);
+          pass.clear = false;
           break;
         case 'film':
           pass = new THREE.FilmPass( 0.35, .75, 2048, false );
@@ -405,6 +426,19 @@ elation.require([
           pass = new THREE.ManualMSAARenderPass(this.scene, this.actualcamera);
           pass.unbiased = true;
           pass.sampleLevel = 1;
+          break;
+        case 'masktest':
+          this.maskscene = new THREE.Scene();
+          var maskobj = new THREE.Mesh(new THREE.SphereGeometry(1000));
+maskobj.scale.y = -1;
+          maskobj.position.set(0,0,0);
+window.maskobj = maskobj;
+          this.maskscene.add(maskobj);
+          pass = new THREE.MaskPass(this.maskscene, this.actualcamera);
+          pass.clear = false;
+          break;
+        case 'maskclear':
+          pass = new THREE.ClearMaskPass();
           break;
         case 'ssao':
           pass = new THREE.ShaderPass( THREE.SSAOShader );
@@ -832,7 +866,7 @@ if (vivehack) player.head.reparent(player.neck);
         this.pickingcomposer.setSize(scaledwidth, scaledheight);
       }
       if (this.effects['SSAO']) {
-        this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+        this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat, stencilBuffer: true } );
 
         this.effects['SSAO'].uniforms[ 'size' ].value.set( width, height);
         this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
