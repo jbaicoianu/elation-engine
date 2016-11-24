@@ -5,7 +5,7 @@ elation.require([
     'engine.assets',
     'engine.external.pako',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader',
+    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader',
   ], function() {
 
   elation.define('engine.assetworker', {
@@ -14,16 +14,20 @@ elation.require([
       THREE.Cache.enabled = true;
       THREE.ImageLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
 
+        var scope = this;
+
         var uuid = srcmap[url];
         if (!uuid) {
           srcmap[url] = uuid = THREE.Math.generateUUID();
         }
         var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
-console.log('GOT IMAGE', img);
+        scope.manager.itemStart( url );
         if ( onLoad ) {
           onLoad( img );
         }
-        //return img;
+        scope.manager.itemEnd( url );
+
+        return img;
       }
       this.loader = new elation.engine.assets.loaders.model();
       elation.engine.assets.init();
@@ -48,6 +52,7 @@ console.log('GOT IMAGE', img);
         'obj': new elation.engine.assets.loaders.model_obj(),
         'fbx': new elation.engine.assets.loaders.model_fbx(),
         'wrl': new elation.engine.assets.loaders.model_wrl(),
+        'gltf': new elation.engine.assets.loaders.model_gltf(),
       }
     },
     getFullURL: function(src) {
@@ -60,16 +65,20 @@ console.log('GOT IMAGE', img);
       return fullurl;
     },
     load: function(job) {
-      var fullurl = this.getFullURL(job.data.src);
-      elation.net.get(fullurl, null, {
-        responseType: 'arraybuffer',
-        callback: elation.bind(this, this.onload, job),
-        onprogress: elation.bind(this, this.onprogress, job),
-        onerror: elation.bind(this, this.onerror, job),
-        headers: {
-          'X-Requested-With': 'Elation Engine asset loader'
-        }
-      });
+      if (job.data.srcdata) {
+        this.onload(job, job.data.srcdata);
+      } else if (job.data.src) {
+        var fullurl = this.getFullURL(job.data.src);
+        elation.net.get(fullurl, null, {
+          responseType: 'arraybuffer',
+          callback: elation.bind(this, this.onload, job),
+          onprogress: elation.bind(this, this.onprogress, job),
+          onerror: elation.bind(this, this.onerror, job),
+          headers: {
+            'X-Requested-With': 'Elation Engine asset loader'
+          }
+        });
+      }
     },
     contentIsGzipped: function(databuf) {
       var c1 = databuf[0], c2 = databuf[1];
@@ -89,7 +98,8 @@ console.log('GOT IMAGE', img);
         [/<COLLADA/im, 'collada'],
         [/^\s*v\s+-?[\d\.]+\s+-?[\d\.]+\s+-?[\d\.]+\s*$/im, 'obj'],
         [/FBXHeader/i, 'fbx'],
-        [/^\#VRML/, 'wrl']
+        [/^\#VRML/, 'wrl'],
+        [/^\s*{/, 'gltf']
       ];
 
       var type = false;
@@ -121,17 +131,7 @@ console.log('GOT IMAGE', img);
           var decoder = new TextDecoder('utf-8');
           modeldata = decoder.decode(dataview);
         } else {
-          var str = '';
-          var bufview = new Uint8Array(rawdata);
-          var l = bufview.length;
-          for (var i = 0; i < l; i++) {
-            str += String.fromCharCode(bufview[i]);
-          }
-          try {
-            modeldata = decodeURIComponent(escape(str));
-          } catch (e) {
-            modeldata = str;
-          }
+          modeldata = this.convertArrayBufferToString(rawdata);
         }
       }    
       if (modeldata) {
@@ -166,8 +166,24 @@ console.log('GOT IMAGE', img);
       console.log('error', job, ev);
       postMessage({message: 'error', id: job.id, data: 'unknown error'});
     },
+    convertArrayBufferToString: function(rawdata) {
+      var str = '';
+      var converted = '';
+      var bufview = new Uint8Array(rawdata);
+      var l = bufview.length;
+      for (var i = 0; i < l; i++) {
+        str += String.fromCharCode(bufview[i]);
+      }
+      try {
+        converted = decodeURIComponent(escape(str));
+      } catch (e) {
+        converted = str;
+      }
+      return converted;
+    }
   });
   elation.define('engine.assets.loaders.model_obj', {
+    convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
     parse: function(data, job) {
       return new Promise(elation.bind(this, function(resolve, reject) { 
         var mtl = job.data.mtl || false;
@@ -184,77 +200,62 @@ console.log('GOT IMAGE', img);
 */
         //var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
         var loader = new THREE.OBJLoader();
-        var modeldata = loader.parse(data);
+        var modeldata = false;
 
         if (mtl) {
+          var createMaterials = elation.bind(this, function ( materials ) {
+                materials.preload();
+                loader.setMaterials(materials);
+                //loader.setPath(mtlLoader.path);
+                modeldata = loader.parse(data);
+                resolve(this.convertToJSON(modeldata));
+              }),
+
           mtl = this.getFullURL(mtl, baseurl); 
           if (elation.engine.assets.corsproxy) {
             mtl = elation.engine.assets.corsproxy + mtl;
           }
+          var mtlpath = mtl.substr( 0, mtl.lastIndexOf( "/" ) + 1 );
+          var mtlfile = mtl.substr(mtl.lastIndexOf( "/" ) + 1);
           var mtlLoader = new THREE.MTLLoader( );
-          mtlLoader.setBaseUrl( mtl.substr( 0, mtl.lastIndexOf( "/" ) + 1 ) );
+          mtlLoader.setPath( mtlpath );
           mtlLoader.setCrossOrigin( 'anonymous' );
-          mtlLoader.load( mtl, 
-            elation.bind(this, function ( materials ) {
-              var materialsCreator = materials;
-              materialsCreator.preload();
-
-              modeldata.traverse( function ( object ) {
-
-                if ( object instanceof THREE.Mesh ) {
-
-                  if (object.material instanceof THREE.MeshFaceMaterial) {
-                    var newmaterials = [];
-                    object.material.materials.forEach(function(m) {
-                      if ( m.name ) {
-
-                        var material = materialsCreator.create( m.name );
-
-                        if ( material ) {
-                          newmaterials.push(material);
-                        } else {
-                          newmaterials.push(m);
-                        }
-                      } else {
-                        newmaterials.push(m);
-                      }
-                    });
-                    object.material.materials = newmaterials;
-                  } else {
-                    if ( object.material.name ) {
-
-                      var material = materialsCreator.create( object.material.name );
-
-                      if ( material ) object.material = material;
-
-                    }
-                  }
-
-                }
-
-              } );
-              resolve(this.convertToJSON(modeldata));
-            }),
-            undefined,
-            elation.bind(this, function() {
-              resolve(this.convertToJSON(modeldata));
-            })
-          );
+          if (job.data.mtldata) {
+            var mtldata = this.convertArrayBufferToString(job.data.mtldata);
+            var materials = mtlLoader.parse(mtldata);
+            createMaterials(materials);        
+          } else {
+            mtlLoader.load( mtlfile, 
+              createMaterials,
+              function(ev) {
+                //console.log('progress?', ev);
+              },
+              elation.bind(this, function(ev) {
+                resolve(this.convertToJSON(modeldata));
+              })
+            );
+          }
         } else {
+          modeldata = loader.parse(data);
           resolve(this.convertToJSON(modeldata));
         }
         return modeldata;
       }));
     },
     convertToJSON: function(scene) {
-      // Convert Geometries to BufferGeometries
-      scene.traverse(function(n) {
-        if (n.geometry && n.geometry instanceof THREE.Geometry) {
-          var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
-          n.geometry = bufgeo;
-        }
-      });
-      return scene.toJSON();
+      var json;
+      if (scene) {
+        // Convert Geometries to BufferGeometries
+        scene.traverse(function(n) {
+          if (n.geometry && n.geometry instanceof THREE.Geometry) {
+            var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+            n.geometry = bufgeo;
+          }
+        });
+        json = scene.toJSON();
+      }
+      return json;
+
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_collada', {
@@ -407,6 +408,25 @@ console.log(this, num);
         var loader = new THREE.FBXLoader();
         var modeldata = loader.parse(data);
         resolve(modeldata.toJSON());
+      });
+    }
+  }, elation.engine.assets.base);
+  elation.define('engine.assets.loaders.model_gltf', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) { 
+        var json = JSON.parse(data);
+        var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
+
+        THREE.GLTFLoader.Shaders.removeAll();
+        var loader = new THREE.GLTFLoader();
+        loader.parse(json, elation.bind(this, function(modeldata) {
+          if (modeldata.scene) {
+            var encoded = modeldata.scene.toJSON();
+            resolve(encoded);
+          } else {
+            reject();
+          }
+        }), path);
       });
     }
   }, elation.engine.assets.base);
