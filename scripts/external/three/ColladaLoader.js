@@ -1143,7 +1143,6 @@ THREE.ColladaLoader = function () {
 							if ( !( instance_material.symbol in double_sided_materials ) ) {
 
 								var _copied_material = material3js.clone();
-console.log('copied material', _copied_material);
 								_copied_material.side = THREE.DoubleSide;
 								double_sided_materials[ instance_material.symbol ] = _copied_material;
 
