@@ -20,7 +20,6 @@ elation.require([
   "ui.contextmenu",
   "ui.toolbox",
   "ui.label",
-  "ui.label",
 ], function() {
   elation.requireCSS('engine.systems.admin');
 
@@ -43,33 +42,32 @@ elation.require([
       console.log('INIT: admin');
 
       this.world = this.engine.systems.world;
+      this.hidden = true;
 
       //this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {engine: this.engine});
+
+      this.engine.systems.controls.addCommands('admin', {
+        //'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
+        'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); } }),
+        //'toggle_snap': elation.bind(this, function(ev) { this.toggleSnap(ev.value); }),
+      });
+      this.engine.systems.controls.addBindings('admin', {
+        //'keyboard_ctrl_a': 'add_thing',
+        'keyboard_f1': 'toggle_admin',
+        //'keyboard_shift': 'toggle_snap',
+      });
+      this.engine.systems.controls.activateContext('admin');
+    }
+    this.createUI = function() {
       this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
       this.assets = elation.engine.systems.admin.assets(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
       this.worldcontrol = elation.engine.systems.admin.worldcontrol(null, elation.html.create({append: document.body}), {engine: this.engine});
     }
     this.engine_frame = function(ev) {
-      /* FIXME - silly hack! */
-      if ( this.cameraactive && !this.admincontrols) {
-        this.createCamera();
-
-        this.engine.systems.controls.addCommands('admin', {
-          'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
-          'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); } }),
-          'toggle_snap': elation.bind(this, function(ev) { this.toggleSnap(ev.value); }),
-        });
-        this.engine.systems.controls.addBindings('admin', {
-          'keyboard_ctrl_a': 'add_thing',
-          'keyboard_f1': 'toggle_admin',
-          'keyboard_shift': 'toggle_snap',
-        });
-        this.engine.systems.controls.activateContext('admin');
-      } else if (this.cameraactive) {
-        //this.admincontrols.update(ev.data.delta);
-      }
-      if (this.manipulator) {
-        this.manipulator.update();
+      if (!this.hidden) {
+        if (this.manipulator) {
+          this.manipulator.update();
+        }
       }
     }
     this.createCamera = function() {
@@ -78,9 +76,9 @@ elation.require([
         var view = render.views['main'];
 
         this.manipulator = new THREE.TransformControls(view.actualcamera, view.container);
-        elation.events.add(this.manipulator, 'mouseDown', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_start', element: this, data: this.manipulator.object.userData.thing}); }));
-        elation.events.add(this.manipulator, 'mouseUp', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_end', element: this, data: this.manipulator.object.userData.thing}); }));
-        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { elation.events.fire({type: 'admin_edit_change', element: this, data: this.manipulator.object.userData.thing});  this.manipulator.object.userData.thing.refresh(); render.setdirty(); }));
+        elation.events.add(this.manipulator, 'mouseDown', elation.bind(this, function() { if (this.manipulator.object && this.manipulator.object.userData.thing) { elation.events.fire({type: 'admin_edit_start', element: this, data: this.manipulator.object.userData.thing}); }}));
+        elation.events.add(this.manipulator, 'mouseUp', elation.bind(this, function() { if (this.manipulator.object && this.manipulator.object.userData.thing) { elation.events.fire({type: 'admin_edit_end', element: this, data: this.manipulator.object.userData.thing}); }}));
+        elation.events.add(this.manipulator, 'change', elation.bind(this, function() { if (this.manipulator.object && this.manipulator.object.userData.thing) { elation.events.fire({type: 'admin_edit_change', element: this, data: this.manipulator.object.userData.thing});  this.manipulator.object.userData.thing.refresh(); render.setdirty(); } }));
 
 /*
         this.orbitcontrols = new THREE.OrbitControls(view.camera, view.container);
@@ -106,8 +104,9 @@ elation.require([
         this.cameraactive = true;
 
 */
-      this.cameraactive = true;
-      this.admincontrols = true;
+        this.cameraactive = true;
+        this.admincontrols = true;
+
         this.admincamera = this.world.spawn('camera_admin', 'admincam', { position: [0, 1, 1], view: this.engine.systems.render.views['main'], persist: false});
         elation.events.add(render.views['main'].container, 'dragenter,dragover,drop', this);
         elation.events.add(null, 'engine_control_capture,engine_control_release', this);
@@ -139,6 +138,11 @@ console.log('enable the active guy?', this.lastactivething);
         this.lastactivething = false;
         this.admincamera.disable();
       } else {
+        if (!this.created) {
+          this.createUI();
+          this.created = true;
+          this.createCamera();
+        }
         this.hidden = false;
         this.scenetree.show();
         this.worldcontrol.show();
@@ -157,8 +161,10 @@ console.log('deeeeee', view.activething);
         if (this.manipulator) {
           this.engine.systems.world.scene['world-3d'].add(this.manipulator);
         }
-        this.engine.client.setActiveThing(this.admincamera);
-        this.admincamera.enable();
+        setTimeout(elation.bind(this, function() {
+          this.engine.client.setActiveThing(this.admincamera);
+          this.admincamera.enable();
+        }), 0);
       }
     }
     this.toggleSnap = function(state) {
@@ -225,6 +231,7 @@ console.log('deeeeee', view.activething);
   elation.component.add("engine.systems.admin.scenetree", function() {
     this.init = function() {
       this.args.controls = false;
+      this.args.movable = true;
       elation.engine.systems.admin.scenetree.extendclass.init.call(this);
 
       this.world = this.args.world;
