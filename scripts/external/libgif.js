@@ -128,119 +128,140 @@
         };
     };
 
+    var readCode = function (data, meta) {
+        var code = 0;
+        for (var i = 0; i < meta.codeSize; i++) {
+            if (data[meta.pos >> 3] & (1 << (meta.pos & 7))) {
+                code |= 1 << i;
+            }
+            meta.pos++;
+        }
+        return code;
+    };
+    var enlargeBuffer = function(meta) {
+        var bufferSize = meta.buffer.length + meta.bufferBlockSize;
+        var newbuffer = new Uint8Array(bufferSize);
+        newbuffer.set(meta.buffer);
+        meta.buffer = newbuffer;
+        meta.bufferBlockSize = meta.bufferBlockSize << 1;
+    }
+    var pushCode = function(dict, code, last, meta) {
+        var newlength = dict[last].byteLength + 1;
+        while (meta.bufferOffset + newlength > meta.buffer.length) enlargeBuffer(meta);
+        var newdict = meta.buffer.subarray(meta.bufferOffset, meta.bufferOffset + newlength);
+        newdict.set(dict[last]);
+        newdict[newlength-1] = dict[code][0];
+        meta.bufferOffset += newlength;
+        dict.push(newdict);
+    }
+    var fill = function (dict, meta) {
+        for (var i = 0; i < meta.clearCode; i++) {
+            dict[i] = new Uint8Array(1);
+            dict[i][0] = i;
+        }
+        dict[meta.clearCode] = new Uint8Array(0);
+        dict[meta.eoiCode] = null;
+    }
+    var clear = function (dict, meta) {
+        var keep = meta.clearCode + 2;
+        dict.splice(keep, dict.length - keep);
+        meta.codeSize = meta.minCodeSize + 1;
+        meta.bufferOffset = 0;
+    };
+
+    // Block allocators, double block size each time
+    var enlargeOutput = function(meta) {
+        var outputSize = meta.output.length + meta.outputBlockSize;
+        var newoutput = new Uint8Array(outputSize);
+        newoutput.set(meta.output);
+        meta.output = newoutput;
+        meta.outputBlockSize = meta.outputBlockSize << 1;
+    }
+
+
+
     var lzwDecode = function (minCodeSize, data) {
-        var pos = 0; // Maybe this streaming thing should be merged with the Stream?
-        var readCode = function (size) {
-            var code = 0;
-            for (var i = 0; i < size; i++) {
-                if (data[pos >> 3] & (1 << (pos & 7))) {
-                    code |= 1 << i;
-                }
-                pos++;
-            }
-            return code;
+        var meta = {
+          bufferOffset: 0,
+          outputOffset: 0,
+          outputBlockSize: 4096,
+          bufferBlockSize: 4096,
+          clearCode: 1 << minCodeSize,
+          eoiCode: (1 << minCodeSize) + 1,
+          minCodeSize: minCodeSize,
+          codeSize: minCodeSize + 1,
+          code: 0,
+          pos: 0
+
         };
+        meta.output = new Uint8Array(meta.outputBlockSize);
+        meta.buffer = new Uint8Array(meta.bufferBlockSize);
+        var dict = [];
 
 
-        var clearCode = 1 << minCodeSize;
-        var eoiCode = clearCode + 1;
 
-        var codeSize = minCodeSize + 1;
-
-        var outputBlockSize = 4096,
-            bufferBlockSize = 4096;
-
-        var output = new Uint8Array(outputBlockSize),
-            buffer = new Uint8Array(bufferBlockSize),
-            dict = [];
-
-        var bufferOffset = 0,
-            outputOffset = 0;
-
-
-        var fill = function () {
-            for (var i = 0; i < clearCode; i++) {
-                dict[i] = new Uint8Array(1);
-                dict[i][0] = i;
-            }
-            dict[clearCode] = new Uint8Array(0);
-            dict[eoiCode] = null;
-        }
-        var clear = function () {
-            var keep = clearCode + 2;
-            dict.splice(keep, dict.length - keep);
-            codeSize = minCodeSize + 1;
-            bufferOffset = 0;
-        };
-
-        // Block allocators, double block size each time
-        var enlargeOutput = function() {
-            var outputSize = output.length + outputBlockSize;
-            var newoutput = new Uint8Array(outputSize);
-            newoutput.set(output);
-            output = newoutput;
-            outputBlockSize = outputBlockSize << 1;
-        }
-        var enlargeBuffer = function() {
-            var bufferSize = buffer.length + bufferBlockSize;
-            var newbuffer = new Uint8Array(bufferSize);
-            newbuffer.set(buffer);
-            buffer = newbuffer;
-            bufferBlockSize = bufferBlockSize << 1;
-        }
-
-        var pushCode = function(code, last) {
-            var newlength = dict[last].byteLength + 1;
-            while (bufferOffset + newlength > buffer.length) enlargeBuffer();
-            var newdict = buffer.subarray(bufferOffset, bufferOffset + newlength);
-            newdict.set(dict[last]);
-            newdict[newlength-1] = dict[code][0];
-            bufferOffset += newlength;
-            dict.push(newdict);
-        }
-
-        var code;
         var last;
 
-        fill();
+        fill(dict, meta);
 
         while (true) {
-            last = code;
-            code = readCode(codeSize);
+            last = meta.code;
+            meta.code = readCode(data, meta);
 
-            if (code === clearCode) {
-                clear();
+            if (meta.code === meta.clearCode) {
+                clear(dict, meta);
                 continue;
             }
-            if (code === eoiCode) break;
+            if (meta.code === meta.eoiCode) break;
 
-            if (code < dict.length) {
-                if (last !== clearCode) {
-                    pushCode(code, last);
+            if (meta.code < dict.length) {
+                if (last !== meta.clearCode) {
+                    pushCode(dict, meta.code, last, meta);
                 }
             }
             else {
-                if (code !== dict.length) throw new Error('Invalid LZW code.');
-                pushCode(last, last);
+                if (meta.code !== dict.length) throw new Error('Invalid LZW code. (' + meta.code + ' != ' + dict.length + ')');
+                pushCode(dict, last, last, meta);
             }
 
-            var newsize = dict[code].length;
-            while (outputOffset + newsize > output.length) enlargeOutput();
-            output.set(dict[code], outputOffset);
-            outputOffset += newsize;
+            var newsize = dict[meta.code].length;
+            while (meta.outputOffset + newsize > meta.output.length) enlargeOutput(meta);
+            meta.output.set(dict[meta.code], meta.outputOffset);
+            meta.outputOffset += newsize;
 
-            if (dict.length === (1 << codeSize) && codeSize < 12) {
+            if (dict.length === (1 << meta.codeSize) && meta.codeSize < 12) {
                 // If we're at the last code and codeSize is 12, the next code will be a clearCode, and it'll be 12 bits long.
-                codeSize++;
+                meta.codeSize++;
             }
         }
 
         // I don't know if this is technically an error, but some GIFs do it.
         //if (Math.ceil(pos / 8) !== data.length) throw new Error('Extraneous LZW bytes.');
-        return output.subarray(0, outputOffset);
+        return meta.output.subarray(0, meta.outputOffset);
     };
 
 
+    var readSubBlocks = function (st) {
+        var size, data, offset = 0;
+        var bufsize = 8192;
+        data = new Uint8Array(bufsize);
+
+        var resizeBuffer = function() { 
+            var newdata = new Uint8Array(data.length + bufsize);
+            newdata.set(data);
+            data = newdata;
+        }
+
+        do {
+            size = st.readByte();
+
+            // Increase buffer size if this would exceed our current size
+            while (offset + size > data.length) resizeBuffer();
+            data.set(st.readBytes(size), offset);
+            offset += size;
+        } while (size !== 0);
+        return data.subarray(0, offset); // truncate any excess buffer space
+    };
     // The actual parsing; returns an object with properties.
     var parseGIF = function (st, handler) {
         handler || (handler = {});
@@ -254,27 +275,6 @@
             return ct;
         };
 
-        var readSubBlocks = function () {
-            var size, data, offset = 0;
-            var bufsize = 8192;
-            data = new Uint8Array(bufsize);
-
-            var resizeBuffer = function() { 
-                var newdata = new Uint8Array(data.length + bufsize);
-                newdata.set(data);
-                data = newdata;
-            }
-
-            do {
-                size = st.readByte();
-
-                // Increase buffer size if this would exceed our current size
-                while (offset + size > data.length) resizeBuffer();
-                data.set(st.readBytes(size), offset);
-                offset += size;
-            } while (size !== 0);
-            return data.subarray(0, offset); // truncate any excess buffer space
-        };
 
         var parseHeader = function () {
             var hdr = {};
@@ -317,7 +317,7 @@
             };
 
             var parseComExt = function (block) {
-                block.comment = readSubBlocks();
+                block.comment = readSubBlocks(st);
                 handler.com && handler.com(block);
             };
 
@@ -325,7 +325,7 @@
                 // No one *ever* uses this. If you use it, deal with parsing it yourself.
                 var blockSize = st.readByte(); // Always 12
                 block.ptHeader = st.readBytes(12);
-                block.ptData = readSubBlocks();
+                block.ptData = readSubBlocks(st);
                 handler.pte && handler.pte(block);
             };
 
@@ -339,7 +339,7 @@
                 };
 
                 var parseUnknownAppExt = function (block) {
-                    block.appData = readSubBlocks();
+                    block.appData = readSubBlocks(st);
                     // FIXME: This won't work if a handler wants to match on any identifier.
                     handler.app && handler.app[block.identifier] && handler.app[block.identifier](block);
                 };
@@ -358,7 +358,7 @@
             };
 
             var parseUnknownExt = function (block) {
-                block.data = readSubBlocks();
+                block.data = readSubBlocks(st);
                 handler.unknown && handler.unknown(block);
             };
 
@@ -431,7 +431,7 @@
 
             img.lzwMinCodeSize = st.readByte();
 
-            var lzwData = readSubBlocks();
+            var lzwData = readSubBlocks(st);
 
             img.pixels = lzwDecode(img.lzwMinCodeSize, lzwData);
 
