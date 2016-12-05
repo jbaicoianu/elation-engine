@@ -61,7 +61,7 @@ elation.require(deps, function() {
     this.start = function() {
       this.started = this.running = true;
       elation.events.fire({element: this, type: "engine_start"});
-      this.lastupdate = new Date().getTime();
+      this.lastupdate = performance.now();
       // Start run loop, passing in current time
       this.run(0);
     }
@@ -72,7 +72,8 @@ elation.require(deps, function() {
 
     this.run = function(ts) {
       // recursively request another frame until we're no longer running
-      if (!ts) ts = new Date().getTime();
+      //if (!ts) ts = new Date().getTime();
+      var ts = performance.now();
       if (this.running) {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
         this.frame(this.boundfunc);
