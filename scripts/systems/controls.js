@@ -212,9 +212,14 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       this.pollGamepads();
       //this.pollHMDs();
 
+      var processed = {};
       if (this.changes.length > 0) {
         var now = new Date().getTime();
         for (var i = 0; i < this.changes.length; i++) {
+          if (processed[this.changes[i]]) {
+            continue;
+          }
+
           for (var j = 0; j < this.activecontexts.length; j++) {
             var context = this.activecontexts[j];
             var contextstate = this.contextstates[context] || {};
@@ -237,6 +242,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
               }
             }
           }
+          processed[this.changes[i]] = true;
         }
         this.changes = [];
       }
@@ -584,9 +590,6 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
             this.state["mouse_drag_x"] = this.state["mouse_x"];
             this.changes.push("mouse_drag_x");
           }
-        } else {
-          this.state["mouse_delta_x"] = 0;
-          this.state["mouse_drag_delta_x"] = 0;
         }
         this.state["mouse_pos"] = mpos;
         this.state["mouse_delta"] = [this.state["mouse_delta_x"], this.state["mouse_delta_y"]];
@@ -599,9 +602,6 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
             this.state["mouse_drag_y"] = this.state["mouse_y"];
             this.changes.push("mouse_drag_y");
           }
-        } else {
-          this.state["mouse_delta_y"] = 0;
-          this.state["mouse_drag_delta_y"] = 0;
         }
         if (this.state["mouse_button_0"]) {
           this.state["mouse_drag"] = this.state["mouse_pos"];
@@ -611,10 +611,12 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         }
       } 
       if (status["mouse_delta"]) {
-        this.state["mouse_delta_x"] = deltas[0];
-        this.state["mouse_delta_y"] = deltas[1];
+        this.state["mouse_delta_x"] = (this.state["mouse_delta_x"] ? this.state["mouse_delta_x"] + deltas[0] : deltas[0]);
+        this.state["mouse_delta_y"] = (this.state["mouse_delta_y"] ? this.state["mouse_delta_y"] + deltas[1] : deltas[1]);
+        this.state["mouse_delta"] = [this.state["mouse_delta_x"], this.state["mouse_delta_y"]];
         this.changes.push("mouse_delta_x");
         this.changes.push("mouse_delta_y");
+        this.changes.push("mouse_delta");
 
         if (this.state["mouse_button_0"]) {
           this.state["mouse_drag_x"] = this.state["mouse_x"];
@@ -626,11 +628,6 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           this.changes.push("mouse_drag_delta_x");
           this.changes.push("mouse_drag_delta_y");
         }
-      } else {
-        this.state["mouse_delta_x"] = 0;
-        this.state["mouse_drag_delta_x"] = 0;
-        this.state["mouse_delta_y"] = 0;
-        this.state["mouse_drag_delta_y"] = 0;
       }
     }
     this.mouseup = function(ev) {
