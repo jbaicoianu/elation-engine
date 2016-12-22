@@ -1,4 +1,4 @@
-elation.require(['engine.things.player'], function() {
+elation.require(['engine.things.player', 'engine.things.ball'], function() {
   elation.component.add('engine.things.ballplayer', function() {
     this.postinit = function() {
       elation.engine.things.ballplayer.extendclass.postinit.call(this);
@@ -16,7 +16,7 @@ elation.require(['engine.things.player'], function() {
     }
     this.createForces = function() {
       elation.engine.things.ballplayer.extendclass.createForces.call(this);
-      this.setCollider('capsule', { radius: this.properties.fatness, length: this.properties.height - this.properties.fatness * 2, offset: new THREE.Vector3(0,this.properties.height/2,0)});
+      //this.setCollider('capsule', { radius: this.properties.fatness, length: this.properties.height - this.properties.fatness * 2, offset: new THREE.Vector3(0,this.properties.height/2,0)});
       //this.setCollider('sphere', { radius: .25, length: 1 });
     }
     this.enable = function() {
