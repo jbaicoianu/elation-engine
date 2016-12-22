@@ -1169,7 +1169,7 @@ THREE.ColladaLoader = function () {
 
 				if ( num_materials > 1 ) {
 
-					material = new THREE.MeshFaceMaterial( used_materials_array );
+					material = new THREE.MultiMaterial( used_materials_array );
 
 					for ( j = 0; j < geom.faces.length; j ++ ) {
 
@@ -3600,7 +3600,7 @@ THREE.ColladaLoader = function () {
 					var bumpType = child.getAttribute( 'bumptype' );
 					if ( bumpType ) {
 						if ( bumpType.toLowerCase() === "heightfield" ) {
-							this[ 'bump' ] = ( new ColorOrTexture() ).parse( child );
+							this[ 'normal' ] = ( new ColorOrTexture() ).parse( child );
 						} else if ( bumpType.toLowerCase() === "normalmap" ) {
 							this[ 'normal' ] = ( new ColorOrTexture() ).parse( child );
 						} else {
@@ -3803,14 +3803,20 @@ THREE.ColladaLoader = function () {
 			case 'phong':
 			case 'blinn':
 
-				if (props.diffuse != undefined) props.color = props.diffuse;
+				if (props.diffuse != undefined) {
+          props.color = props.diffuse;
+          delete props.diffuse;
+        }
 				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 
 			case 'lambert':
 			default:
 
-				if (props.diffuse != undefined) props.color = props.diffuse;
+				if (props.diffuse != undefined) {
+          props.color = props.diffuse;
+          delete props.diffuse;
+        }
 				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 

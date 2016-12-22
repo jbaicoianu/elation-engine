@@ -558,6 +558,7 @@ THREE.OBJLoader.prototype = {
 
 			} else if ( lineFirstChar === "l" ) {
 
+/*
 				var lineParts = line.substring( 1 ).trim().split( " " );
 				var lineVertices = [], lineUVs = [];
 
@@ -578,6 +579,7 @@ THREE.OBJLoader.prototype = {
 
 				}
 				state.addLineGeometry( lineVertices, lineUVs );
+*/
 
 			} else if ( ( result = this.regexp.object_pattern.exec( line ) ) !== null ) {
 
