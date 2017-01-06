@@ -3712,7 +3712,7 @@ THREE.ColladaLoader = function () {
 
 										} else if (elation && elation.engine && elation.engine.materials) {
 											// FIXME - hack for Elation texture caching
-											texture = elation.engine.materials.getTexture(url);
+											//texture = elation.engine.materials.getTexture(url);
 										} else {
 
 											texture = new THREE.Texture();
