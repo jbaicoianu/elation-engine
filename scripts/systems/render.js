@@ -13,6 +13,7 @@ elation.require([
   "engine.external.three.render.MaskPass",
   "engine.external.three.render.CopyShader",
   "engine.external.three.render.RecordingPass",
+  "engine.external.three.CubemapToEquirectangular",
 
   "engine.external.threecap.threecap",
 
@@ -53,7 +54,7 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: false, preserveDrawingBuffer: true});
+      this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
@@ -200,14 +201,14 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode]);
-      var poop = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+      var rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
           minFilter: THREE.LinearFilter,
           magFilter: THREE.LinearFilter,
           format: THREE.RGBAFormat,
           stencilBuffer: true
         });
-      this.composer = this.createRenderPath(['clear', 'masktest', this.rendermode, 'fxaa', 'msaa', 'bloom', 'maskclear', 'recording'], poop);
-      this.composer = this.createRenderPath(['clear', 'portals', 'masktest', this.rendermode, 'fxaa', 'msaa', 'bloom', 'maskclear'], poop);
+      this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], rendertarget);
+      //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
@@ -249,8 +250,8 @@ elation.require([
             if (n[i] instanceof VRDisplay) {
               this.vrdisplay = n[i];
               elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
-              elation.events.add(window, 'vrdisplayactivated', elation.bind(this, this.toggleVR, true));
-              elation.events.add(window, 'vrdisplaydeactivated', elation.bind(this, this.toggleVR, false));
+              elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
+              elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
               break;
             }
           }
@@ -305,8 +306,21 @@ elation.require([
 
         this.pickingdebug = false;
 
-        this.engine.systems.controls.addCommands('view', {'picking_debug': elation.bind(this, function(ev) { if (ev.value == 1) { this.pickingdebug = !this.pickingdebug; this.rendersystem.dirty = true; } })});
+        this.engine.systems.controls.addCommands('view', {
+          'picking_debug': elation.bind(this, function(ev) { 
+            if (ev.value == 1) { 
+              this.pickingdebug = !this.pickingdebug; 
+              this.rendersystem.dirty = true; 
+            } 
+          }),
+          'picking_select': elation.bind(this, function(ev) {
+            if (ev.value == 1) {
+              this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
+            }
+          })
+        });
         this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
+        this.engine.systems.controls.addBindings('view', {'gamepad_0_button_0': 'picking_select'});
         this.engine.systems.controls.activateContext('view');
       }
     }
@@ -520,14 +534,13 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
         if (newstate && !this.vrdisplay.isPresenting) {
 if (vivehack) {
-  player.head.reparent(player);
+  //player.head.reparent(player);
 }
           this.vrdisplay.requestPresent([{
             source: this.rendersystem.renderer.domElement,
             leftBounds: [0.0, 0.0, 0.5, 1.0],
             rightBounds: [0.5, 0.0, 0.5, 1.0]
           }]).then(elation.bind(this, function() {
-            console.log('presenting!');
             var eyeL = this.vrdisplay.getEyeParameters('left');
             var eyeR = this.vrdisplay.getEyeParameters('right');
 
@@ -537,16 +550,18 @@ if (vivehack) {
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
 
+            this.pickingactive = true;
+            this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
+
             elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
           this.vrdisplay.exitPresent().then(elation.bind(this, function() {
-            console.log('stopped presenting');
             this.camera.fov = 75;
             this.aspectscale = 1;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
-if (vivehack) player.head.reparent(player.neck);
+//if (vivehack) player.head.reparent(player.neck);
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
         }
@@ -636,15 +651,12 @@ if (vivehack) player.head.reparent(player.neck);
           var player = this.engine.client.player;
           player.updateHMD(this.vrdisplay);
           this.vreffect.render(this.scene, this.camera);
-          //var pose = this.vrdisplay.getPose();
-          var pose = player.hmdstate.hmd;
-          this.vrdisplay.submitFrame();
         } else {
           this.composer.render(delta);
         }
 
         if (this.rendersystem.cssrenderer) {
-          //this.rendersystem.cssrenderer.render(this.scene, this.camera);
+          this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
         }
       }
       /*
@@ -1031,10 +1043,15 @@ if (vivehack) player.head.reparent(player.neck);
       return this.picker.updatePickingTarget(force);
     }
     this.updatePickingObject = function(force) {
-      return this.picker.updatePickingObject(force);
+      if (this.picker) {
+        return this.picker.updatePickingObject(force);
+      }
+      return false;
     }
     this.pick = function(x, y) {
-      return this.picker.pick(x, y);
+      if (this.picker) {
+        return this.picker.pick(x, y);
+      }
     }
     this.getPickingData = function(obj) {
       return this.picker.getPickingData(obj);
@@ -1058,6 +1075,100 @@ if (vivehack) player.head.reparent(player.neck);
         this.mousepos[0] = Math.round(dims.w / 2);
         this.mousepos[1] = Math.round(dims.h / 2);
       }
+    }
+    this.screenshot = function(args) {
+      if (!args) args = {};
+      var type = args.type || 'single';
+      var format = args.format || 'jpg';
+
+      var promise = false;
+      if (type == 'single') {
+        promise = this.screenshotSingle(args);
+      } else if (type == 'cubemap') {
+      } else if (type == 'equirectangular') {
+        promise = this.screenshotEquirectangular(args);
+      }
+
+      return promise;
+    }
+    this.screenshotSingle = function(args) {
+      var format = args.format || 'jpg';
+      var promise = new Promise(elation.bind(this, function(resolve, reject) {
+        var img = false;
+        var canvas = this.rendersystem.renderer.domElement;
+        var resized = document.createElement('canvas');
+        resized.width = args.width || canvas.width;
+        resized.height = args.height || canvas.height;
+        var ctx = resized.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, resized.width, resized.height);
+        if (format == 'jpg') {
+          img = resized.toDataURL('image/jpeg');
+        } else if (format == 'png') {
+          img = resized.toDataURL('image/png');
+        };
+        if (img) {
+          resolve(img);
+        } else {
+          reject();
+        }
+      }));
+      return promise;
+    }
+    this.screenshotCubemap = function(args) {
+      var args = args || {};
+      var width = args.width || 512;
+      var camera = args.camera || this.actualcamera;
+      var raw = args.raw;
+      var renderer = this.rendersystem.renderer;
+      var cubecam = new THREE.CubeCamera(camera.near, camera.far, width);
+      cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
+      this.scene.add(cubecam);
+
+      if (raw) {
+        cubecam.updateCubeMap(renderer, this.scene);
+        return cubecam;
+      } else {
+        var pos = [
+          [width*2, width],
+          [0, width],
+          [width, 0],
+          [width, width*2],
+          [width, width],
+          [width*3, width],
+        ];
+        var materials = [],
+            images = [];
+        for (var i = 0; i < cubecam.children.length; i++) {
+          var renderTarget = new THREE.WebGLRenderTarget(width, width);
+          var canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = width;
+          var ctx = canvas.getContext('2d');
+          var buffer = new Uint8Array(width * width * 4);
+          renderer.render( this.scene, cubecam.children[i], renderTarget );
+          renderer.readRenderTargetPixels(renderTarget, 0, 0, width, width, buffer);
+
+          var imageData = ctx.createImageData(width, width);
+          imageData.data.set(buffer);
+
+          ctx.putImageData(imageData, 0, 0);
+          var src = canvas.toDataURL('image/jpeg');
+
+          var img = document.createElement('img');
+          img.src = src;
+          images.push(img);
+        }
+        return images;
+      }
+    }
+    this.screenshotEquirectangular = function(args) {
+      var renderer = this.rendersystem.renderer;
+      var width = args.width || 4096;
+      var height = args.height || width / 2;
+      var cubecam = this.screenshotCubemap({width: height, raw: true});
+      var equimap = new CubemapToEquirectangular(renderer, false);
+      equimap.setSize(width, height);
+      return equimap.convert(cubecam);
     }
   }, elation.ui.base);
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
@@ -1477,7 +1588,9 @@ console.log('dun it', msaafilter);
       while (intersects.length > 0) {
         hit = intersects.shift();
         if (!(hit.object instanceof THREE.EdgesHelper)) {
-          this.lasthit = hit; // FIXME - hack for demo
+          if (hit !== this.lasthit) {
+            this.lasthit = hit; // FIXME - hack for demo
+          }
           fired = this.firePickingEvents(hit, x, y);
           break;
         }
