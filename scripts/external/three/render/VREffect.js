@@ -297,8 +297,10 @@ THREE.VREffect = function ( renderer, onError ) {
 
 			if ( vrDisplay.getFrameData ) {
 
-				vrDisplay.depthNear = camera.near;
-				vrDisplay.depthFar = camera.far;
+        var zNear = (camera.near === undefined ? 0.01 : camera.near);
+            zFar = (camera.far === undefined ? 10000.0 : camera.far);
+				vrDisplay.depthNear = zNear;
+				vrDisplay.depthFar = zFar;
 
 				vrDisplay.getFrameData( frameData );
 
