@@ -25,6 +25,8 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
         right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
       };
+      this.hands.left.hide();
+      this.hands.right.hide();
     }
     this.updatePositions = function() {
       this.updateTrackedObjects();
