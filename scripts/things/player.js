@@ -1,6 +1,6 @@
 elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things.label2d', 'engine.things.objecttracker'], function() {
   elation.component.add('engine.things.player', function() {
-    this.targetrange = 5;
+    this.targetrange = 8;
     this.postinit = function() {
       this.defineProperties({
         height: { type: 'float', default: 2.0 },
@@ -11,7 +11,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         runstrength: { type: 'float', default: 250.0 },
         runspeed: { type: 'float', default: 5.4 },
         crouchspeed: { type: 'float', default: 150.0 },
-        turnspeed: { type: 'float', default: 2.0 },
+        turnspeed: { type: 'float', default: Math.PI/2 },
         jumpstrength: { type: 'float', default: 300.0 },
         jumptime: { type: 'float', default: 150 },
         movefriction: { type: 'float', default: 4.0 },
@@ -32,8 +32,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'move_down': ['keyboard_f', elation.bind(this, this.updateControls)],
         'turn_left': ['keyboard_left', elation.bind(this, this.updateControls)],
         'turn_right': ['keyboard_right,gamepad_0_axis_2', elation.bind(this, this.updateControls)],
-        'mouse_turn': ['mouse_delta_x', elation.bind(this, this.updateControls)],
-        'mouse_pitch': ['mouse_delta_y', elation.bind(this, this.updateControls)],
+        //'mouse_turn': ['mouse_delta_x', elation.bind(this, this.updateMouseControls)],
+        //'mouse_pitch': ['mouse_delta_y', elation.bind(this, this.updateMouseControls)],
+        'mouse_look': ['mouse_delta', elation.bind(this, this.updateMouseControls)],
         'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
         'look_down': ['keyboard_down,gamepad_0_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_0_button_10', elation.bind(this, this.updateControls)],
@@ -41,7 +42,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //'jump': ['keyboard_space,gamepad_0_button_1', elation.bind(this, this.handleJump)],
         //'toss': ['keyboard_space,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_0_button_1', elation.bind(this, this.toss_cube)],
-        'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
+        //'use': ['keyboard_e,gamepad_0_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
         //'toggle_flying': ['keyboard_f', elation.bind(this, this.toggle_flying)],
         'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
@@ -51,6 +52,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'hmd': ['hmd_0', elation.bind(this, this.refresh)],
         'orientation': ['orientation', elation.bind(this, this.refresh)],
       });
+      this.mousedelta = [0,0];
       this.moveVector = new THREE.Vector3();
       this.turnVector = new THREE.Euler(0, 0, 0);
       this.lookVector = new THREE.Euler(0, 0, 0);
@@ -170,8 +172,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.ears = new THREE.Object3D();
       //this.camera.rotation.set(-Math.PI/16, 0, 0);
 
-      //var camhelper = new THREE.CameraHelper(this.camera);
-      //this.camera.add(camhelper);
       return this.objects['3d'];
     }
     this.createChildren = function() {
@@ -203,6 +203,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.tracker = this.spawn('objecttracker', null, {player: this});
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
+
+      //var camhelper = new THREE.CameraHelper(this.camera.camera);
+      //this.engine.systems.world.scene['world-3d'].add(camhelper);
     }
     this.getGroundHeight = function() {
       
@@ -266,10 +269,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
           this.turnVector.y = (this.controlstate.turn_left - this.controlstate.turn_right) * this.properties.turnspeed;
           this.lookVector.x = (this.controlstate.look_up - this.controlstate.look_down) * this.properties.turnspeed;
-          if (this.engine.systems.controls.pointerLockActive) {
-            this.turnVector.y -= this.controlstate.mouse_turn * this.properties.turnspeed;
-            this.lookVector.x -= this.controlstate.mouse_pitch * this.properties.turnspeed;
-          }
 
           if (this.controlstate.crouch) {
             if (this.flying) {
@@ -285,6 +284,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
           if (this.moveForce) {
             var moveSpeed = Math.min(1.0, this.moveVector.length());
+//if (moveSpeed !== 0) debugger;
             var dumbhack = false;
             if (this.flying || this.canJump()) {
               this.frictionForce.update(this.properties.movefriction);
@@ -323,14 +323,15 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
-            if (this.headconstraint) this.headconstraint.enabled = true;
+            if (this.headconstraint) this.headconstraint.enabled = (!this.vrdevice || !this.vrdevice.isPresenting);
             this.head.objects.dynamics.setAngularVelocity(this.lookVector);
             this.head.objects.dynamics.updateState();
-            //this.head.refresh();
+            this.head.refresh();
           }
         }
         //this.handleTargeting();
 
+        this.refresh();
         //elation.events.fire({type: 'thing_change', element: this});
       }
     })();
@@ -345,7 +346,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
           pose = vrdevice.getPose();
         }
         if (pose) this.hmdstate.hmd = pose;
-        
+        this.vrdevice = vrdevice;
       }
 
       if (this.headconstraint) this.headconstraint.enabled = !vrdevice.isPresenting;
@@ -368,12 +369,42 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //this.head.objects.dynamics.angular.fromArray(hmd.angularVelocity);
       }
 
+      var view = this.engine.systems.render.views.main;
+      view.mousepos = [view.size[0] / 2, view.size[1] / 2, 0];
+
       this.head.objects.dynamics.updateState();
       this.refresh();
     }
     this.updateControls = function() {
-      this.refresh();
     }
+    this.updateMouseControls = (function() {
+      var angular = new THREE.Vector3(),
+          tmpquat = new THREE.Quaternion();
+
+      return function(ev) {
+        if (this.engine.systems.controls.pointerLockActive) {
+          var mouselook = ev.data.mouse_look;
+          if (mouselook[0]) {
+            angular.set(0, -mouselook[0] * this.properties.turnspeed / 60, 0);
+            var theta = angular.length();
+            angular.divideScalar(theta);
+            tmpquat.setFromAxisAngle(angular, theta);
+            this.properties.orientation.multiply(tmpquat);
+            ev.data.mouse_turn = 0;
+          }
+
+          if (mouselook[1]) {
+            angular.set(-mouselook[1] * this.properties.turnspeed / 60, 0, 0)
+            theta = angular.length();
+            angular.divideScalar(theta);
+            tmpquat.setFromAxisAngle(angular, theta);
+            this.head.properties.orientation.multiply(tmpquat);
+            ev.data.mouse_pitch = 0;
+          }
+        }
+        this.refresh();
+      };
+    })();
     this.handleCreate = function(ev) {
       if (this.properties.defaultplayer) {
         this.engine.client.setActiveThing(this);
@@ -538,7 +569,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         }
         return false;
       }
-      return true;
     })();
   }, elation.engine.things.generic);
 });
