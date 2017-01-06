@@ -66,8 +66,10 @@ elation.require(deps, function() {
       this.run(0);
     }
     this.stop = function() {
-      this.running = false;
-      elation.events.fire({element: this, type: "engine_stop"});
+      if (this.running) {
+        this.running = false;
+        elation.events.fire({element: this, type: "engine_stop"});
+      }
     }
 
     this.run = function(ts) {
@@ -569,6 +571,9 @@ elation.require(deps, function() {
       var time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
       var filename = 'vrcade-' + date + ' ' + time + '.' + extension
       return filename;
+    }
+    this.screenshot = function(args) {
+      return this.view.screenshot(args);
     }
   }, elation.ui.base);
   
