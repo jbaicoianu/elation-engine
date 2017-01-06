@@ -695,7 +695,7 @@ elation.component.add("engine.things.generic", function() {
       var collidergeom = false;
       if (type == 'sphere') {
         collidergeom = elation.engine.geometries.generate('sphere', { 
-          radius: args.radius
+          radius: args.radius / this.properties.scale.x
         });
       } else if (type == 'box') {
         var size = new THREE.Vector3().subVectors(args.max, args.min);

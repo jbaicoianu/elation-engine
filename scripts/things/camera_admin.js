@@ -27,7 +27,7 @@ elation.require(['engine.things.camera'], function() {
         this.orbitcontrols = new THREE.OrbitControls(this.camera, this.view.container);
         this.orbitcontrols.rotateUp(-Math.PI/4);
         this.orbitcontrols.rotateLeft(-Math.PI/4);
-        this.orbitcontrols.dollyOut(25);
+        this.orbitcontrols.dollyOut(10);
         this.orbitcontrols.userPanSpeed = 10;
         this.orbitcontrols.keyPanSpeed = 100;
         this.orbitcontrols.noKeys = true;
@@ -75,11 +75,9 @@ console.log('toggle controls', this.admincontrols, this.orbitcontrols, this.flyc
       this.admincontrols.enabled = true;
     }
     this.enable = function() {
-console.log('enable admin thing');
       this.admincontrols.enabled = true;
     }
     this.disable = function() {
-console.log('disable admin thing');
       this.admincontrols.enabled = false;
     }
     this.engine_frame = function(ev) {

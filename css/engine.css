@@ -69,3 +69,12 @@
   width: 10em;
   display: inline-block;
 }
+.engine_view.cursor_default {
+  cursor: default;
+}
+.engine_view.cursor_pointer {
+  cursor: pointer;
+}
+.engine_view.cursor_crosshair {
+  cursor: crosshair;
+}

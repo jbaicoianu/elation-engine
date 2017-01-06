@@ -141,7 +141,43 @@ Object.assign( THREE.EffectComposer.prototype, {
 
 		}
 
-	}
+	},
+
+  getSize: function() {
+
+		return this.renderer.getSize();
+
+	},
+
+  getPixelRatio: function() {
+
+		return this.renderer.getPixelRatio();
+
+	},
+
+  setPixelRatio: function(ratio) {
+
+		return this.renderer.setPixelRatio(ratio);
+
+	},
+
+  setScissor: function(x, y, width, height) {
+
+		return this.renderer.setScissor(x, y, width, height);
+
+	},
+
+  setScissorTest: function(boolean) {
+
+		return this.renderer.setScissorTest(boolean);
+
+	},
+
+  setViewport: function(x, y, width, height) {
+
+		return this.renderer.setViewport(x, y, width, height);
+
+  }
 
 } );
 

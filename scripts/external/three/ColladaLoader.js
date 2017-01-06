@@ -1143,7 +1143,6 @@ THREE.ColladaLoader = function () {
 							if ( !( instance_material.symbol in double_sided_materials ) ) {
 
 								var _copied_material = material3js.clone();
-console.log('copied material', _copied_material);
 								_copied_material.side = THREE.DoubleSide;
 								double_sided_materials[ instance_material.symbol ] = _copied_material;
 
@@ -1170,7 +1169,7 @@ console.log('copied material', _copied_material);
 
 				if ( num_materials > 1 ) {
 
-					material = new THREE.MeshFaceMaterial( used_materials_array );
+					material = new THREE.MultiMaterial( used_materials_array );
 
 					for ( j = 0; j < geom.faces.length; j ++ ) {
 
@@ -3601,7 +3600,7 @@ console.log('copied material', _copied_material);
 					var bumpType = child.getAttribute( 'bumptype' );
 					if ( bumpType ) {
 						if ( bumpType.toLowerCase() === "heightfield" ) {
-							this[ 'bump' ] = ( new ColorOrTexture() ).parse( child );
+							this[ 'normal' ] = ( new ColorOrTexture() ).parse( child );
 						} else if ( bumpType.toLowerCase() === "normalmap" ) {
 							this[ 'normal' ] = ( new ColorOrTexture() ).parse( child );
 						} else {
@@ -3713,7 +3712,7 @@ console.log('copied material', _copied_material);
 
 										} else if (elation && elation.engine && elation.engine.materials) {
 											// FIXME - hack for Elation texture caching
-											texture = elation.engine.materials.getTexture(url);
+											//texture = elation.engine.materials.getTexture(url);
 										} else {
 
 											texture = new THREE.Texture();
@@ -3804,14 +3803,20 @@ console.log('copied material', _copied_material);
 			case 'phong':
 			case 'blinn':
 
-				if (props.diffuse != undefined) props.color = props.diffuse;
+				if (props.diffuse != undefined) {
+          props.color = props.diffuse;
+          delete props.diffuse;
+        }
 				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 
 			case 'lambert':
 			default:
 
-				if (props.diffuse != undefined) props.color = props.diffuse;
+				if (props.diffuse != undefined) {
+          props.color = props.diffuse;
+          delete props.diffuse;
+        }
 				this.material = new THREE.MeshPhongMaterial( props );
 				break;
 

@@ -361,7 +361,7 @@ THREEcapRenderPass.prototype = {
 		}.bind(this));
 	},
 	setSize: function(w, h) {
-		console.log('FIXME - set size!');
+		//console.log('FIXME - set size!');
 	}
 };
 "use strict";

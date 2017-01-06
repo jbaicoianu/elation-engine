@@ -163,7 +163,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       // background plane
       //var boxgeo = new THREE.PlaneBufferGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
       var boxgeo = new THREE.BoxGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight, .001);
-      var mat = new THREE.MeshBasicMaterial({color: this.properties.backgroundcolor, emissive: emissive, opacity: .8, transparent: true, depthTest: false});
+      var mat = new THREE.MeshPhongMaterial({color: this.properties.backgroundcolor, emissive: emissive, opacity: .8, transparent: true, depthTest: false});
       var mesh = new THREE.Mesh(boxgeo, mat);
       mesh.renderOrder = 5;
       return mesh;
