@@ -7,16 +7,16 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     corsproxy: '',
     placeholders: {},
 
-    init: function() {
+    init: function(dummy) {
       var corsproxy = elation.config.get('engine.assets.corsproxy', '');
       //THREE.Loader.Handlers.add(/.*/i, corsproxy);
       //THREE.Loader.Handlers.add( /\.dds$/i, new THREE.DDSLoader() );
       if (corsproxy != '') {
-        this.setCORSProxy(corsproxy);
+        this.setCORSProxy(corsproxy, dummy);
       }
     },
-    loadAssetPack: function(url) {
-      this.assetroot = new elation.engine.assets.pack({name: url, src: url});
+    loadAssetPack: function(url, baseurl) {
+      this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
       this.assetroot.load()
     },
     loadJSON: function(json, baseurl) {
@@ -53,9 +53,9 @@ if (!ENV_IS_BROWSER) return;
       }
       return undefined;
     },
-    setCORSProxy: function(proxy) {
+    setCORSProxy: function(proxy, dummy) {
       elation.engine.assets.corsproxy = proxy;
-      var loader = new elation.engine.assets.corsproxyloader(proxy);
+      var loader = new elation.engine.assets.corsproxyloader(proxy, undefined, dummy);
       elation.engine.assetdownloader.setCORSProxy(proxy);
       THREE.Loader.Handlers.add(/.*/i, loader);
 
@@ -81,12 +81,19 @@ if (!ENV_IS_BROWSER) return;
       for (var i = 0; i < urls.length; i++) {
         var subpromise = new Promise(function(resolve, reject) {
           var fullurl = urls[i];
-          if (corsproxy) fullurl = corsproxy + fullurl;
+          if (corsproxy && fullurl.indexOf(corsproxy) != 0) fullurl = corsproxy + fullurl;
           if (!queue[fullurl]) {
             var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
               responseType: 'arraybuffer',
-              onload: resolve,
-              onerror: reject,
+              onload: function(ev) { 
+                var status = ev.target.status;
+                if (status == 200) {
+                  resolve(ev);
+                } else {
+                  reject();
+                }
+              },
+              onerror: function() { reject(); },
               onprogress: progress,
               headers: {
                 'X-Requested-With': 'Elation Engine asset loader'
@@ -110,16 +117,35 @@ if (!ENV_IS_BROWSER) return;
   });
 
   elation.define('engine.assets.corsproxyloader', {
-    _construct: function(corsproxy, manager) {
+    _construct: function(corsproxy, manager, dummy) {
       this.corsproxy = corsproxy || '';
       this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+      this.uuidmap = {};
+      this.dummy = dummy;
     },
     load: function ( url, onLoad, onProgress, onError ) {
       var fullurl = url;
       if (this.corsproxy != '' && url.indexOf(this.corsproxy) != 0) {
         fullurl = this.corsproxy + url;
       }
-      return THREE.TextureLoader.prototype.load.call(this, fullurl, onLoad, onProgress, onError);
+      if (!this.dummy) {
+        return THREE.TextureLoader.prototype.load.call(this, fullurl, onLoad, onProgress, onError);
+      }
+
+      return this.getDummyTexture(fullurl, onLoad);
+    },
+    getDummyTexture: function(url, onLoad) {
+      var texture = new THREE.Texture();
+      var uuid = this.uuidmap[url];
+      if (!uuid) {
+        uuid = this.uuidmap[url] = THREE.Math.generateUUID();
+      }
+      var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
+      texture.image = img;
+      if (onLoad) {
+        setTimeout(onLoad.bind(img), 0);
+      }
+      return texture;
     }
   }, THREE.TextureLoader);
 
@@ -130,6 +156,7 @@ if (!ENV_IS_BROWSER) return;
     license: 'unknown',
     author: 'unknown',
     sourceurl: false,
+    size: false,
     loaded: false,
     preview: false,
     baseurl: '',
@@ -225,19 +252,43 @@ if (!ENV_IS_BROWSER) return;
     reverse3d: false,
     texture: false,
     imagetype: '',
-    hasalpha: false,
+    hasalpha: null,
 
     load: function() {
-      var loader = new THREE.TextureLoader();
-      loader.setCrossOrigin('');
       if (this.src) {
-        var url = this.getProxiedURL(this.src);
+        var fullurl = this.getFullURL(this.src);
+        var proxiedurl = this.getProxiedURL(this.src);
+        var texture = this._texture = new THREE.Texture();
+        texture.image = this.canvas = this.getCanvas();
+        texture.image.originalSrc = this.src;
+        texture.sourceFile = this.src;
+        texture.needsUpdate = true;
+        elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
+          elation.bind(this, function(events) {
+            var xhr = events[0].target;
+            var type = this.contenttype = xhr.getResponseHeader('content-type')
+            if (typeof createImageBitmap == 'function' && type != 'image/gif') {
+              var blob = new Blob([xhr.response], {type: type});
+              createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleError));
+            } else {
+              var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
+              elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
+              elation.events.add(image, 'error', elation.bind(this, this.handleError));
+              image.crossOrigin = 'anonymous';
+              image.src = proxiedurl;
+            }
 
-        this._texture = loader.load(url, elation.bind(this, this.handleLoad), elation.bind(this, this.handleProgress), elation.bind(this, this.handleError));
-        this._texture.sourceFile = this.src;
-        this._texture.image = this.canvas = this.getCanvas();
-        this._texture.image.originalSrc = this.src;
-        this._texture.needsUpdate = true;
+            this.state = 'processing';
+            elation.events.fire({element: this, type: 'asset_load_processing'});
+          }), 
+          elation.bind(this, function(error) {
+            this.state = 'error';
+            elation.events.fire({element: this, type: 'asset_error'});
+          })
+        );
+        elation.events.fire({element: this, type: 'asset_load_queued'});
+
+
       }
     },
     getCanvas: function() {
@@ -263,16 +314,14 @@ if (!ENV_IS_BROWSER) return;
       }
       return this.canvas;
     },
-    handleLoad: function(data) {
-      //console.log('loaded image', data.sourceFile, data.image, data);
-      this._texture = data;
-      data.sourceFile = this.src;
-      data.image = this.processImage(data.image);
-      //data.needsUpdate = true;
-      data.wrapS = data.wrapT = THREE.RepeatWrapping;
-      data.anisotropy = 16;
+    handleLoad: function(image) {
+      //console.log('loaded image', this, image);
+      var texture = this._texture;
+      texture.image = this.processImage(image);
+      texture.needsUpdate = true;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 16;
       this.loaded = true;
-      this._texture.needsUpdate = true;
       elation.events.fire({type: 'asset_load', element: this._texture});
       elation.events.fire({type: 'asset_load', element: this});
       elation.events.fire({element: this, type: 'asset_load_complete'});
@@ -283,6 +332,7 @@ if (!ENV_IS_BROWSER) return;
         loaded: ev.loaded,
         total: ev.total
       };
+      this.size = ev.total;
       //console.log('image progress', progress);
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
@@ -321,7 +371,9 @@ if (!ENV_IS_BROWSER) return;
         canvas.height = elation.engine.materials.nextHighestPowerOfTwo(image.height);
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
-        this.hasalpha = this.canvasHasAlpha(canvas);
+        if (this.hasalpha === null) {
+          this.hasalpha = this.canvasHasAlpha(canvas);
+        }
         this._texture.generateMipMaps = true;
 
         return canvas;
@@ -397,7 +449,14 @@ if (!ENV_IS_BROWSER) return;
       // We might also be able to get hints from the XHR loader about the image's MIME type
 
       var type = 'jpg';
-      if (this.src.match(/\.(.*?)$/)) {
+      if (this.contenttype) {
+        var map = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/gif': 'gif',
+        };
+        type = map[this.contenttype];
+      } else if (this.src.match(/\.(.*?)$/)) {
         var parts = this.src.split('.');
         type = parts.pop();
       }
@@ -453,6 +512,12 @@ if (!ENV_IS_BROWSER) return;
       this._video = video;
       this._texture = new THREE.VideoTexture(video);
       this._texture.minFilter = THREE.LinearFilter;
+      elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
+    },
+    handleLoad: function() {
+      this.loaded = true;
+      elation.events.fire({element: this, type: 'asset_load'});
+      elation.events.fire({element: this, type: 'asset_load_complete'});
     },
     handleProgress: function(ev) {
       //console.log('image progress!', ev);
@@ -461,6 +526,7 @@ if (!ENV_IS_BROWSER) return;
         loaded: ev.loaded,
         total: ev.total
       };
+      this.size = ev.total;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
     handleError: function(ev) {
@@ -524,6 +590,7 @@ if (!ENV_IS_BROWSER) return;
     },
     handleProgress: function(ev) {
       console.log('sound progress!', ev);
+      this.size = ev.total;
     },
     handleError: function(ev) {
       console.log('sound uh oh!', ev);
@@ -742,7 +809,7 @@ if (!ENV_IS_BROWSER) return;
         }), 
         elation.bind(this, function(error) {
           this.state = 'error';
-          elation.events.fire({element: this, type: 'asset_load_error'});
+          elation.events.fire({element: this, type: 'asset_error'});
         })
       );
       elation.events.fire({element: this, type: 'asset_load_queued'});
@@ -787,12 +854,17 @@ if (!ENV_IS_BROWSER) return;
           }
         }));
 
+        this.state = 'complete';
         elation.events.fire({element: this, type: 'asset_load_processed'});
         elation.events.fire({type: 'asset_load', element: this});
+      } else {
+        // no model data, error!
+        elation.events.fire({type: 'asset_error', element: this});
       }
     },
     handleLoadError: function(e) {
       console.log('Error loading model', this, e);
+      this.state = 'error';
       elation.events.fire({type: 'asset_error', element: this});
     },
     handleLoadProgress: function(progress) {
@@ -802,6 +874,7 @@ if (!ENV_IS_BROWSER) return;
         loaded: progress.loaded,
         total: progress.total,
       };
+      this.size = progress.total;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progressdata});
     },
     extractTextures: function(scene) {
@@ -812,12 +885,12 @@ if (!ENV_IS_BROWSER) return;
       var minFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearMipMapLinearFilter : THREE.NearestFilter);
       var magFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearFilter : THREE.NearestFilter);
 
-      scene.traverse(function(n) { 
+      scene.traverse(elation.bind(this, function(n) { 
         if (n instanceof THREE.Mesh) {
           var materials = (n.material instanceof THREE.MultiMaterial || n.material instanceof THREE.MeshFaceMaterial ? n.material.materials : [n.material]);
 
-          materials.forEach(function(material) {
-            types.forEach(function(texname) { 
+          materials.forEach(elation.bind(this, function(material) {
+            types.forEach(elation.bind(this, function(texname) { 
               var tex = material[texname];
 
               if (tex) { // && tex.image instanceof HTMLImageElement) {
@@ -837,19 +910,20 @@ if (!ENV_IS_BROWSER) return;
                       baseurl: this.baseurl
                     });
                   }
-                  texturepromises.push(new Promise(function(resolve, reject) {
+                  texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
                     elation.events.add(asset, 'asset_load_complete', resolve);
                     elation.events.add(asset, 'asset_error', reject);
-                  }));
+                  })));
                   
+                  elation.events.fire({element: this, type: 'asset_load_dependency', data: asset});
                   tex = asset.getInstance();
                   material[texname] = textures[src] = tex;
                 } else {
                   tex = material[texname] = textures[src];
                 }
               }
-            });
-          });
+            }));
+          }));
         }
         for (var k in textures) {
           var tex = textures[k];
@@ -858,12 +932,22 @@ if (!ENV_IS_BROWSER) return;
             //tex.magFilter = magFilter;
           }
         }
-      });
+      }));
 
       if (texturepromises.length > 0) {
-        Promise.all(texturepromises).then(elation.bind(this, function() {        
-          elation.events.fire({element: this, type: 'asset_load_complete'});
-        }));
+        var total = texturepromises.length-1,
+            finished = 0;
+
+        // Send the completed event when all textures this model references are loaded
+        var completed = function() { 
+          if (++finished >= total) {
+            elation.events.fire({element: this, type: 'asset_load_complete'});
+          }
+        };
+
+        for (var i = 0; i < texturepromises.length; i++) {
+          texturepromises[i].then(elation.bind(this, completed), elation.bind(this, completed));
+        }
       } else {
         setTimeout(elation.bind(this, function() {
           elation.events.fire({element: this, type: 'asset_load_complete'});
