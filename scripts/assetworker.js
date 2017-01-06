@@ -30,7 +30,7 @@ elation.require([
         return img;
       }
       this.loader = new elation.engine.assets.loaders.model();
-      elation.engine.assets.init();
+      elation.engine.assets.init(true);
     },
     onmessage: function(ev) {
       var msg = ev.data;
@@ -138,20 +138,24 @@ elation.require([
         this.parse(modeldata, job).then(function(data) {
           var transferrables = [];
           // Convert BufferGeometry arrays back to Float32Arrays so they can be transferred efficiently
-          for (var i = 0; i < data.geometries.length; i++) {
-            var geo = data.geometries[i];
-            for (var k in geo.data.attributes) {
-              //var arr = Float32Array.from(geo.data.attributes[k].array);
-              var src = geo.data.attributes[k].array;
-              var arr = new Float32Array(src.length);
-              for (var j = 0; j < src.length; j++) {
-                arr[j] = src[j];
+          try {
+            for (var i = 0; i < data.geometries.length; i++) {
+              var geo = data.geometries[i];
+              for (var k in geo.data.attributes) {
+                //var arr = Float32Array.from(geo.data.attributes[k].array);
+                var src = geo.data.attributes[k].array;
+                var arr = new Float32Array(src.length);
+                for (var j = 0; j < src.length; j++) {
+                  arr[j] = src[j];
+                }
+                transferrables.push(arr.buffer);
+                geo.data.attributes[k].array = arr;
               }
-              transferrables.push(arr.buffer);
-              geo.data.attributes[k].array = arr;
             }
+            postMessage({message: 'finished', id: job.id, data: data}, transferrables);
+          } catch (e) {
+            postMessage({message: 'error', id: job.id, data: e.toString()});
           }
-          postMessage({message: 'finished', id: job.id, data: data}, transferrables);
         }, function(d) {
           postMessage({message: 'error', id: job.id, data: d.toString()});
         });
