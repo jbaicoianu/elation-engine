@@ -935,7 +935,7 @@ if (!ENV_IS_BROWSER) return;
       }));
 
       if (texturepromises.length > 0) {
-        var total = texturepromises.length-1,
+        var total = texturepromises.length,
             finished = 0;
 
         // Send the completed event when all textures this model references are loaded
