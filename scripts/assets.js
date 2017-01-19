@@ -74,6 +74,11 @@ if (!ENV_IS_BROWSER) return;
     this.setCORSProxy = function(proxy) {
       this.corsproxy = proxy;
     }
+    this.isUrlInQueue = function(url) {
+      var fullurl = url;
+      if (this.corsproxy && fullurl.indexOf(this.corsproxy) != 0) fullurl = this.corsproxy + fullurl;
+      return fullurl in this.queue;
+    }
     this.fetchURLs = function(urls, progress) {
       var promises = [],
           queue = this.queue;
@@ -200,11 +205,11 @@ if (!ENV_IS_BROWSER) return;
       if (!baseurl) baseurl = this.baseurl;
       var fullurl = url;
       if (this.isURLRelative(fullurl)) {
-         fullurl = baseurl + fullurl;
+        fullurl = baseurl + fullurl;
       } else if (this.isURLProxied(fullurl)) {
         fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
       } else if (this.isURLAbsolute(fullurl)) {
-         fullurl = self.location.origin + fullurl;
+        fullurl = self.location.origin + fullurl;
       }
 
       return fullurl;
@@ -251,6 +256,7 @@ if (!ENV_IS_BROWSER) return;
     ou3d: false,
     reverse3d: false,
     texture: false,
+    frames: false,
     imagetype: '',
     hasalpha: null,
 
@@ -263,32 +269,32 @@ if (!ENV_IS_BROWSER) return;
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
-        elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
-          elation.bind(this, function(events) {
-            var xhr = events[0].target;
-            var type = this.contenttype = xhr.getResponseHeader('content-type')
-            if (typeof createImageBitmap == 'function' && type != 'image/gif') {
-              var blob = new Blob([xhr.response], {type: type});
-              createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleError));
-            } else {
-              var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
-              elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
-              elation.events.add(image, 'error', elation.bind(this, this.handleError));
-              image.crossOrigin = 'anonymous';
-              image.src = proxiedurl;
-            }
+        if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
+          elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
+            elation.bind(this, function(events) {
+              var xhr = events[0].target;
+              var type = this.contenttype = xhr.getResponseHeader('content-type')
+              if (typeof createImageBitmap == 'function' && type != 'image/gif') {
+                var blob = new Blob([xhr.response], {type: type});
+                createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleError));
+              } else {
+                var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
+                elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
+                elation.events.add(image, 'error', elation.bind(this, this.handleError));
+                image.crossOrigin = 'anonymous';
+                image.src = proxiedurl;
+              }
 
-            this.state = 'processing';
-            elation.events.fire({element: this, type: 'asset_load_processing'});
-          }), 
-          elation.bind(this, function(error) {
-            this.state = 'error';
-            elation.events.fire({element: this, type: 'asset_error'});
-          })
-        );
-        elation.events.fire({element: this, type: 'asset_load_queued'});
-
-
+              this.state = 'processing';
+              elation.events.fire({element: this, type: 'asset_load_processing'});
+            }), 
+            elation.bind(this, function(error) {
+              this.state = 'error';
+              elation.events.fire({element: this, type: 'asset_error'});
+            })
+          );
+          elation.events.fire({element: this, type: 'asset_load_queued'});
+        }
       }
     },
     getCanvas: function() {
@@ -322,6 +328,10 @@ if (!ENV_IS_BROWSER) return;
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.anisotropy = 16;
       this.loaded = true;
+
+      this.sendLoadEvents();
+    },
+    sendLoadEvents: function() {
       elation.events.fire({type: 'asset_load', element: this._texture});
       elation.events.fire({type: 'asset_load', element: this});
       elation.events.fire({element: this, type: 'asset_load_complete'});
@@ -375,6 +385,7 @@ if (!ENV_IS_BROWSER) return;
           this.hasalpha = this.canvasHasAlpha(canvas);
         }
         this._texture.generateMipMaps = true;
+console.log('new tex', this._texture);
 
         return canvas;
       //} else {
@@ -408,8 +419,10 @@ if (!ENV_IS_BROWSER) return;
       texture.magFilter = THREE.NearestFilter;
       //texture.generateMipmaps = false;
       var frames = [];
+      var frametextures = this.frames = [];
       var framedelays = [];
       var framenum = -1;
+      var lastframe = texture;
       gif.load(function() {
         var canvas = gif.get_canvas();
 
@@ -427,12 +440,23 @@ if (!ENV_IS_BROWSER) return;
               //mainctx.putImageData(gifframe.data, 0, 0, 0, 0, canvas.width, canvas.height);
               ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, frame.image.width, frame.image.height);
               texture.minFilter = texture.magFilter = THREE.NearestFilter; // FIXME - should this be hardcoded for all gifs?
+
+              frametextures[framenum] = new THREE.Texture(frame.image);
+              frametextures[framenum].minFilter = frametextures[framenum].magFilter = THREE.NearestFilter; // FIXME - should this be hardcoded for all gifs?
+              frametextures[framenum].needsUpdate = true;
             }
           }
           if (frame && frame.image) {
+            /*
             texture.image = frame.image;
             texture.needsUpdate = true;
             elation.events.fire({type: 'update', element: texture});
+            */
+            var frametex = frametextures[framenum] || lastframe;
+            if (frametex !== lastframe) {
+              lastframe = frametex;
+            }
+            elation.events.fire({element: texture, type: 'asset_update', data: frametex});
           }
 
           if (!static) {
@@ -763,7 +787,9 @@ if (!ENV_IS_BROWSER) return;
         
         var loadargs = {src: this.getFullURL()};
         if (this.mtl) loadargs.mtl = this.getFullURL(this.mtl, this.getBaseURL(loadargs.src));
-        this.queueForDownload(loadargs);
+        if (!elation.engine.assetdownloader.isUrlInQueue(loadargs.src)) {
+          this.queueForDownload(loadargs);
+        }
       } else {
         this.removePlaceholders();
       }
