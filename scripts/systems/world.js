@@ -105,6 +105,7 @@ elation.require([
       var thing = ev.target;
       if (thing) {
         this.framechanges.push(thing);
+        this.engine.systems.render.setdirty();
       }
     }
     this.world_thing_add = function(ev) {
