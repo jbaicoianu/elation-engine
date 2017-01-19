@@ -347,9 +347,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         }
         if (pose) this.hmdstate.hmd = pose;
         this.vrdevice = vrdevice;
+        if (this.headconstraint) this.headconstraint.enabled = false;
+      } else {
+        if (this.headconstraint) this.headconstraint.enabled = true;
       }
 
-      if (this.headconstraint) this.headconstraint.enabled = !vrdevice.isPresenting;
       var scale = 1;
       var hmd = this.hmdstate.hmd;
       if (hmd.position) {
