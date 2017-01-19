@@ -201,14 +201,14 @@ elation.require([
       this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
 
       //this.composer = this.createRenderPath([this.rendermode]);
-      var rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+      this.rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
           minFilter: THREE.LinearFilter,
           magFilter: THREE.LinearFilter,
           format: THREE.RGBAFormat,
           stencilBuffer: true
         });
-      this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], rendertarget);
-      //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], rendertarget);
+      this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
+      //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
       this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
@@ -295,9 +295,16 @@ elation.require([
 
       this.glcontext = this.rendersystem.renderer.getContext();
 
-      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', function(ev) {
+      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', elation.bind(this, function(ev) {
         console.log('ERROR - context lost!  Can we handle this somehow?');
-      });
+        ev.preventDefault();
+        this.engine.stop();
+      }));
+      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextrestored', elation.bind(this, function(ev) {
+        console.log('context restored');
+        ev.preventDefault();
+        this.engine.start();
+      }));
 
       if (this.picking) {
         this.mousepos = [0, 0, document.body.scrollTop];
@@ -544,8 +551,6 @@ if (vivehack) {
             var eyeL = this.vrdisplay.getEyeParameters('left');
             var eyeR = this.vrdisplay.getEyeParameters('right');
 
-            var fov = eyeL.fieldOfView.leftDegrees + eyeL.fieldOfView.rightDegrees;
-            this.camera.fov = fov;
             this.aspectscale = 1;
             this.getsize();
             this.setrendersize(this.size[0], this.size[1]);
@@ -647,9 +652,12 @@ if (vivehack) {
         */
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
-        if (this.vrdisplay && this.vrdisplay.isPresenting) {
+        if (this.vrdisplay) {
           var player = this.engine.client.player;
           player.updateHMD(this.vrdisplay);
+        } 
+
+        if (this.vrdisplay && this.vrdisplay.isPresenting) {
           this.vreffect.render(this.scene, this.camera);
         } else {
           this.composer.render(delta);
@@ -1169,6 +1177,35 @@ if (vivehack) {
       var equimap = new CubemapToEquirectangular(renderer, false);
       equimap.setSize(width, height);
       return equimap.convert(cubecam);
+    }
+    this.getPixelAt = function(x, y) {
+      return this.getPixelsAt(x, y, 1, 1);
+    }
+    this.getPixelsAt = function(x, y, w, h) {
+      var renderer = this.rendersystem.renderer;
+      var canvas = renderer.domElement;
+      var renderTarget = this.rendertarget;
+      // Return a promise here because there's discussion about making these pixel-reading functions async in the WebGL spec
+
+      if (this.rendersystem.dirty) {
+        this.render(0);
+      }
+
+      return new Promise(function(resolve, reject) {
+        /*
+        var buffer = new Uint8Array(w * h * 4);
+        renderer.readRenderTargetPixels(renderTarget, x, y, w, h, buffer);
+        resolve(buffer);
+        */
+        var newcanvas = document.createElement('canvas'),
+        ctx = newcanvas.getContext('2d');
+
+        newcanvas.width = w;
+        newcanvas.height = w;
+        ctx.drawImage(canvas, x, y, w, h);
+        var pixels = ctx.getImageData(0,0,w,h);
+        resolve(pixels.data);
+      });
     }
   }, elation.ui.base);
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
