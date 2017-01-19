@@ -586,9 +586,10 @@ elation.require(deps, function() {
         if (n < 10) return '0' + n;
         return n;
       }
+      var prefix = elation.config.get('engine.screenshot.prefix', 'screenshot');
       var date = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
       var time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-      var filename = 'vrcade-' + date + ' ' + time + '.' + extension
+      var filename = 'prefix + -' + date + ' ' + time + '.' + extension
       return filename;
     }
     this.screenshot = function(args) {
