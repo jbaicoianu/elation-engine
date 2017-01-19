@@ -53,7 +53,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
           if (pose.orientation) {
             c.model.quaternion.fromArray(pose.orientation);
-            this.hands[hand].orientation.fromArray(pose.orientation);
+            this.hands[hand].properties.orientation.fromArray(pose.orientation);
           }
         }
       }
