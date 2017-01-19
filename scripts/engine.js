@@ -346,7 +346,7 @@ elation.require(deps, function() {
     this.initControls = function() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
         'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
-        //'share_screenshot': ['keyboard_comma', elation.bind(this, this.shareScreenshot)],
+        'share_screenshot': ['keyboard_ctrl_period', elation.bind(this, this.shareScreenshot)],
         //'share_gif': ['keyboard_period', elation.bind(this, this.shareMP4)],
         'pointerlock': ['pointerlock', elation.bind(this, this.togglePointerLock)],
         'vr_toggle': ['keyboard_ctrl_rightsquarebracket', elation.bind(this, this.toggleVR)],
@@ -488,10 +488,19 @@ elation.require(deps, function() {
     }
     this.createSharePicker = function() {
       this.sharepicker = elation.share.picker({append: document.body});
-      this.sharepicker.addShareTarget(elation.share.targets.imgur({clientid: '96d8f6e2515953a'}));
-      this.sharepicker.addShareTarget(elation.share.targets.dropbox({clientid: 'g5m5xsgqaqmf7jc'}));
-      this.sharepicker.addShareTarget(elation.share.targets.googledrive({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
-      this.sharepicker.addShareTarget(elation.share.targets.youtube({clientid: '374523350201-lev5al121s8u9aaq8spor3spsaugpcmd.apps.googleusercontent.com'}));
+      var share = elation.config.get('share'),
+          targets = share.targets || {};
+      
+      if (targets.imgur) {
+        this.sharepicker.addShareTarget(elation.share.targets.imgur(targets.imgur));
+      }
+      if (targets.dropbox) {
+        this.sharepicker.addShareTarget(elation.share.targets.dropbox(targets.dropbox));
+      }
+      if (targets.google) {
+        this.sharepicker.addShareTarget(elation.share.targets.googledrive(targets.google));
+        this.sharepicker.addShareTarget(elation.share.targets.youtube(targets.google));
+      }
       this.sharepicker.addShareTarget(elation.share.targets.file({}));
     }
     this.shareScreenshot = function(ev) {
@@ -512,15 +521,25 @@ elation.require(deps, function() {
           console.log('finished jpg in ' + data.time.toFixed(2) + 'ms'); 
         }));
 */
-        recorder.capturePNG().then(elation.bind(this, function(data) {
-          var img = data.image.data;
+        //recorder.capturePNG().then(elation.bind(this, function(data) {
+        this.screenshot({format: 'png'}).then(elation.bind(this, function(data) {
+          var imgdata = data.split(',')[1]; //data.image.data;
+
+          var bytestr = atob(imgdata);
+          var img = new Uint8Array(bytestr.length);
+          for (var i = 0; i < bytestr.length; i++) {
+            img[i] = bytestr.charCodeAt(i);
+          }
+          
+
           this.sharepicker.share({
             name: this.getScreenshotFilename('png'), 
             type: 'image/png',
             image: img, 
           });
           var now = new Date().getTime();
-          console.log('finished png in ' + data.time.toFixed(2) + 'ms'); 
+          //console.log('finished png in ' + data.time.toFixed(2) + 'ms'); 
+          console.log('finished png'); 
         }));
       }
     }
