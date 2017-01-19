@@ -16168,6 +16168,7 @@
 		gl.shaderSource( shader, string );
 		gl.compileShader( shader );
 
+/*
 		if ( gl.getShaderParameter( shader, gl.COMPILE_STATUS ) === false ) {
 
 			console.error( 'THREE.WebGLShader: Shader couldn\'t compile.' );
@@ -16179,6 +16180,7 @@
 			console.warn( 'THREE.WebGLShader: gl.getShaderInfoLog()', type === gl.VERTEX_SHADER ? 'vertex' : 'fragment', gl.getShaderInfoLog( shader ), addLineNumbers( string ) );
 
 		}
+*/
 
 		// --enable-privileged-webgl-extension
 		// console.log( type, gl.getExtension( 'WEBGL_debug_shaders' ).getTranslatedShaderSource( shader ) );
@@ -16713,6 +16715,7 @@
 
 		gl.linkProgram( program );
 
+/*
 		var programLog = gl.getProgramInfoLog( program );
 		var vertexLog = gl.getShaderInfoLog( glVertexShader );
 		var fragmentLog = gl.getShaderInfoLog( glFragmentShader );
@@ -16765,6 +16768,7 @@
 			};
 
 		}
+*/
 
 		// clean up
 
