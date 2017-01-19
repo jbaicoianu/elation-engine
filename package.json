@@ -1,12 +1,11 @@
 {
   "name": "elation-engine",
   "description": "WebGL/WebVR engine written in Javascript",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "main": "",
   "author": "James Baicoianu",
   "license": "MIT",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/jbaicoianu/elation-engine"
@@ -23,4 +22,3 @@
     "three.js"
   ]
 }
-
