@@ -3,6 +3,7 @@ var deps = [
   "engine.materials",
   "engine.assets",
   "engine.geometries",
+  "engine.sharing",
   "engine.things.generic",
   "engine.things.menu",
   "engine.systems.admin",
@@ -19,12 +20,7 @@ var deps = [
 if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
-    "share.picker",
-    "share.targets.imgur",
-    "share.targets.dropbox",
-    "share.targets.googledrive",
-    "share.targets.youtube",
-    "share.targets.file",
+    "engine.sharing"
   ]);
 } else if (elation.env.isNode) {
   deps.push("engine.external.three.nodethree");
@@ -214,13 +210,19 @@ elation.require(deps, function() {
           client: this.client
         });
 
+        /* Share Settings */
+        var sharepanel = elation.engine.sharing.config({
+          client: this.client
+        });
+
         var configtabs = elation.ui.tabbedcontent({
           append: this,
           items: {
             controls: { label: 'Controls', content: controlpanel },
             video: { label: 'Video', content: videopanel },
             audio: { label: 'Audio', content: soundpanel },
-            network: { label: 'Network', disabled: true },
+            sharing: { label: 'Sharing', content: sharepanel },
+            //network: { label: 'Network', disabled: true },
           }
         });
     }
@@ -532,11 +534,14 @@ elation.require(deps, function() {
           }
           
 
+          this.player.disable();
           this.sharepicker.share({
             name: this.getScreenshotFilename('png'), 
             type: 'image/png',
             image: img, 
-          });
+          }).then(elation.bind(this, function(upload) {
+            //this.player.enable();
+          }));
           var now = new Date().getTime();
           //console.log('finished png in ' + data.time.toFixed(2) + 'ms'); 
           console.log('finished png'); 
