@@ -53,6 +53,7 @@ elation.require(deps, function() {
       if (elation.env.isBrowser) target = window
       elation.events.add(target, "unload", elation.bind(this, this.stop)); 
       elation.engine.assets.init();
+      elation.events.fire({element: this, type: "engine_init"});
     }
     this.start = function() {
       this.started = this.running = true;
@@ -326,24 +327,25 @@ elation.require(deps, function() {
     this.startEngine = function(engine) {
       this.world = this.engine.systems.world; // shortcut
 
-      var cfg = this.enginecfg;
-      this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), {
-        fullsize: cfg.fullsize,
-        resolution: cfg.resolution,
-        picking: cfg.picking,
-        engine: this.name,
-        showstats: cfg.stats,
-        crosshair: cfg.crosshair 
-      } );
+      try {
+        var cfg = this.enginecfg;
+        this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), {
+          fullsize: cfg.fullsize,
+          resolution: cfg.resolution,
+          picking: cfg.picking,
+          engine: this.name,
+          showstats: cfg.stats,
+          crosshair: cfg.crosshair 
+        } );
 
-      this.initWorld();
-      this.initControls();
+        this.initWorld();
+        this.initControls();
 
-      //this.gameobj = this.engine.systems.world.children.vrcade;
-      //this.gameobj.setview(this.view);
-      //elation.events.add(this.loader, 'ui_loader_finish', elation.bind(this.gameobj, this.gameobj.handleLoaderFinished));
-
-      engine.start();
+        engine.start();
+      } catch (e) {
+        console.error(e);
+        elation.events.fire({element: this, type: 'engine_error', data: e});
+      }
     }
     this.initControls = function() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
@@ -489,29 +491,24 @@ elation.require(deps, function() {
     this.showAbout = function() {
     }
     this.createSharePicker = function() {
-      this.sharepicker = elation.share.picker({append: document.body});
-      var share = elation.config.get('share'),
-          targets = share.targets || {};
-      
-      if (targets.imgur) {
-        this.sharepicker.addShareTarget(elation.share.targets.imgur(targets.imgur));
-      }
-      if (targets.dropbox) {
-        this.sharepicker.addShareTarget(elation.share.targets.dropbox(targets.dropbox));
-      }
-      if (targets.google) {
-        this.sharepicker.addShareTarget(elation.share.targets.googledrive(targets.google));
-        this.sharepicker.addShareTarget(elation.share.targets.youtube(targets.google));
-      }
-      this.sharepicker.addShareTarget(elation.share.targets.file({}));
+    }
+    this.initSharing = function() {
+      this.sharedialog = elation.engine.sharing({append: document.body, client: this});
     }
     this.shareScreenshot = function(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
+        if (!this.sharedialog) {
+          this.sharedialog = elation.engine.sharing({append: document.body, client: this});
+        } else {
+          this.sharedialog.show();
+        }
+        this.sharedialog.share();
+        return;
+/*
         if (!this.sharepicker) {
           this.createSharePicker();
         }
         var recorder = this.view.recorder;
-/*
         recorder.captureJPG().then(elation.bind(this, function(data) {
           var img = data.image.data;
           this.sharepicker.share({
