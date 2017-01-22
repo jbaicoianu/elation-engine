@@ -16,6 +16,7 @@ elation.require([
   "engine.external.three.CubemapToEquirectangular",
 
   "engine.external.threecap.threecap",
+  "engine.external.webvr-polyfill",
 
   //"engine.external.gifjs.gif",
   //"engine.external.ffmpeg.ffmpeg",
@@ -155,6 +156,7 @@ elation.require([
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
+      elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
       this.container.tabIndex = 1;
       if (!this.args.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
@@ -243,34 +245,7 @@ elation.require([
       //this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
 
       this.vrdisplay = false;
-      if (navigator.getVRDisplays) {
-        // WebVR 1.0 spec
-        navigator.getVRDisplays().then(function(n) {
-          for (var i = 0; i < n.length; i++) {  
-            if (n[i] instanceof VRDisplay) {
-              this.vrdisplay = n[i];
-              elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
-              elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
-              elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
-              break;
-            }
-          }
-        }.bind(this));
-        
-      } else if (navigator.getVRDevices) {
-        navigator.getVRDevices().then(function(n) {
-          for (var i = 0; i < n.length; i++) {  
-            if (n[i] instanceof HMDVRDevice) {
-              this.vrdisplay = n[i];
-              console.log('COOL FOUND A VR DEVICE', this.vrdisplay);
-              setTimeout(elation.bind(this, function() {
-                //this.engine.client.toggleVR({value: 1});
-              }), 1000);
-              break;
-            }
-          }
-        }.bind(this));
-      }
+      this.initVRDisplays();
 
       if (this.showstats) {
         // FIXME - not smart!
@@ -329,6 +304,40 @@ elation.require([
         this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
         this.engine.systems.controls.addBindings('view', {'gamepad_0_button_0': 'picking_select'});
         this.engine.systems.controls.activateContext('view');
+      }
+    }
+    this.initVRDisplays = function() {
+      if (ENV_IS_BROWSER && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
+        this.initializedPolyfill = true;
+        InitializeWebVRPolyfill();
+      }
+      if (navigator.getVRDisplays) {
+        // WebVR 1.0 spec
+        navigator.getVRDisplays().then(function(n) {
+          for (var i = 0; i < n.length; i++) {  
+            if (n[i] instanceof VRDisplay) {
+              this.vrdisplay = n[i];
+              elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
+              elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
+              elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
+              break;
+            }
+          }
+        }.bind(this));
+        
+      } else if (navigator.getVRDevices) {
+        navigator.getVRDevices().then(function(n) {
+          for (var i = 0; i < n.length; i++) {  
+            if (n[i] instanceof HMDVRDevice) {
+              this.vrdisplay = n[i];
+              console.log('COOL FOUND A VR DEVICE', this.vrdisplay);
+              setTimeout(elation.bind(this, function() {
+                //this.engine.client.toggleVR({value: 1});
+              }), 1000);
+              break;
+            }
+          }
+        }.bind(this));
       }
     }
     this.destroy = function() {
@@ -543,6 +552,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 if (vivehack) {
   //player.head.reparent(player);
 }
+          this.toggleFullscreen(true);
           this.vrdisplay.requestPresent([{
             source: this.rendersystem.renderer.domElement,
             leftBounds: [0.0, 0.0, 0.5, 1.0],
@@ -1013,7 +1023,7 @@ if (vivehack) {
         this.pickingactive = true;
       }
       this.cancelclick = false;
-      if (!this.fullscreen) {
+      if (!this.isFullscreen()) {
         this.toggleFullscreen(true);
         this.cancelclick = true;
       } else {
