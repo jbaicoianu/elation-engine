@@ -385,7 +385,6 @@ if (!ENV_IS_BROWSER) return;
           this.hasalpha = this.canvasHasAlpha(canvas);
         }
         this._texture.generateMipMaps = true;
-console.log('new tex', this._texture);
 
         return canvas;
       //} else {
