@@ -307,7 +307,7 @@ elation.require([
       }
     }
     this.initVRDisplays = function() {
-      if (ENV_IS_BROWSER && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
+      if (ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
         this.initializedPolyfill = true;
         InitializeWebVRPolyfill();
       }
@@ -881,6 +881,7 @@ if (vivehack) {
       this.rendersystem.renderer.domElement.style.transform = 'scale3d(' + [invscale, invscale, invscale].join(',') + ')';
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
+      this.rendersystem.renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1);
       this.rendersystem.renderer.setSize(scaledwidth, scaledheight);  
       if (this.composer) {
         this.composer.setSize(scaledwidth, scaledheight);  
