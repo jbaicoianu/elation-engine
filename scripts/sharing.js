@@ -1,6 +1,7 @@
-elation.requireCSS("engine.sharing");
-
 elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targets.dropbox", "share.targets.googledrive", "share.targets.youtube", "share.targets.file", "share.targets.facebook"], function() {
+  elation.requireCSS(["engine.sharing"]);
+
+
   elation.component.add('engine.sharing', function() {
     this.init = function() {
       elation.engine.sharing.extendclass.init.call(this);
