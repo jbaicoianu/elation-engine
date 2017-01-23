@@ -6,9 +6,6 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
     this.init = function() {
       elation.engine.sharing.extendclass.init.call(this);
       this.client = this.args.client;
-      this.sharebutton = elation.ui.button({classname: 'janusweb_sharing', label: 'Share'});
-      elation.events.add(this.sharebutton, 'ui_button_click', elation.bind(this, this.showShareDialog));
-      this.client.buttons.add('sharing', this.sharebutton);
     }
     this.showShareDialog = function() {
       if (!this.dialog) {
