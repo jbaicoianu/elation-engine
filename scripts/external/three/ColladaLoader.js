@@ -3702,7 +3702,7 @@ THREE.ColladaLoader = function () {
 
 									if ( image ) {
 
-										var url = baseUrl + image.init_from;
+										var url = (image.init_from.match(/^https?:/i) ? image.init_from : baseUrl + image.init_from);
 
 										var texture;
 										var loader = THREE.Loader.Handlers.get( url );

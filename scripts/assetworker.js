@@ -59,7 +59,7 @@ elation.require([
       var corsproxy = elation.engine.assets.corsproxy || '';
       var baseurl = src.substr( 0, src.lastIndexOf( "/" ) + 1 ) 
       var fullurl = src;
-      if (src.match(/^(https?:)?\/\//) && !src.match(/^(https?:)?\/\/localhost/)) {
+      if (src.match(/^(https?:)?\/\//) && !src.match(/^(https?:)?\/\/localhost/) && fullurl.substr(0,corsproxy.length) != corsproxy) {
         fullurl = corsproxy + fullurl;
       }
       return fullurl;
@@ -216,11 +216,12 @@ elation.require([
               }),
 
           mtl = this.getFullURL(mtl, baseurl); 
-          if (elation.engine.assets.corsproxy) {
+          if (elation.engine.assets.corsproxy && mtl.indexOf(elation.engine.assets.corsproxy) != 0) {
             mtl = elation.engine.assets.corsproxy + mtl;
           }
           var mtlpath = mtl.substr( 0, mtl.lastIndexOf( "/" ) + 1 );
           var mtlfile = mtl.substr(mtl.lastIndexOf( "/" ) + 1);
+
           var mtlLoader = new THREE.MTLLoader( );
           mtlLoader.setPath( mtlpath );
           mtlLoader.setCrossOrigin( 'anonymous' );
@@ -350,7 +351,6 @@ elation.require([
           return -1;
         };
         var fakecharAt = function(num) { 
-console.log(this, num);
           if (this.textContent) return this.textContent.charAt(num);
           return '';
         };
