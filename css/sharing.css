@@ -1,0 +1,37 @@
+.engine_sharing.ui_window .ui_content {
+  padding-top: 0;
+}
+.engine_sharing_link {
+  display: flex;
+}
+.engine_sharing_link .ui_input {
+  flex: 1;
+}
+.engine_sharing_link .ui_input input {
+  width: 100%;
+}
+
+.engine_sharing_screenshot .ui_panel.orientation_horizontal {
+  display: flex;
+}
+.engine_sharing_screenshot .engine_sharing_screenshot_resolution {
+  flex: 1;
+}
+.engine_sharing_screenshot .engine_sharing_screenshot_resolution select {
+  width: 100%;
+}
+.engine_sharing .ui_label,
+.engine_sharing .ui_input .ui_label {
+  display: block;
+  font-size: .7em;
+  font-weight: bold;
+  padding: 0;
+}
+.engine_sharing .ui_label::after {
+  content: '';
+  display: none;
+}
+.engine_sharing .ui_select select,
+.engine_sharing .ui_input input {
+  display: block;
+}
