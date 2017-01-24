@@ -9,8 +9,7 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
     }
     this.showShareDialog = function() {
       if (!this.dialog) {
-        this.dialog = elation.engine.sharing.dialog({append: document.body, client: this.client, anchor: this.sharebutton});
-        elation.events.add(this.dialog, 'ui_window_close', elation.bind(this, function() { this.sharebutton.show(); }));
+        this.dialog = elation.engine.sharing.dialog({append: document.body, client: this.client, anchor: this.args.anchor});
       } else {
         this.dialog.show();
       }
@@ -24,9 +23,13 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
     this.init = function() {
       this.client = this.args.client;
 
+      this.anchor = this.args.anchor;
+
+      var bottom = 100;
+
       this.args.title = 'Sharing Options';
       this.args.right = true;
-      this.args.bottom = 60;
+      this.args.bottom = bottom;
       this.args.minimize = false;
       this.args.maximize = false;
       this.args.resizable = false;
@@ -106,8 +109,8 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
       this.client = this.args.client;
       this.picker = this.args.picker;
 
-      var resolutions = ['(window)', '512 x 256', '1280 x 720', '1920 x 1080', '3840 x ', '8k'];
-      var formats = ['PNG', 'JPEG'];
+      var resolutions = ['(window)', '512x256', '1280x720', '1920x1080', '3840x2160', '7680x4320'];
+      var formats = ['png', 'jpg'];
 
       var panel = elation.ui.panel_horizontal({
         append: this
@@ -116,16 +119,18 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         append: panel,
         label: 'Resolution',
         classname: 'engine_sharing_screenshot_resolution',
-        items: resolutions
+        items: resolutions,
+        selected: resolutions[0]
       });
       this.format = elation.ui.select({
         append: panel,
         label: 'Format',
-        items: formats
+        items: formats,
+        selected: 'png'
       });
       this.button = elation.ui.button({
         append: panel,
-        label: 'Share',
+        label: 'Capture',
         events: {
           click: elation.bind(this, this.share)
         }
@@ -135,8 +140,18 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
     }
     this.share = function() {
       var client = this.client;
-      client.screenshot({format: 'png'}).then(elation.bind(this, function(data) {
-console.log('done');
+      var width = window.innerWidth, 
+          height = window.innerHeight;
+      if (this.resolution.value != '(window)') {
+        var size = this.resolution.value.split('x');
+        width = size[0];
+        height = size[1];
+        client.view.setrendersize(width, height);
+        // Force a render after resizing
+        client.view.render(0);
+      }
+      
+      client.screenshot({width: width, height: height, format: this.format.value}).then(elation.bind(this, function(data) {
         var imgdata = data.split(',')[1]; //data.image.data;
 
         var bytestr = atob(imgdata);
@@ -145,17 +160,22 @@ console.log('done');
           img[i] = bytestr.charCodeAt(i);
         }
 
+        var mimes = {
+          png: 'image/png',
+          jpg: 'image/jpeg'
+        };
         client.player.disable();
         this.picker.share({
-          name: this.getScreenshotFilename('png'), 
-          type: 'image/png',
+          name: this.getScreenshotFilename(this.format.value), 
+          type: mimes[this.format.value],
           image: img, 
         }).then(elation.bind(this, function(upload) {
           //this.player.enable();
         }));
         var now = new Date().getTime();
         //console.log('finished png in ' + data.time.toFixed(2) + 'ms'); 
-        console.log('finished png'); 
+        console.log('finished screenshot'); 
+        client.view.setrendersize(window.innerWidth, window.innerHeight);
       }));
     }
     this.getScreenshotFilename = function(extension) {
@@ -176,6 +196,11 @@ console.log('done');
     this.init = function() {
       elation.engine.sharing.share_screenshot360.extendclass.init.call(this);
       this.client = this.args.client;
+      this.picker = this.args.picker;
+
+      this.xmlns = {
+        'GPano': 'http://ns.google.com/photos/1.0/panorama/'
+      };
 
       var mappings = ['equirectangular', 'cubemap'],
           resolutions = ['512', '1024', '2048', '4096', '8192'],
@@ -184,6 +209,7 @@ console.log('done');
       var panel = elation.ui.panel_horizontal({
         append: this
       });
+
       this.mapping = elation.ui.select({
         append: panel,
         label: 'Type',
@@ -192,7 +218,7 @@ console.log('done');
       this.resolution = elation.ui.select({
         append: panel,
         label: 'Resolution',
-        default: '4096',
+        selected: '4096',
         items: resolutions
       });
       this.format = elation.ui.select({
@@ -200,14 +226,149 @@ console.log('done');
         label: 'Format',
         items: formats
       });
+
       this.button = elation.ui.button({
         append: panel,
-        label: 'Share'
+        label: 'Capture',
+        events: {
+          click: elation.bind(this, this.share)
+        }
       });
 
       this.addclass('engine_sharing_screenshot360');
     }
-    this.share = function(data) {
+    this.share = function() {
+      var client = this.client;
+      var width = this.resolution.value,
+          height = this.resolution.value / 2;
+      client.screenshot({type: 'equirectangular', format: 'jpg'}).then(elation.bind(this, function(data) {
+        var imgdata = data.split(',')[1]; //data.image.data;
+
+        var bytestr = atob(imgdata);
+        var img = new Uint8Array(bytestr.length);
+        var lastbyte = null;
+        var inject = false;
+
+        // merge the panorama exif data inito image binary data
+        // FIXME - could be made more efficient!
+
+        var offset = 0;
+        for (var i = 0; i < bytestr.length; i++) {
+          var byte = img[i+offset] = bytestr.charCodeAt(i);
+          if (lastbyte == 0xff && (byte == 0xc0 || byte == 0xc2 || byte == 0xda)) {
+            console.log('found exif thing', i);
+            if (!inject) {
+              inject = i-1;
+            }
+          }
+          lastbyte = byte;
+        }
+        if (inject) {
+          var xmp = this.getXMPBytes(data);
+          offset = xmp.length;
+          var newimg = new Uint8Array(bytestr.length + xmp.length);
+          newimg.set(img.subarray(0, inject, 0));
+          newimg.set(xmp, inject);
+          newimg.set(img.subarray(inject), inject + offset);
+          img = newimg;
+        }
+
+        client.player.disable();
+        this.picker.share({
+          name: this.getScreenshotFilename('jpg'), 
+          type: 'image/jpg',
+          image: img,
+          //imageb64: data,
+          width: width,
+          height: height,
+        }).then(elation.bind(this, function(upload) {
+          //this.player.enable();
+        }));
+      }));
+    }
+    this.getXMPBytes = function(data) {
+      var xmp = {
+        'GPano:ProjectionType': 'equirectangular',
+      };
+      var xmpStr = this.getXMPString(xmp);
+      var xmpData= this.buildXMPsegments(xmpStr);
+
+      var len = 0;
+      for (var i = 0; i < xmpData.length; i++) {
+        len += xmpData[i].length;
+      }
+      var bytes = new Uint8Array(len);
+      var offset = 0;
+      for (var i = 0; i < xmpData.length; i++) {
+        var d = xmpData[i];
+        for (var j = 0; j < d.length; j++) {
+          bytes[offset++] = d[j];
+        }
+      }
+
+      return bytes;
+    }
+    this.getXMPString = function(props, xmlns) {
+      var xmp = [], k;
+      xmlns = xmlns || this.xmlns;
+      xmp.push('<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.1.0-jc003">');
+      xmp.push('<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">');
+      xmp.push('<rdf:Description rdf:about=""');
+      for (k in xmlns) {
+        xmp.push(' xmlns:', k, '="', xmlns[k], '"');
+      }
+      for (k in props) {
+        // TODO html entities escaping
+        xmp.push(' ', k, '="' + props[k] + '"');
+      }
+      xmp.push(' /></rdf:RDF></x:xmpmeta>');
+      return xmp.join('');
+    }
+
+
+    this.buildXMPsegments = function(standardXMP) {
+      var extendedUid, parts = [];
+      console.log('StandardXMP: ', standardXMP.length);
+
+      var xmpHeader = 'http://ns.adobe.com/xap/1.0/';
+
+      parts.push(new Uint8Array([0xFF, 0xE1]));
+      parts.push(this.makeUint16Buffer([2 + xmpHeader.length + 1 + standardXMP.length]));
+      parts.push(this.stringToUint8Array(xmpHeader), new Uint8Array([0x00]));
+      parts.push(this.stringToUint8Array(standardXMP));
+      console.log('Written standardXMP');
+      return parts;
+    },
+
+    this.makeUint16Buffer = function(arr, littleEndian) {
+      var ab = new ArrayBuffer(arr.length * 2),
+          dv = new DataView(ab);
+      for (var i = 0; i < arr.length; ++i) {
+        dv.setUint16(i * 2, arr[i], littleEndian);
+      }
+      return new Uint8Array(ab);
+    }
+    this.stringToUint8Array = function(str) {
+      var arr = new Uint8Array(str.length);
+      for (var i = 0; i < str.length; i++) {
+        arr[i] = str.charCodeAt(i);
+      }
+      return arr;
+    }
+
+
+    this.getScreenshotFilename = function(extension) {
+      if (!extension) extension = 'jpg';
+      var now = new Date();
+      function pad(n) {
+        if (n < 10) return '0' + n;
+        return n;
+      }
+      var prefix = elation.config.get('engine.screenshot.prefix', 'screenshot');
+      var date = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+      var time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      var filename = prefix + '-equirectangular-' + date + ' ' + time + '.' + extension
+      return filename;
     }
   }, elation.ui.panel);
   elation.component.add('engine.sharing.share_video', function() {
