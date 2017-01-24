@@ -1133,61 +1133,87 @@ if (vivehack) {
       }));
       return promise;
     }
-    this.screenshotCubemap = function(args) {
-      var args = args || {};
-      var width = args.width || 512;
-      var camera = args.camera || this.actualcamera;
-      var raw = args.raw;
-      var renderer = this.rendersystem.renderer;
-      var cubecam = new THREE.CubeCamera(camera.near, camera.far, width);
-      cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
-      this.scene.add(cubecam);
+    this.screenshotCubemap = (function() {
+      var renderTargets = [];
 
-      if (raw) {
-        cubecam.updateCubeMap(renderer, this.scene);
-        return cubecam;
-      } else {
-        var pos = [
-          [width*2, width],
-          [0, width],
-          [width, 0],
-          [width, width*2],
-          [width, width],
-          [width*3, width],
-        ];
-        var materials = [],
-            images = [];
-        for (var i = 0; i < cubecam.children.length; i++) {
-          var renderTarget = new THREE.WebGLRenderTarget(width, width);
+      return function(args) {
+        var args = args || {};
+        var width = args.width || 512;
+        var camera = args.camera || this.actualcamera;
+        var raw = args.raw;
+        var format = args.format || 'jpg';
+        var renderer = this.rendersystem.renderer;
+        var cubecam = new THREE.CubeCamera(camera.near, camera.far, width);
+        cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
+        this.scene.add(cubecam);
+
+        if (raw) {
+          cubecam.updateCubeMap(renderer, this.scene);
+          return cubecam;
+        } else {
+          var pos = [
+            [width*2, width],
+            [0, width],
+            [width, 0],
+            [width, width*2],
+            [width, width],
+            [width*3, width],
+          ];
+          var materials = [],
+              images = [];
           var canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = width;
           var ctx = canvas.getContext('2d');
-          var buffer = new Uint8Array(width * width * 4);
-          renderer.render( this.scene, cubecam.children[i], renderTarget );
-          renderer.readRenderTargetPixels(renderTarget, 0, 0, width, width, buffer);
-
           var imageData = ctx.createImageData(width, width);
-          imageData.data.set(buffer);
+          var buffer = new Uint8Array(width * width * 4);
 
-          ctx.putImageData(imageData, 0, 0);
-          var src = canvas.toDataURL('image/jpeg');
+          for (var i = 0; i < cubecam.children.length; i++) {
+            if (!renderTargets[i]) {
+              renderTargets[i] = new THREE.WebGLRenderTarget(width, width);
+            } else {
+              renderTargets[i].setSize(width, width);
+            }
+            renderer.render( this.scene, cubecam.children[i], renderTargets[i] );
+            renderer.readRenderTargetPixels(renderTargets[i], 0, 0, width, width, buffer);
 
-          var img = document.createElement('img');
-          img.src = src;
-          images.push(img);
+            imageData.data.set(buffer);
+
+            ctx.putImageData(imageData, 0, 0);
+            var src = canvas.toDataURL(this.formatToMime(format));
+
+            var img = document.createElement('img');
+            img.src = src;
+            images.push(img);
+            //renderTargets[i].dispose();
+          }
+          this.scene.remove(cubecam);
+          return images;
         }
-        return images;
       }
-    }
-    this.screenshotEquirectangular = function(args) {
-      var renderer = this.rendersystem.renderer;
-      var width = args.width || 4096;
-      var height = args.height || width / 2;
-      var cubecam = this.screenshotCubemap({width: height, raw: true});
-      var equimap = new CubemapToEquirectangular(renderer, false);
-      equimap.setSize(width, height);
-      return equimap.convert(cubecam);
+    })();
+    this.screenshotEquirectangular = (function() {
+      var converter = false;
+      return function(args) {
+        var width = args.width || 4096;
+        var format = args.format || 'jpg';
+        var height = args.height || width / 2;
+        var cubecam = this.screenshotCubemap({width: height, height: height, format: 'png', raw: true});
+        if (!converter) {
+          var renderer = this.rendersystem.renderer;
+          converter = new CubemapToEquirectangular(renderer, false);
+        }
+        converter.setSize(width, height);
+        return converter.convert(cubecam, this.formatToMime(format));
+      }
+    })();
+    this.formatToMime = function(format) {
+      var formats = {
+        gif: 'image/gif',
+        jpg: 'image/jpeg',
+        png: 'image/png'
+      };
+      return formats[format];
     }
     this.getPixelAt = function(x, y) {
       return this.getPixelsAt(x, y, 1, 1);
