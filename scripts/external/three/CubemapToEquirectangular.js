@@ -137,7 +137,7 @@ CubemapToEquirectangular.prototype.attachCubeCamera = function( camera ) {
 
 }
 
-CubemapToEquirectangular.prototype.convert = function( cubeCamera ) {
+CubemapToEquirectangular.prototype.convert = function( cubeCamera, type ) {
 
 	this.quad.material.uniforms.map.value = cubeCamera.renderTarget.texture;
 	this.renderer.render( this.scene, this.camera, this.output, true );
@@ -149,13 +149,15 @@ CubemapToEquirectangular.prototype.convert = function( cubeCamera ) {
 
 	this.ctx.putImageData( imageData, 0, 0 );
 
+  var type = type || 'image/png';
+
   var promise = new Promise(function(resolve, reject) {
     /*
 		this.canvas.toBlob( function( blob ) {
 			var url = URL.createObjectURL(blob);
-		}, 'image/png' );
+		}, type );
 		*/
-		var base64 = this.canvas.toDataURL('image/png');
+		var base64 = this.canvas.toDataURL(type);
 		resolve(base64);
 	}.bind(this));	
   return promise;
