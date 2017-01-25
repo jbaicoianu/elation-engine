@@ -250,6 +250,7 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         var inject = false;
 
         // merge the panorama exif data inito image binary data
+        // XMP handling courtesy of https://github.com/panrafal/depthy/blob/master/app/scripts/classes/GDepthEncoder.js
         // FIXME - could be made more efficient!
 
         var offset = 0;
