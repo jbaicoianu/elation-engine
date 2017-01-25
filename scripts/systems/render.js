@@ -127,6 +127,7 @@ elation.require([
     this.init = function() {
       elation.html.addclass(this.container, "engine_view");
       this.picking = this.args.picking || false;
+      this.useWebVRPolyfill = elation.utils.any(this.args.useWebVRPolyfill, true);
       this.size = [0, 0];
       this.size_old = [0, 0];
       this.scale = 100;
@@ -307,7 +308,7 @@ elation.require([
       }
     }
     this.initVRDisplays = function() {
-      if (ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
+      if (this.useWebVRPolyfill && ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
         this.initializedPolyfill = true;
         InitializeWebVRPolyfill();
       }
