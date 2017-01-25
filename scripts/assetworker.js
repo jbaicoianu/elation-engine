@@ -420,8 +420,10 @@ elation.require([
       return new Promise(function(resolve, reject) { 
         var json = JSON.parse(data);
         var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
+        var proxypath = elation.engine.assets.corsproxy + path;
+        console.log('gltf pass!', path, proxypath);
 
-        THREE.GLTFLoader.Shaders.removeAll();
+        //THREE.GLTFLoader.Shaders.removeAll();
         var loader = new THREE.GLTFLoader();
         loader.parse(json, elation.bind(this, function(modeldata) {
           if (modeldata.scene) {
@@ -430,7 +432,7 @@ elation.require([
           } else {
             reject();
           }
-        }), path);
+        }), proxypath);
       });
     }
   }, elation.engine.assets.base);
