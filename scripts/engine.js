@@ -265,6 +265,7 @@ elation.require(deps, function() {
         picking: true,
         fullsize: true,
         resolution: null,
+        useWebVRPolyfill: true
       };
       this.setEngineConfig(this.args);
       this.initEngine();
@@ -303,6 +304,7 @@ elation.require(deps, function() {
       if (args.crosshair !== undefined) cfg.crosshair = args.crosshair;
       if (args.picking !== undefined) cfg.picking = args.picking;
       if (args.stats !== undefined) cfg.stats = args.stats;
+      if (args.useWebVRPolyfill !== undefined) cfg.useWebVRPolyfill = args.useWebVRPolyfill;
     }
     // Instantiate the engine
     this.loadEngine = function() {
@@ -335,7 +337,8 @@ elation.require(deps, function() {
           picking: cfg.picking,
           engine: this.name,
           showstats: cfg.stats,
-          crosshair: cfg.crosshair 
+          crosshair: cfg.crosshair ,
+          useWebVRPolyfill: cfg.useWebVRPolyfill 
         } );
 
         this.initWorld();
