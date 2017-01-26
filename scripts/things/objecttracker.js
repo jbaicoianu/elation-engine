@@ -38,13 +38,14 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       var player = this.engine.client.player,
           stage = this.vrdisplay.stageParameters;
       for (var i = 0; i < this.controllers.length; i++) {
-        var c = this.controllers[i];
-        if (c && c.data.pose) {
-          var hand = (i ? 'left' : 'right');
+        var c = this.controllers[i],
+            handname = (i ? 'left' : 'right'),
+            hand = this.hands[handname];
+        if (c && c.data.pose && hand) {
           var pose = c.data.pose;
           if (pose.position) {
             c.model.position.fromArray(pose.position).multiplyScalar(1);
-            this.hands[hand].position.fromArray(pose.position);
+            hand.position.fromArray(pose.position);
           }
           //c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
           //c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
@@ -53,7 +54,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
           if (pose.orientation) {
             c.model.quaternion.fromArray(pose.orientation);
-            this.hands[hand].properties.orientation.fromArray(pose.orientation);
+            hand.properties.orientation.fromArray(pose.orientation);
           }
         }
       }
