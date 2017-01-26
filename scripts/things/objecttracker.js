@@ -6,42 +6,27 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         player: { type: 'object' }
       });
       this.controllers = [];
-      this.hands = false;
+      this.hands = {};
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updatePositions));
       elation.events.add(window, "webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", elation.bind(this, this.updateTrackedObjects));
     }
     this.createChildren = function() {
-/*
-      this.hands = {
-        left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
-        right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
-      };
-*/
       Leap.loop(elation.bind(this, this.handleLeapLoop));
       this.updateTrackedObjects();
-    }
-    this.createHands = function() {
-      this.hands = {
-        left: this.player.shoulders.spawn('leapmotion_hand', 'hand_left', { position: new THREE.Vector3(0, 0, 0) }),
-        right: this.player.shoulders.spawn('leapmotion_hand', 'hand_right', { position: new THREE.Vector3(0, 0, 0) })
-      };
-      this.hands.left.hide();
-      this.hands.right.hide();
     }
     this.updatePositions = function() {
       this.updateTrackedObjects();
       if (!this.vrdisplay) {
         return;
       }
-      if (!this.hands) this.createHands();
 
       var player = this.engine.client.player,
           stage = this.vrdisplay.stageParameters;
       for (var i = 0; i < this.controllers.length; i++) {
         var c = this.controllers[i],
-            handname = (i ? 'left' : 'right'),
-            hand = this.hands[handname];
-        if (c && c.data.pose && hand) {
+            handname = (i ? 'left' : 'right');
+        if (c && c.data.pose) {
+          var hand = this.getHand(handname);
           var pose = c.data.pose;
           if (pose.position) {
             c.model.position.fromArray(pose.position).multiplyScalar(1);
@@ -99,7 +84,13 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     }
     this.hasHands = function() {
       // TODO - this should also work with leap motion
-      return this.controllers.length > 0 || this.hands;
+      return this.controllers.length > 0 || this.hands.left || this.hands.right;
+    }
+    this.getHand = function(hand) {
+      if (!this.hands[hand]) {
+        this.hands[hand] = this.player.shoulders.spawn('leapmotion_hand', 'hand_' + hand, { position: new THREE.Vector3(0, 0, 0) });
+      }
+      return this.hands[hand];
     }
     this.getHands = function() {
       if (this.controllers.length > 0) {
@@ -111,24 +102,20 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           hands.right = this.controllers[1].data.pose;
         }
         return hands;
-      } else if (this.hands) {
-        return {
-          left: this.hands.left,
-          right: this.hands.right,
-        };
+      } else if (this.hands && (this.hands.left || this.hands.right)) {
+        return this.hands;
       }
       return false;
     }
     this.handleLeapLoop = function(frame) {
       var framehands = {};
       
-      if (!this.hands) this.createHands();
       for (var i = 0; i < frame.hands.length; i++) {
         framehands[frame.hands[i].type] = frame.hands[i];
       }
       for (var k in this.hands) {
         var hand = framehands[k];
-        var handobj = this.hands[k];
+        var handobj = this.getHand(k);
         if (hand && handobj) {
           if (hand.valid) {
             handobj.active = true;
