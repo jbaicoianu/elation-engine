@@ -878,6 +878,10 @@ if (vivehack) {
           invscale = 100 / this.scale,
           scaledwidth = width * scale,
           scaledheight = height * scale;
+      if (scaledwidth == 0 || scaledheight == 0) {
+        console.warn('Renderer was told to resize to ' + scaledwidth + 'x' + scaledheight);
+        return;
+      }
       this.rendersystem.renderer.domElement.style.transformOrigin = '0 0';
       this.rendersystem.renderer.domElement.style.transform = 'scale3d(' + [invscale, invscale, invscale].join(',') + ')';
       this.sizevec.set(scaledwidth, scaledheight);
