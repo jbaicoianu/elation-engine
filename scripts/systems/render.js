@@ -553,7 +553,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 if (vivehack) {
   //player.head.reparent(player);
 }
-          this.toggleFullscreen(true);
           this.vrdisplay.requestPresent([{
             source: this.rendersystem.renderer.domElement,
             leftBounds: [0.0, 0.0, 0.5, 1.0],
