@@ -263,7 +263,6 @@ if (!ENV_IS_BROWSER) return;
     load: function() {
       if (this.src) {
         var fullurl = this.getFullURL(this.src);
-        var proxiedurl = this.getProxiedURL(this.src);
         var texture = this._texture = new THREE.Texture();
         texture.image = this.canvas = this.getCanvas();
         texture.image.originalSrc = this.src;
@@ -276,13 +275,9 @@ if (!ENV_IS_BROWSER) return;
               var type = this.contenttype = xhr.getResponseHeader('content-type')
               if (typeof createImageBitmap == 'function' && type != 'image/gif') {
                 var blob = new Blob([xhr.response], {type: type});
-                createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleError));
+                createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleBitmapError));
               } else {
-                var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
-                elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
-                elation.events.add(image, 'error', elation.bind(this, this.handleError));
-                image.crossOrigin = 'anonymous';
-                image.src = proxiedurl;
+                this.loadImageByURL();
               }
 
               this.state = 'processing';
@@ -296,6 +291,15 @@ if (!ENV_IS_BROWSER) return;
           elation.events.fire({element: this, type: 'asset_load_queued'});
         }
       }
+    },
+    loadImageByURL: function() {
+      var proxiedurl = this.getProxiedURL(this.src);
+      var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
+      elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
+      elation.events.add(image, 'error', elation.bind(this, this.handleError));
+      image.crossOrigin = 'anonymous';
+      image.src = proxiedurl;
+      return image;
     },
     getCanvas: function() {
       if (!this.canvas) {
@@ -345,6 +349,10 @@ if (!ENV_IS_BROWSER) return;
       this.size = ev.total;
       //console.log('image progress', progress);
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
+    },
+    handleBitmapError: function(src, ev) {
+      console.log('Error loading image via createImageBitmap, fall back on normal image');
+      this.loadImageByURL();
     },
     handleError: function(ev) {
       console.log('image error!', this, this._texture.image, ev);
