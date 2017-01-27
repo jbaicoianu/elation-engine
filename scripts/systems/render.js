@@ -303,7 +303,7 @@ elation.require([
           })
         });
         this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
-        this.engine.systems.controls.addBindings('view', {'gamepad_0_button_0': 'picking_select'});
+        this.engine.systems.controls.addBindings('view', {'gamepad_any_button_0': 'picking_select'});
         this.engine.systems.controls.activateContext('view');
       }
     }

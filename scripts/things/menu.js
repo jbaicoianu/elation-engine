@@ -6,9 +6,9 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
         labelcfg: { type: 'object', default: {} }
       });
       this.controlstate = this.engine.systems.controls.addContext('menu', {
-        'menu_up': ['keyboard_up,gamepad_0_button_12', elation.bind(this, this.updateControls)],
-        'menu_down': ['keyboard_down,gamepad_0_axis_1,gamepad_0_axis_3,gamepad_0_button_13', elation.bind(this, this.updateControls)],
-        'activate': ['keyboard_enter,gamepad_0_button_0', elation.bind(this, this.updateControls)],
+        'menu_up': ['keyboard_up,gamepad_any_button_12', elation.bind(this, this.updateControls)],
+        'menu_down': ['keyboard_down,gamepad_any_axis_1,gamepad_0_axis_3,gamepad_0_button_13', elation.bind(this, this.updateControls)],
+        'activate': ['keyboard_enter,gamepad_any_button_0', elation.bind(this, this.updateControls)],
       });
       this.selected = false;
       this.menuitems = [];
