@@ -74,7 +74,7 @@
  **/
 elation.requireCSS('engine.systems.controls');
 
-elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent'], function() {
+elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent', 'engine.external.nipplejs'], function() {
   elation.extend("engine.systems.controls", function(args) {
     elation.implement(this, elation.engine.systems.system);
 
@@ -102,6 +102,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       gamepad: {
         sensitivity: 1,
         deadzone: 0.2
+      },
+      touchpad: {
+        emulateGamepad: true
       },
       hmd: {
       }
@@ -139,6 +142,45 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       //elation.events.add(window, "deviceorientation,devicemotion", this);
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
       elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
+
+      if (this.settings.touchpad && this.settings.touchpad.emulateGamepad) {
+        var touchzone = document.createElement('div');
+        touchzone.style.position = 'fixed';
+        touchzone.style.bottom = 0;
+        touchzone.style.left = 0;
+        touchzone.style.zIndex = 100;
+        touchzone.style.width = '120px';
+        touchzone.style.height = '120px';
+        //touchzone.style.background = 'rgba(255,128,128,.3)';
+        document.body.appendChild(touchzone);
+
+        this.virtualjoystick = nipplejs.create({
+          zone: touchzone,
+          mode: 'static',
+          catchDistance: 150,
+          restOpacity: .2,
+          position: {left: '60px', bottom: '60px'},
+        });
+        this.virtualjoystick.on('move end', elation.bind(this, function(ev, nipple) { 
+          var strength = Math.min(1, nipple.force);
+          var x = (nipple.angle ? strength * Math.cos(nipple.angle.radian) : 0),
+              y = (nipple.angle ? strength * -Math.sin(nipple.angle.radian) : 0);
+
+          var bindname_x = this.getBindingName('gamepad', 0, 'axis_' + 0);
+          var bindname_y = this.getBindingName('gamepad', 0, 'axis_' + 1);
+
+          if (this.state[bindname_x] != x) {
+            this.changes.push(bindname_x);
+            this.state[bindname_x] = x;
+            this.state[bindname_x + '_full'] = THREE.Math.mapLinear(x, -1, 1, 0, 1);
+          }
+          if (this.state[bindname_y] != y) {
+            this.changes.push(bindname_y);
+            this.state[bindname_y] = y;
+            this.state[bindname_y + '_full'] = THREE.Math.mapLinear(y, -1, 1, 0, 1);
+          }
+        }));
+      }
 
       if (args) {
         this.addContexts(args);
