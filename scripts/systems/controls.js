@@ -166,18 +166,26 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           var x = (nipple.angle ? strength * Math.cos(nipple.angle.radian) : 0),
               y = (nipple.angle ? strength * -Math.sin(nipple.angle.radian) : 0);
 
-          var bindname_x = this.getBindingName('gamepad', 0, 'axis_' + 0);
-          var bindname_y = this.getBindingName('gamepad', 0, 'axis_' + 1);
+          var bindname_x = this.getBindingName('gamepad', 'virtual', 'axis_' + 0);
+          var bindname_y = this.getBindingName('gamepad', 'virtual', 'axis_' + 1);
+          var bindname_any_x = this.getBindingName('gamepad', 'any', 'axis_' + 0);
+          var bindname_any_y = this.getBindingName('gamepad', 'any', 'axis_' + 1);
 
           if (this.state[bindname_x] != x) {
             this.changes.push(bindname_x);
             this.state[bindname_x] = x;
             this.state[bindname_x + '_full'] = THREE.Math.mapLinear(x, -1, 1, 0, 1);
+            this.changes.push(bindname_any_x);
+            this.state[bindname_any_x] = x;
+            this.state[bindname_any_x + '_full'] = THREE.Math.mapLinear(x, -1, 1, 0, 1);
           }
           if (this.state[bindname_y] != y) {
             this.changes.push(bindname_y);
             this.state[bindname_y] = y;
             this.state[bindname_y + '_full'] = THREE.Math.mapLinear(y, -1, 1, 0, 1);
+            this.changes.push(bindname_any_y);
+            this.state[bindname_any_y] = y;
+            this.state[bindname_any_y + '_full'] = THREE.Math.mapLinear(y, -1, 1, 0, 1);
           }
         }));
       }
@@ -384,6 +392,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
             for (var a = 0; a < gamepad.axes.length; a+=2) {
               var bindname_x = this.getBindingName('gamepad', i, 'axis_' + a);
               var bindname_y = this.getBindingName('gamepad', i, 'axis_' + (a+1));
+              var bindname_any_x = this.getBindingName('gamepad', 'any', 'axis_' + a);
+              var bindname_any_y = this.getBindingName('gamepad', 'any', 'axis_' + (a+1));
               // FIXME - Vive hack
               var axisscale = 1;
               if (this.hmds && this.hmds.length > 0) {
@@ -397,18 +407,27 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
                 this.changes.push(bindname_x);
                 this.state[bindname_x] = values[0];
                 this.state[bindname_x + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
+                this.changes.push(bindname_any_x);
+                this.state[bindname_any_x] = values[0];
+                this.state[bindname_any_x + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
               }
               if (this.state[bindname_y] != values[1]) {
                 this.changes.push(bindname_y);
                 this.state[bindname_y] = values[1];
                 this.state[bindname_y + '_full'] = THREE.Math.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
+                this.changes.push(bindname_any_y);
+                this.state[bindname_any_y] = values[1];
+                this.state[bindname_any_y + '_full'] = THREE.Math.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
               }
             }
             for (var b = 0; b < gamepad.buttons.length; b++) {
               var bindname = this.getBindingName('gamepad', i, 'button_' + b);
+              var bindname_any = this.getBindingName('gamepad', 'any', 'button_' + b);
               if (this.state[bindname] != gamepad.buttons[b].value) {
                 this.changes.push(bindname);
                 this.state[bindname] = gamepad.buttons[b].value;
+                this.changes.push(bindname_any);
+                this.state[bindname_any] = gamepad.buttons[b].value;
               }
             }
           }
