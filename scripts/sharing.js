@@ -44,7 +44,7 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         screenshot360: elation.engine.sharing.share_screenshot360({client: this.client, picker: this.sharepicker}),
         video: elation.engine.sharing.share_video({client: this.client, picker: this.sharepicker}),
       };
-      this.selected = 'screenshot';
+      this.selected = 'link';
 
       this.tabs = elation.ui.tabbedcontent({
         append: this,
@@ -88,6 +88,7 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
       this.client = this.args.client;
       this.janusweb = this.client.janusweb;
 
+/*
       this.link = elation.ui.input({
         append: this,
         label: 'URL',
@@ -97,9 +98,62 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         append: this,
         label: 'Share'
       });
+*/
+      var fb = elation.html.create({tag: 'div', classname: 'fb-share-button'});
+      fb.dataset.href = 'https://web.janusvr.com/sites/' + this.janusweb.currentroom.url; // FIXME - this is definitely not the way to do it
+      fb.dataset.layout = 'button_count';
+      this.container.appendChild(fb);
+
+      var twitter = elation.html.create({tag: 'a', classname: 'twitter-share-button'});
+      twitter.href = "https://twitter.com/intent/tweet";
+      twitter.innerHTML = 'Tweet';
+      //twitter.dataset.size = 'large';
+      this.container.appendChild(twitter);
+
       this.addclass('engine_sharing_link');
+
+      setTimeout(elation.bind(this, function() {
+        this.loadFacebook();
+        this.loadTwitter();
+      }), 10);
     }
     this.share = function(data) {
+    }
+    this.loadFacebook = function() {
+      var clientid = elation.config.get('share.targets.facebook.clientid');
+      window.fbAsyncInit = elation.bind(this, function() {
+        FB.init({
+          appId      : clientid,
+          xfbml      : true,
+          version    : 'v2.8',
+          status     : true
+        });
+      });
+      (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    }
+    this.loadTwitter = function() {
+      window.twttr = (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0],
+          t = window.twttr || {};
+        if (d.getElementById(id)) return t;
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://platform.twitter.com/widgets.js";
+        fjs.parentNode.insertBefore(js, fjs);
+
+        t._e = [];
+        t.ready = function(f) {
+          t._e.push(f);
+        };
+
+        return t;
+      }(document, "script", "twitter-wjs"));
     }
   }, elation.ui.panel_horizontal);
   elation.component.add('engine.sharing.share_screenshot', function() {
