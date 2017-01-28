@@ -515,7 +515,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.toggleFullscreen = function(fullscreen) {
       if (typeof fullscreen == 'undefined') {
-        fullscreen = !this.fullscreen;
+        fullscreen = !this.isFullscreen();
       } else if (typeof fullscreen.data != 'undefined') {
         fullscreen = fullscreen.data;
       }
@@ -1028,14 +1028,17 @@ if (vivehack) {
         this.pickingactive = true;
       }
       this.cancelclick = false;
+/*
       if (!this.isFullscreen()) {
-        this.toggleFullscreen(true);
+        //this.toggleFullscreen(true);
         this.cancelclick = true;
       } else {
+*/
         this.mousepos = [Math.round(ev.touches[0].clientX), Math.round(ev.touches[0].clientY), document.body.scrollTop];
         this.updatePickingObject();
         this.mousedown(ev.touches[0]);
-      }
+//      }
+
     }
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
@@ -1621,10 +1624,14 @@ console.log('dun it', msaafilter);
   elation.extend('engine.systems.render.picking_cpu', function(view, scene) {
     this.view = view;
     this.scene = scene;
-    this.raycaster = new THREE.Raycaster();
+    this.camerapos = new THREE.Vector3(),
+    this.cameradir = new THREE.Vector3();
+    this.raycaster = new THREE.Raycaster(this.camerapos, this.cameradir);
+
     this.keystates = {shiftKey: false, ctrlKey: false, altKey: false, metaKey: false };
     this.lastmousepos = [0, 0, 0];
     this.mousevec = new THREE.Vector2();
+    this.lastdir = new THREE.Vector3();
 
     this.init = function() {
     }
@@ -1645,9 +1652,13 @@ console.log('dun it', msaafilter);
       this.mousevec.x = (x / this.view.size[0]) * 2 - 1;
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
 
+      var vrdisplay = this.view.vrdisplay;
+
+      var camera = (vrdisplay && vrdisplay.isPresenting ? this.view.camera : this.view.actualcamera);
       this.scene.updateMatrixWorld();
-      this.view.actualcamera.updateMatrixWorld();
-      this.raycaster.setFromCamera(this.mousevec, this.view.actualcamera);
+      camera.updateMatrixWorld();
+
+      this.raycaster.setFromCamera(this.mousevec, camera);
 /*
       if (!this.rayviz) {
         this.rayviz = new THREE.ArrowHelper(this.raycaster.ray.direction.clone(), this.raycaster.ray.origin.clone(), 100);
