@@ -1,7 +1,7 @@
 {
   "name": "elation-engine",
   "description": "WebGL/WebVR engine written in Javascript",
-  "version": "0.9.24",
+  "version": "0.9.25",
   "main": "",
   "author": "James Baicoianu",
   "license": "MIT",
