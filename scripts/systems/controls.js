@@ -158,7 +158,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           zone: touchzone,
           mode: 'static',
           catchDistance: 150,
-          restOpacity: .2,
+          restOpacity: .4,
           position: {left: '60px', bottom: '60px'},
         });
         this.virtualjoystick.on('move end', elation.bind(this, function(ev, nipple) { 
