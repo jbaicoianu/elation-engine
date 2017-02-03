@@ -148,7 +148,7 @@ if (!ENV_IS_BROWSER) return;
       var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
       texture.image = img;
       if (onLoad) {
-        setTimeout(onLoad.bind(img), 0);
+        setTimeout(onLoad.bind(img, texture), 0);
       }
       return texture;
     }
@@ -257,6 +257,7 @@ if (!ENV_IS_BROWSER) return;
     reverse3d: false,
     texture: false,
     frames: false,
+    flipY: true,
     imagetype: '',
     hasalpha: null,
 
@@ -268,6 +269,7 @@ if (!ENV_IS_BROWSER) return;
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
+        texture.flipY = this.flipY;
         if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
           elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
             elation.bind(this, function(events) {
@@ -928,7 +930,6 @@ if (!ENV_IS_BROWSER) return;
 
               if (tex) { // && tex.image instanceof HTMLImageElement) {
                 var img = tex.image;
-//console.log('swap textures', texname, tex, material, (tex ? tex.image : false));
                 var src = img.originalSrc || img.src;
                 if (!textures[src]) {
                   //elation.engine.assets.loadJSON([{"assettype": "image", name: src, "src": src}], this.baseurl); 
@@ -940,7 +941,8 @@ if (!ENV_IS_BROWSER) return;
                       assettype: 'image', 
                       name: src, 
                       src: src,
-                      baseurl: this.baseurl
+                      baseurl: this.baseurl,
+                      flipY: tex.flipY
                     });
                   }
                   texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
