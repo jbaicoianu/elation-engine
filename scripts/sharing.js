@@ -475,9 +475,11 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
           this.client.createSharePicker();
           sharepicker = this.client.sharepicker;
         }
+/*
         var foo = sharepicker.showTargetSelector('image/png', sharepanel).then(function(f) {
           console.log('mfing ya', f);
         });
+*/
 
       // Capture Settings
 /*
