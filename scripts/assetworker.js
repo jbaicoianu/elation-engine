@@ -5,7 +5,7 @@ elation.require([
     'engine.assets',
     'engine.external.pako',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader',
+    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader', 'engine.external.three.PLYLoader'
   ], function() {
 
   elation.define('engine.assetworker', {
@@ -51,6 +51,7 @@ elation.require([
         'collada': new elation.engine.assets.loaders.model_collada(),
         'obj': new elation.engine.assets.loaders.model_obj(),
         'fbx': new elation.engine.assets.loaders.model_fbx(),
+        'ply': new elation.engine.assets.loaders.model_ply(),
         'wrl': new elation.engine.assets.loaders.model_wrl(),
         'gltf': new elation.engine.assets.loaders.model_gltf(),
       }
@@ -98,6 +99,7 @@ elation.require([
         [/<COLLADA/im, 'collada'],
         [/^\s*v\s+-?[\d\.]+\s+-?[\d\.]+\s+-?[\d\.]+\s*$/im, 'obj'],
         [/FBXHeader/i, 'fbx'],
+        [/^ply$/im, 'ply'],
         [/^\#VRML/, 'wrl'],
         [/^\s*{/, 'gltf']
       ];
@@ -131,6 +133,7 @@ elation.require([
           var decoder = new TextDecoder('utf-8');
           modeldata = decoder.decode(dataview);
         } else {
+          // FIXME - do we really need to do this?  It should be handled on a per-modeltype basis, at least
           modeldata = this.convertArrayBufferToString(rawdata);
         }
       }    
@@ -171,13 +174,16 @@ elation.require([
       postMessage({message: 'error', id: job.id, data: 'unknown error'});
     },
     convertArrayBufferToString: function(rawdata) {
-      var str = '';
       var converted = '';
+
       var bufview = new Uint8Array(rawdata);
       var l = bufview.length;
+      var str = '';
       for (var i = 0; i < l; i++) {
         str += String.fromCharCode(bufview[i]);
       }
+
+      // convert binary data to string encoding
       try {
         converted = decodeURIComponent(escape(str));
       } catch (e) {
@@ -402,6 +408,13 @@ elation.require([
         var loader = new THREE.VRMLLoader();
         var modeldata = loader.parse(data);
 
+        modeldata.traverse(function(n) {
+          if (n.geometry && n.geometry instanceof THREE.Geometry) {
+            var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+            n.geometry = bufgeo;
+          }
+        });
+
         resolve(modeldata.toJSON());
       });
     }
@@ -423,7 +436,7 @@ elation.require([
         var proxypath = elation.engine.assets.corsproxy + path;
         console.log('gltf pass!', path, proxypath);
 
-        //THREE.GLTFLoader.Shaders.removeAll();
+        THREE.GLTFLoader.Shaders.removeAll();
         var loader = new THREE.GLTFLoader();
         loader.parse(json, elation.bind(this, function(modeldata) {
           if (modeldata.scene) {
@@ -435,6 +448,47 @@ elation.require([
         }), proxypath);
       });
     }
+  }, elation.engine.assets.base);
+  elation.define('engine.assets.loaders.model_ply', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) { 
+        var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
+        var proxypath = elation.engine.assets.corsproxy + path;
+
+        var loader = new THREE.PLYLoader();
+        loader.setPropertyNameMapping({
+          diffuse_red: 'red',
+          diffuse_green: 'green',
+          diffuse_blue: 'blue'
+        });
+
+        var geometry = loader.parse(data);
+        var encoded = false;
+
+        if (!geometry.index || geometry.index.length == 0) {
+          // No face data, render as point cloud
+          geometry.index = null;
+          var points = new THREE.Points(geometry, new THREE.PointsMaterial({
+            color: 0xffffff, 
+            size: 0.02, 
+            sizeAttenuation: true, 
+            vertexColors: (geometry.attributes.color && geometry.attributes.color.length > 0 ? THREE.VertexColors : THREE.NoColors)
+          }));
+          encoded = points.toJSON();
+        } else {
+          // Has face data, render as mesh.  Compute normals if necessary
+          if (!geometry.attributes.normal) {
+            geometry.computeVertexNormals();
+          }
+          var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial());
+          encoded = mesh.toJSON();
+        }
+        resolve(encoded);
+
+        //reject();
+      });
+    },
+
   }, elation.engine.assets.base);
 
 });
