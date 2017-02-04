@@ -900,6 +900,18 @@ if (!ENV_IS_BROWSER) return;
     handleLoadError: function(e) {
       console.log('Error loading model', this, e);
       this.state = 'error';
+      var errorgeo = new THREE.SphereGeometry(0.25);
+      var error = new THREE.Mesh(errorgeo, new THREE.MeshBasicMaterial({color: 0xff0000}));
+        this.fillGroup(this._model, error);
+
+        this.instances.forEach(elation.bind(this, function(n) { 
+          if (!n.userData.loaded) {
+            n.userData.loaded = true;
+            //n.add(scene.clone()); 
+            this.fillGroup(n, error);
+            elation.events.fire({type: 'asset_load', element: n});
+          }
+        }));
       elation.events.fire({type: 'asset_error', element: this});
     },
     handleLoadProgress: function(progress) {
