@@ -782,7 +782,8 @@ elation.component.add("engine.things.generic", function() {
     var obj1 = ev.data.bodies[0].object, obj2 = ev.data.bodies[1].object;
 
     elation.events.fire({type: 'collide', element: this, data: {
-      other: (obj1 == this ? obj2 : obj1)
+      other: (obj1 == this ? obj2 : obj1),
+      collision: ev.data
     } });
   }
   this.loadJSON = function(url, texturepath) {
