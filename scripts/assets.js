@@ -91,6 +91,7 @@ if (!ENV_IS_BROWSER) return;
             var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
               responseType: 'arraybuffer',
               onload: function(ev) { 
+                delete queue[fullurl];
                 var status = ev.target.status;
                 if (status == 200) {
                   resolve(ev);
@@ -98,7 +99,7 @@ if (!ENV_IS_BROWSER) return;
                   reject();
                 }
               },
-              onerror: function() { reject(); },
+              onerror: function() { delete queue[fullurl]; reject(); },
               onprogress: progress,
               headers: {
                 'X-Requested-With': 'Elation Engine asset loader'
