@@ -4,13 +4,17 @@ elation.require([
     'engine.engine',
     'engine.assets',
     'engine.external.pako',
-    'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader', 'engine.external.xmldom',
+    'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader2', 'engine.external.xmldom',
     'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader', 'engine.external.three.PLYLoader'
   ], function() {
 
   elation.define('engine.assetworker', {
     _construct: function() {
       var srcmap = {};
+      // Compatibility for ColladaLoader
+      Image = function(src) { this.src = src; };
+      Image.prototype.toDataURL = function() { return this.src; }
+
       THREE.Cache.enabled = true;
       THREE.ImageLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
 
@@ -274,129 +278,32 @@ elation.require([
 
     parse: function(xml, job) {
       return new Promise(elation.bind(this, function(resolve, reject) {
-        var docRoot = this.parser.parseFromString(xml);
-        var collada = docRoot.getElementsByTagName('COLLADA')[0];
         var data = false;
-
-        // helper functions
-        function getChildrenByTagName(node, tag) {
-          var tags = [];
-          for (var i = 0; i < node.childNodes.length; i++) {
-            var childnode = node.childNodes[i];
-            if (childnode.tagName == tag) {
-              tags.push(childnode);
-              childnode.querySelectorAll = querySelectorAll;
-              childnode.querySelector = querySelector;
-            }
-          };
-          return tags;
-        }
-        function querySelectorAll(selector) {
-          var sels = selector.split(","),
-              run = function(node,selector) {
-                  var sel = selector.split(/[ >]+/), com = selector.match(/[ >]+/g) || [], s, c, ret = [node], nodes, l, i, subs, m, j, check, x, w, ok,
-                      as;
-                  com.unshift(" ");
-                  while(s = sel.shift()) {
-                      c = com.shift();
-                      if( c) c = c.replace(/^ +| +$/g,"");
-                      nodes = ret.slice(0);
-                      ret = [];
-                      l = nodes.length;
-                      subs = s.match(/[#.[]?[a-z_-]+(?:='[^']+'|="[^"]+")?]?/gi);
-                      m = subs.length;
-                      for( i=0; i<l; i++) {
-                          if( subs[0].charAt(0) == "#") ret = [document.getElementById(subs[0].substr(1))];
-                          else {
-                              check = c == ">" ? nodes[i].children : nodes[i].getElementsByTagName("*");
-                              if( !check) continue;
-                              w = check.length;
-                              for( x=0; x<w; x++) {
-                                  ok = true;
-                                  for( j=0; j<m; j++) {
-                                      switch(subs[j].charAt(0)) {
-                                      case ".":
-                                          if( !check[x].className.match(new RegExp("\\b"+subs[j].substr(1)+"\\b"))) ok = false;
-                                          break;
-                                      case "[":
-                                          as = subs[j].substr(1,subs[j].length-2).split("=");
-                                          if( !check[x].getAttribute(as[0])) ok = false;
-                                          else if( as[1]) {
-                                              as[1] = as[1].replace(/^['"]|['"]$/g,"");
-                                              if( check[x].getAttribute(as[0]) != as[1]) ok = false;
-                                          }
-                                          break;
-                                      default:
-                                          if( check[x].tagName.toLowerCase() != subs[j].toLowerCase()) ok = false;
-                                          break;
-                                      }
-                                      if( !ok) break;
-                                  }
-                                  if( ok) ret.push(check[x]);
-                              }
-                          }
-                      }
-                  }
-                  return ret;
-              }, l = sels.length, i, ret = [], tmp, m, j;
-          for( i=0; i<l; i++) {
-              tmp = run(this,sels[i]);
-              m = tmp.length;
-              for( j=0; j<m; j++) {
-                  ret.push(tmp[j]);
-              }
-          }
-          return ret;
-
-        }
-        function querySelector(selector) {
-          return this.querySelectorAll(selector)[0];
-        }
-        var fakeindexOf = function(str) { 
-          if (this.textContent) return this.textContent.indexOf(str);
-          return -1;
-        };
-        var fakecharAt = function(num) { 
-          if (this.textContent) return this.textContent.charAt(num);
-          return '';
-        };
-        var fakesubstr = function(start, end) {
-          if (this.textContent) return this.textContent.substr(start, end);
-          return '';
-        };
-        function fakeQuerySelector(node) {
-          node.querySelectorAll = querySelectorAll;
-          node.querySelector = querySelector;
-          node.indexOf = fakeindexOf;
-          node.charAt = fakecharAt;
-          node.substr = fakesubstr;
-
-          if (node.childNodes && node.childNodes.length > 0) {
-            for (var i = 0; i < node.childNodes.length; i++) {
-              fakeQuerySelector(node.childNodes[i]);
-            }
-          }
-        }
-        fakeQuerySelector(docRoot);
+        var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
         var loader = new THREE.ColladaLoader();
         loader.options.convertUpAxis = true;
         loader.options.upAxis = 'Y';
-        loader.parse(docRoot, function(parsed) {
-          parsed.scene.traverse(function(n) {
-            if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
-                (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
-              n.geometry.computeFaceNormals();
-              n.geometry.computeVertexNormals();
-            }
-            // Convert to BufferGeometry for better loading efficiency
-            if (n.geometry && n.geometry instanceof THREE.Geometry) {
-              var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
-              n.geometry = bufgeo;
-            }
-          });
-          data = parsed;        
-        }, job.data.src);
+        var parsed = loader.parse(xml);
+        var imageids = Object.keys(parsed.library.images);
+        for (var i = 0; i < imageids.length; i++) {
+          var img = parsed.library.images[imageids[i]].build;
+          img.src = this.getProxiedURL(baseurl + img.src);
+        }
+        parsed.scene.traverse(function(n) {
+          if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
+              (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
+            n.geometry.computeFaceNormals();
+            n.geometry.computeVertexNormals();
+          }
+          // Convert to BufferGeometry for better loading efficiency
+          if (n.geometry && n.geometry instanceof THREE.Geometry) {
+            var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+            n.geometry = bufgeo;
+          }
+        });
+        data = parsed;        
 
+        data.scene.rotation.z = 0;
         data.scene.updateMatrix();
         resolve(data.scene.toJSON());
       }));
