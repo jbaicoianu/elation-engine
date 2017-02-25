@@ -278,34 +278,39 @@ elation.require([
 
     parse: function(xml, job) {
       return new Promise(elation.bind(this, function(resolve, reject) {
-        var data = false;
-        var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
-        var loader = new THREE.ColladaLoader();
-        loader.options.convertUpAxis = true;
-        loader.options.upAxis = 'Y';
-        var parsed = loader.parse(xml);
-        var imageids = Object.keys(parsed.library.images);
-        for (var i = 0; i < imageids.length; i++) {
-          var img = parsed.library.images[imageids[i]].build;
-          img.src = this.getProxiedURL(baseurl + img.src);
-        }
-        parsed.scene.traverse(function(n) {
-          if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
-              (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
-            n.geometry.computeFaceNormals();
-            n.geometry.computeVertexNormals();
+        try {
+          var data = false;
+          var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
+          var loader = new THREE.ColladaLoader();
+          loader.options.convertUpAxis = true;
+          loader.options.upAxis = 'Y';
+          var parsed = loader.parse(xml);
+          var imageids = Object.keys(parsed.library.images);
+          for (var i = 0; i < imageids.length; i++) {
+            var img = parsed.library.images[imageids[i]].build;
+            img.src = this.getProxiedURL(baseurl + img.src);
           }
-          // Convert to BufferGeometry for better loading efficiency
-          if (n.geometry && n.geometry instanceof THREE.Geometry) {
-            var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
-            n.geometry = bufgeo;
-          }
-        });
-        data = parsed;        
+          parsed.scene.traverse(function(n) {
+            if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
+                (n.geometry instanceof THREE.Geometry && !n.geometry.faceVertexNormals)) {
+              n.geometry.computeFaceNormals();
+              n.geometry.computeVertexNormals();
+            }
+            // Convert to BufferGeometry for better loading efficiency
+            if (n.geometry && n.geometry instanceof THREE.Geometry) {
+              var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
+              n.geometry = bufgeo;
+            }
+          });
+          data = parsed;        
 
-        data.scene.rotation.z = 0;
-        data.scene.updateMatrix();
-        resolve(data.scene.toJSON());
+          data.scene.rotation.z = 0;
+          data.scene.updateMatrix();
+          resolve(data.scene.toJSON());
+        } catch (e) {
+          console.error(e);
+          reject(e);
+        }
       }));
     },
   }, elation.engine.assets.base);
