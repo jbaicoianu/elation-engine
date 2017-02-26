@@ -59,9 +59,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       //this.engine.systems.controls.activateContext('player');
       this.engine.systems.controls.activateContext('playerhmd');
 
-      if (typeof VRFrameData !== 'undefined') {
-        this.framedata = new VRFrameData();
-      }
+
       this.charging = false;
       this.usegravity = false;
       this.flying = true;
@@ -338,6 +336,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.updateHMD = function(vrdevice) {
       if (vrdevice) {
         var pose = false;
+        if (!this.framedata) {
+          this.framedata = (vrdevice.isPolyfilled ? new WebVRPolyfillFrameData() : new VRFrameData());
+        }
         if (vrdevice.getFrameData && this.framedata) {
           if (vrdevice.getFrameData(this.framedata)) {
             pose = this.framedata.pose;

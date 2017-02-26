@@ -6191,6 +6191,7 @@ WebVRPolyfill.prototype.enablePolyfill = function() {
     // Provide the VRFrameData object.
     window.VRFrameData = VRFrameData;
   }
+  window.WebVRPolyfillFrameData = VRFrameData;
 };
 
 WebVRPolyfill.prototype.enableDeprecatedPolyfill = function() {
