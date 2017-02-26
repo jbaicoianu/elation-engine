@@ -6111,7 +6111,7 @@ function WebVRPolyfill() {
                                  navigator.getVRDisplays :
                                  null;
 
-  if (!this.nativeLegacyWebVRAvailable && !this.nativeWebVRAvailable) {
+  if (!this.nativeLegacyWebVRAvailable) {
     this.enablePolyfill();
     if (WebVRConfig.ENABLE_DEPRECATED_API) {
       this.enableDeprecatedPolyfill();

@@ -310,19 +310,18 @@ elation.require([
     this.initVRDisplays = function() {
       if (this.useWebVRPolyfill && ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
         this.initializedPolyfill = true;
-        InitializeWebVRPolyfill();
+        //InitializeWebVRPolyfill();
       }
       if (navigator.getVRDisplays) {
         // WebVR 1.0 spec
         navigator.getVRDisplays().then(function(n) {
           for (var i = 0; i < n.length; i++) {  
-            if (n[i] instanceof VRDisplay) {
-              this.vrdisplay = n[i];
-              elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
-              elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
-              elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
-              break;
-            }
+            // TODO - if we see multiple VR devices, we should enumerate them and let the user pick the one they want to use
+            this.vrdisplay = n[i];
+            elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
+            elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
+            elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
+            break;
           }
         }.bind(this));
         
@@ -379,7 +378,7 @@ elation.require([
       var pass = false;
       switch (name) {
         case 'default':
-          pass = new THREE.RenderPass(this.scene, this.actualcamera, null, null, 0);
+          pass = new THREE.RenderPass(this.scene, this.actualcamera, null, null, 1);
           pass.clear = false;
           break;
         case 'portals':
