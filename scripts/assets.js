@@ -453,6 +453,7 @@ if (!ENV_IS_BROWSER) return;
 
               frametextures[framenum] = new THREE.Texture(frame.image);
               frametextures[framenum].minFilter = frametextures[framenum].magFilter = THREE.NearestFilter; // FIXME - should this be hardcoded for all gifs?
+              frametextures[framenum].wrapS = frametextures[framenum].wrapT = THREE.RepeatWrapping;
               frametextures[framenum].needsUpdate = true;
             }
           }
