@@ -1,4 +1,6 @@
 if (typeof DOMParser == 'undefined') {
+  (function(global) {
+
 /*
  * DOM Level 2
  * Object DOMException
@@ -6,7 +8,7 @@ if (typeof DOMParser == 'undefined') {
  * @see http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/ecma-script-binding.html
  */
 
-function copy(src,dest){
+var copy = function(src,dest){
 	for(var p in src){
 		dest[p] = src[p];
 	}
@@ -15,7 +17,7 @@ function copy(src,dest){
 ^\w+\.prototype\.([_\w]+)\s*=\s*((?:.*\{\s*?[\r\n][\s\S]*?^})|\S.*?(?=[;\r\n]));?
 ^\w+\.prototype\.([_\w]+)\s*=\s*(\S.*?(?=[;\r\n]));?
  */
-function _extends(Class,Super){
+var _extends = function(Class,Super){
 	var pt = Class.prototype;
 	if(Object.create){
 		var ppt = Object.create(Super.prototype)
@@ -72,7 +74,7 @@ var NAMESPACE_ERR            	= ExceptionCode.NAMESPACE_ERR           	= ((Excep
 var INVALID_ACCESS_ERR       	= ExceptionCode.INVALID_ACCESS_ERR      	= ((ExceptionMessage[15]="Invalid access"),15);
 
 
-function DOMException(code, message) {
+var DOMException = function(code, message) {
 	if(message instanceof Error){
 		var error = message;
 	}else{
@@ -92,7 +94,7 @@ copy(ExceptionCode,DOMException)
  * The NodeList interface provides the abstraction of an ordered collection of nodes, without defining or constraining how this collection is implemented. NodeList objects in the DOM are live.
  * The items in the NodeList are accessible via an integral index, starting from 0.
  */
-function NodeList() {
+var NodeList = function() {
 };
 NodeList.prototype = {
 	/**
@@ -139,7 +141,7 @@ _extends(LiveNodeList,NodeList);
  * NamedNodeMap objects in the DOM are live.
  * used for attributes or DocumentType entities 
  */
-function NamedNodeMap() {
+var NamedNodeMap = function() {
 };
 
 function _findNodeIndex(list,node){
@@ -247,7 +249,7 @@ NamedNodeMap.prototype = {
 /**
  * @see http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html#ID-102161490
  */
-function DOMImplementation(/* Object */ features) {
+var DOMImplementation = function(/* Object */ features) {
 	this._features = {};
 	if (features) {
 		for (var feature in features) {
@@ -302,7 +304,7 @@ DOMImplementation.prototype = {
  * @see http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/core.html#ID-1950641247
  */
 
-function Node() {
+var Node = function() {
 };
 
 Node.prototype = {
@@ -430,7 +432,7 @@ function _visitNode(node,callback){
 
 
 
-function Document(){
+var Document = function(){
 }
 function _onAddAttribute(doc,el,newAttr){
 	doc && doc._inc++;
@@ -703,7 +705,7 @@ Document.prototype = {
 _extends(Document,Node);
 
 
-function Element() {
+var Element = function() {
 	this._nsMap = {};
 };
 Element.prototype = {
@@ -801,7 +803,7 @@ Attr.prototype.nodeType = ATTRIBUTE_NODE;
 _extends(Attr,Node);
 
 
-function CharacterData() {
+var CharacterData = function() {
 };
 CharacterData.prototype = {
 	data : '',
@@ -835,7 +837,7 @@ CharacterData.prototype = {
 	}
 }
 _extends(CharacterData,Node);
-function Text() {
+var Text = function() {
 };
 Text.prototype = {
 	nodeName : "#text",
@@ -854,7 +856,7 @@ Text.prototype = {
 	}
 }
 _extends(Text,CharacterData);
-function Comment() {
+var Comment = function() {
 };
 Comment.prototype = {
 	nodeName : "#comment",
@@ -862,7 +864,7 @@ Comment.prototype = {
 }
 _extends(Comment,CharacterData);
 
-function CDATASection() {
+var CDATASection = function() {
 };
 CDATASection.prototype = {
 	nodeName : "#cdata-section",
@@ -871,7 +873,7 @@ CDATASection.prototype = {
 _extends(CDATASection,CharacterData);
 
 
-function DocumentType() {
+var DocumentType = function() {
 };
 DocumentType.prototype.nodeType = DOCUMENT_TYPE_NODE;
 _extends(DocumentType,Node);
@@ -891,7 +893,7 @@ function EntityReference() {
 EntityReference.prototype.nodeType = ENTITY_REFERENCE_NODE;
 _extends(EntityReference,Node);
 
-function DocumentFragment() {
+var DocumentFragment = function() {
 };
 DocumentFragment.prototype.nodeName =	"#document-fragment";
 DocumentFragment.prototype.nodeType =	DOCUMENT_FRAGMENT_NODE;
@@ -902,7 +904,7 @@ function ProcessingInstruction() {
 }
 ProcessingInstruction.prototype.nodeType = PROCESSING_INSTRUCTION_NODE;
 _extends(ProcessingInstruction,Node);
-function XMLSerializer(){}
+var XMLSerializer = function(){}
 XMLSerializer.prototype.serializeToString = function(node,attributeSorter){
 	return node.toString(attributeSorter);
 }
@@ -1140,7 +1142,7 @@ if(typeof require == 'function'){
 	exports.DOMImplementation = DOMImplementation;
 	exports.XMLSerializer = XMLSerializer;
 }
-function DOMParser(options){
+var DOMParser = function(options){
 	this.options = options ||{locator:{}};
 	
 }
@@ -1213,7 +1215,7 @@ function buildErrorHandler(errorImpl,domBuilder,locator){
  * DefaultHandler2:DefaultHandler,LexicalHandler, DeclHandler, EntityResolver2
  * @link http://www.saxproject.org/apidoc/org/xml/sax/helpers/DefaultHandler.html
  */
-function DOMHandler() {
+var DOMHandler = function() {
     this.cdata = false;
 }
 function position(locator,node){
@@ -1418,7 +1420,7 @@ var S_E = 5;//attr value end and no space(quot end)
 var S_S = 6;//(attr value end || tag end ) && (space offer)
 var S_C = 7;//closed el<el />
 
-function XMLReader(){
+var XMLReader = function(){
 	
 }
 
@@ -1984,4 +1986,22 @@ if(typeof require == 'function'){
 	exports.XMLReader = XMLReader;
 }
 
+    global.DOMImplementation = DOMImplementation;
+    global.DOMHandler = DOMHandler;
+    global.DOMException = DOMException;
+    global.DOMParser = DOMParser;
+    global.XMLReader = XMLReader;
+    global.XMLSerializer = XMLSerializer;
+    global.DocumentFragment = DocumentFragment;
+    global.DocumentType = DocumentType;
+    global.NodeList = NodeList;
+    global.NamedNodeMap = NamedNodeMap;
+    global.Node = Node;
+    global.Document = Document;
+    global.Element = Element;
+    global.CharacterData = CharacterData;
+    global.Text = Text;
+    global.Comment = Comment;
+    global.CDATASection = CDATASection;
+  })(self);
 }
