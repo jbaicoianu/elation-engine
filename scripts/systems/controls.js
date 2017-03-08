@@ -547,8 +547,12 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         if (!domel.requestPointerLock) {
           domel.requestPointerLock = domel.requestPointerLock || domel.mozRequestPointerLock || domel.webkitRequestPointerLock;
         }
-        domel.requestPointerLock();
+        if (domel.requestPointerLock) {
+          domel.requestPointerLock();
+          return true;
+        }
       }
+      return false;
     }
     this.releasePointerLock = function() {
       this.pointerLockActive = false;
@@ -613,9 +617,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.mousedown = function(ev) {
       if (ev.button === 0 && !this.getPointerLockElement()) {
-        this.requestPointerLock();
-        //ev.stopPropagation();
-        ev.preventDefault();
+        if (this.requestPointerLock()) {
+          ev.stopPropagation();
+          ev.preventDefault();
+        }
       }
       var bindid = "mouse_button_" + ev.button;
       if (!this.state[bindid]) {
