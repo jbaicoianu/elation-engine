@@ -1010,38 +1010,42 @@ THREE.ColladaLoader.prototype = {
 
 			var mesh = getElementsByTagName( xml, 'mesh' )[ 0 ];
 
-			for ( var i = 0; i < mesh.childNodes.length; i ++ ) {
+			if (mesh) {
 
-				var child = mesh.childNodes[ i ];
+				for ( var i = 0; i < mesh.childNodes.length; i ++ ) {
 
-				if ( child.nodeType !== 1 ) continue;
+					var child = mesh.childNodes[ i ];
 
-				var id = child.getAttribute( 'id' );
+					if ( child.nodeType !== 1 ) continue;
 
-				switch ( child.nodeName ) {
+					var id = child.getAttribute( 'id' );
 
-					case 'source':
-						data.sources[ id ] = parseGeometrySource( child );
-						break;
+					switch ( child.nodeName ) {
 
-					case 'vertices':
-						// data.sources[ id ] = data.sources[ parseId( getElementsByTagName( child, 'input' )[ 0 ].getAttribute( 'source' ) ) ];
-						data.vertices = parseGeometryVertices( child );
-						break;
+						case 'source':
+							data.sources[ id ] = parseGeometrySource( child );
+							break;
 
-					case 'polygons':
-						console.warn( 'ColladaLoader: Unsupported primitive type: ', child.nodeName );
-						break;
+						case 'vertices':
+							// data.sources[ id ] = data.sources[ parseId( getElementsByTagName( child, 'input' )[ 0 ].getAttribute( 'source' ) ) ];
+							data.vertices = parseGeometryVertices( child );
+							break;
 
-					case 'lines':
-					case 'linestrips':
-					case 'polylist':
-					case 'triangles':
-						data.primitives.push( parseGeometryPrimitive( child ) );
-						break;
+						case 'polygons':
+							console.warn( 'ColladaLoader: Unsupported primitive type: ', child.nodeName );
+							break;
 
-					default:
-						console.log( child );
+						case 'lines':
+						case 'linestrips':
+						case 'polylist':
+						case 'triangles':
+							data.primitives.push( parseGeometryPrimitive( child ) );
+							break;
+
+						default:
+							console.log( child );
+
+					}
 
 				}
 
