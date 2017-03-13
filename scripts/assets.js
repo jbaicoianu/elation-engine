@@ -259,8 +259,10 @@ if (!ENV_IS_BROWSER) return;
     texture: false,
     frames: false,
     flipY: true,
+    invert: false,
     imagetype: '',
     hasalpha: null,
+    rawimage: null,
 
     load: function() {
       if (this.src) {
@@ -329,11 +331,12 @@ if (!ENV_IS_BROWSER) return;
     },
     handleLoad: function(image) {
       //console.log('loaded image', this, image);
+      this.rawimage = image;
       var texture = this._texture;
       texture.image = this.processImage(image);
       texture.needsUpdate = true;
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.anisotropy = 16;
+      texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       this.loaded = true;
 
       this.sendLoadEvents();
@@ -388,14 +391,18 @@ if (!ENV_IS_BROWSER) return;
         canvas.src = this.src;
         canvas.originalSrc = this.src;
 
-        canvas.width = elation.engine.materials.nextHighestPowerOfTwo(image.width);
-        canvas.height = elation.engine.materials.nextHighestPowerOfTwo(image.height);
+        var imagemax = elation.config.get('engine.assets.image.maxsize', Infinity);
+        canvas.width = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.width));
+        canvas.height = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.height));
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
         if (this.hasalpha === null) {
           this.hasalpha = this.canvasHasAlpha(canvas);
         }
         this._texture.generateMipMaps = true;
+        if (this.invert) {
+          this.invertImage(canvas);
+        }
 
         return canvas;
       //} else {
@@ -528,7 +535,16 @@ if (!ENV_IS_BROWSER) return;
       }
       return false;
     },
-    
+    invertImage: function(canvas) {
+      var ctx = canvas.getContext('2d');
+      var pixeldata = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < pixeldata.data.length; i+=4) {
+        pixeldata.data[i] = 255 - pixeldata.data[i];
+        pixeldata.data[i+1] = 255 - pixeldata.data[i+1];
+        pixeldata.data[i+2] = 255 - pixeldata.data[i+2];
+      }
+      ctx.putImageData(pixeldata, 0, 0);
+    }
   }, elation.engine.assets.base);
 
   elation.define('engine.assets.video', {
@@ -721,7 +737,7 @@ if (!ENV_IS_BROWSER) return;
     },
     copyMaterial: function(oldmat) {
       var m = new THREE.MeshPhongMaterial();
-      m.anisotropy = 16;
+      m.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       m.name = oldmat.name;
       m.map = oldmat.map;
       m.normalMap = oldmat.normalMap;
@@ -750,7 +766,7 @@ if (!ENV_IS_BROWSER) return;
       }
       group.traverse(function(n) { 
         if (n.material) {
-          var materials = (n.material instanceof THREE.MeshFaceMaterial ? n.material.materials : [n.material]);
+          var materials = (n.material instanceof THREE.MultiMaterial ? n.material.materials : [n.material]);
           materials.forEach(function(m) {
             if (tex0) {
               //m.transparent = true; 
@@ -956,7 +972,8 @@ if (!ENV_IS_BROWSER) return;
                       name: src, 
                       src: src,
                       baseurl: this.baseurl,
-                      flipY: tex.flipY
+                      flipY: tex.flipY,
+                      invert: (texname == 'specularMap')
                     });
                   }
                   texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
