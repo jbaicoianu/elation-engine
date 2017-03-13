@@ -399,7 +399,7 @@ if (!ENV_IS_BROWSER) return;
         if (this.hasalpha === null) {
           this.hasalpha = this.canvasHasAlpha(canvas);
         }
-        this._texture.generateMipMaps = true;
+        this._texture.generateMipMaps = elation.config.get('engine.assets.image.mipmaps', true);
         if (this.invert) {
           this.invertImage(canvas);
         }
