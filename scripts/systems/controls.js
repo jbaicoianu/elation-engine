@@ -618,7 +618,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.mousedown = function(ev) {
       if (ev.button === 0 && !this.getPointerLockElement()) {
         if (this.requestPointerLock()) {
-          ev.stopPropagation();
+          //ev.stopPropagation();
           ev.preventDefault();
         }
       }
