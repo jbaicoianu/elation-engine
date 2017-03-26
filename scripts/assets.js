@@ -371,7 +371,7 @@ if (!ENV_IS_BROWSER) return;
       
       this._texture.image = canvas;
       this._texture.needsUpdate = true;
-      this._texture.generateMipMaps = false;
+      this._texture.generateMipmaps = false;
       elation.events.fire({type: 'asset_error', element: this._texture});
     },
     getInstance: function(args) {
@@ -399,7 +399,7 @@ if (!ENV_IS_BROWSER) return;
         if (this.hasalpha === null) {
           this.hasalpha = this.canvasHasAlpha(canvas);
         }
-        this._texture.generateMipMaps = elation.config.get('engine.assets.image.mipmaps', true);
+        this._texture.generateMipmaps = elation.config.get('engine.assets.image.mipmaps', true);
         if (this.invert) {
           this.invertImage(canvas);
         }
