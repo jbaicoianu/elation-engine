@@ -146,17 +146,19 @@ elation.require([
           var transferrables = [];
           // Convert BufferGeometry arrays back to Float32Arrays so they can be transferred efficiently
           try {
-            for (var i = 0; i < data.geometries.length; i++) {
-              var geo = data.geometries[i];
-              for (var k in geo.data.attributes) {
-                //var arr = Float32Array.from(geo.data.attributes[k].array);
-                var src = geo.data.attributes[k].array;
-                var arr = new Float32Array(src.length);
-                for (var j = 0; j < src.length; j++) {
-                  arr[j] = src[j];
+            if (data.geometries) {
+              for (var i = 0; i < data.geometries.length; i++) {
+                var geo = data.geometries[i];
+                for (var k in geo.data.attributes) {
+                  //var arr = Float32Array.from(geo.data.attributes[k].array);
+                  var src = geo.data.attributes[k].array;
+                  var arr = new Float32Array(src.length);
+                  for (var j = 0; j < src.length; j++) {
+                    arr[j] = src[j];
+                  }
+                  transferrables.push(arr.buffer);
+                  geo.data.attributes[k].array = arr;
                 }
-                transferrables.push(arr.buffer);
-                geo.data.attributes[k].array = arr;
               }
             }
             postMessage({message: 'finished', id: job.id, data: data}, transferrables);
