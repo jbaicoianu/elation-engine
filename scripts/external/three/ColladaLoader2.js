@@ -1157,6 +1157,7 @@ THREE.ColladaLoader.prototype = {
 
 		var DEFAULT_LINEMATERIAL = new THREE.LineBasicMaterial();
 		var DEFAULT_MESHMATERIAL = new THREE.MeshPhongMaterial();
+		var UNDEFINED_COUNTER = 0;
 
 		function buildGeometry( data ) {
 
@@ -1354,13 +1355,21 @@ THREE.ColladaLoader.prototype = {
 
 					case 'node':
 
+						var id;
+
 						if ( child.hasAttribute( 'id' ) ) {
 
-							data.nodes.push( child.getAttribute( 'id' ) );
-							parseNode( child );
+							id = child.getAttribute( 'id' );
+
+						} else {
+
+							id = 'Undefined-' + UNDEFINED_COUNTER++;
+							child.setAttribute( 'id', id );
 
 						}
 
+						data.nodes.push( id );
+						parseNode( child );
 						break;
 
 					case 'instance_camera':
