@@ -9,6 +9,21 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       this.hands = {};
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updatePositions));
       elation.events.add(window, "webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", elation.bind(this, this.updateTrackedObjects));
+
+      this.controllerModels = {
+        touch_left: 'controller_touch_left',
+        touch_right: 'controller_touch_right',
+        vive_left: 'controller_vive',
+        vive_right: 'controller_vive',
+        daydream: 'controller_daydream'
+      };
+      this.controllerMap = {
+        'touch_left': /^Oculus Touch \(Left\)$/,
+        'touch_right': /^Oculus Touch \(Right\)$/,
+        'vive_left': /HTC Vive/,
+        'vive_right': /HTC Vive/,
+        'daydream': /^Daydream Controller$/,
+      };
     }
     this.createChildren = function() {
       Leap.loop(elation.bind(this, this.handleLeapLoop));
@@ -26,20 +41,22 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         var c = this.controllers[i],
             handname = (i ? 'left' : 'right');
         if (c && c.data.pose) {
-          var hand = this.getHand(handname);
+          //var hand = c.model;
           var pose = c.data.pose;
           if (pose.position) {
             c.model.position.fromArray(pose.position).multiplyScalar(1);
-            hand.position.fromArray(pose.position);
+            //hand.position.fromArray(pose.position);
+          } else {
+            c.model.position.set(.2, -.2, -.2);
+            //c.model.children[0].position.z = .1;
+            var dyn = this.player.neck.objects.dynamics;
+            dyn.localToWorldPos(c.model.position).sub(player.position);
           }
-          //c.model.position.y += player.properties.height * 0.8 - player.properties.fatness;
-          //c.model.position.x *= this.vrdisplay.stageParameters.sizeX;
-          //c.model.position.z *= this.vrdisplay.stageParameters.sizeZ;
 
           //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
           if (pose.orientation) {
             c.model.quaternion.fromArray(pose.orientation);
-            hand.properties.orientation.fromArray(pose.orientation);
+            //hand.properties.orientation.fromArray(pose.orientation);
           }
         }
       }
@@ -56,11 +73,24 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     }
     this.setTrackedController = function(i, controller) {
       this.controllers[i] = {
-        model: (this.controllers[i] ? this.controllers[i].model : this.createPlaceholder()),
+        model: this.getControllerModel(controller),
         data: controller
       };
       this.objects['3d'].add(this.controllers[i].model);
       return this.controllers[i];
+    }
+    this.getControllerModel = function(controller) {
+      //(this.controllers[i] ? this.controllers[i].model : this.createPlaceholder()),
+      for (var k in this.controllerMap) {
+        if (controller.id.match(this.controllerMap[k])) {
+          var assetid = this.controllerModels[k];
+          if (assetid) {
+            var asset = elation.engine.assets.find('model', assetid);
+            return asset;
+          }
+        }
+      }
+      return new THREE.Object3D();
     }
     this.createPlaceholder = function() {
       // TODO - For now, we make a rudimentary Vive controller model.  We should be 
