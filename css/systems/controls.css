@@ -151,3 +151,29 @@
 .controls_mouse_sensitivity {
   width: 50%;
 }
+
+.dark .ui_list.controls_binding_list {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 12em;
+} 
+.dark .ui_list.controls_binding_list>.ui_list_item {
+  padding: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+.controls_binding_list .controls_binding_action {
+  width: 50%;
+  display: inline-block;
+  padding: .2em;
+}
+.controls_binding_list .controls_binding_binding {
+  width: 50%;
+  display: inline-block;
+  background: black;
+  padding: .2em;
+  cursor: pointer;
+}
+.controls_binding_list .controls_binding_binding:hover {
+  background: #222;
+}
