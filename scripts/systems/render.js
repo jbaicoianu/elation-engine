@@ -560,11 +560,11 @@ if (vivehack) {
 
             this.aspectscale = 1;
             this.getsize();
-            this.setrendersize(this.size[0], this.size[1]);
-
-            this.pickingactive = true;
-            this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
-
+            if (this.size[0] > 0 && this.size[1] > 0) {
+              // Force mouse position to middle of screen for gaze tracing
+              this.pickingactive = true;
+              this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
+            }
             elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
@@ -572,7 +572,6 @@ if (vivehack) {
             this.camera.fov = 75;
             this.aspectscale = 1;
             this.getsize();
-            this.setrendersize(this.size[0], this.size[1]);
 //if (vivehack) player.head.reparent(player.neck);
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
@@ -861,7 +860,7 @@ if (vivehack) {
         };
       }
       var domel = this.rendersystem.renderer.domElement;
-      if (s.w != domel.width || s.h != domel.height) {
+      if (domel && (s.w != domel.width || s.h != domel.height) && (s.w > 0 && s.h > 0)) {
         this.size = [s.w, s.h];
         this.setrendersize(this.size[0], this.size[1]);
       }
