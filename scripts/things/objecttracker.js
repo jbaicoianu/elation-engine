@@ -47,7 +47,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
             c.model.position.fromArray(pose.position).multiplyScalar(1);
             //hand.position.fromArray(pose.position);
           } else {
-            c.model.position.set(.2, -.2, -.2);
+            c.model.position.set(.2, -.3, .2);
             //c.model.children[0].position.z = .1;
             var dyn = this.player.neck.objects.dynamics;
             dyn.localToWorldPos(c.model.position).sub(player.position);
@@ -86,7 +86,10 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           var assetid = this.controllerModels[k];
           if (assetid) {
             var asset = elation.engine.assets.find('model', assetid);
-            return asset;
+            var obj = new THREE.Object3D();
+            obj.add(asset);
+            asset.position.set(0,0,-0.1);
+            return obj;
           }
         }
       }
