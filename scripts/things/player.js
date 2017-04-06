@@ -373,7 +373,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       }
 
       var view = this.engine.systems.render.views.main;
+      if (view.size[0] == 0 || view.size[1] == 0) {
+        view.getsize();
+      }
       view.mousepos = [view.size[0] / 2, view.size[1] / 2, 0];
+      view.pickingactive = true;
 
       this.head.objects.dynamics.updateState();
       this.refresh();
