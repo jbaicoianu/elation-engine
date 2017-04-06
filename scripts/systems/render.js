@@ -169,7 +169,7 @@ elation.require([
     this.create = function() {
       this.rendersystem = this.engine.systems.render;
 
-      if (!this.rendersystem.renderer.domElement.parentNode) {
+      if (this.rendersystem.renderer.domElement && !this.rendersystem.renderer.domElement.parentNode) {
         this.container.appendChild(this.rendersystem.renderer.domElement);
       }
       if (this.rendersystem.cssrenderer && !this.rendersystem.cssrenderer.domElement.parentNode) {
