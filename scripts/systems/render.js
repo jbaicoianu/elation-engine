@@ -6,8 +6,6 @@ elation.require([
   "engine.external.three.render.EffectComposer",
   "engine.external.three.render.RenderPass",
   "engine.external.three.render.PortalRenderPass",
-  "engine.external.three.render.OculusRiftEffect",
-  "engine.external.three.render.OculusRenderPass",
   "engine.external.three.render.VREffect",
   "engine.external.three.render.ShaderPass",
   "engine.external.three.render.MaskPass",
