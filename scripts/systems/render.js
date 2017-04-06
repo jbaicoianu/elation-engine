@@ -942,9 +942,9 @@ if (vivehack) {
       this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
     }
     this.mousedown = function(ev) {
-      if (this.pickingactive && this.pickingobject) {
+      if (this.pickingactive && this.picker.pickingobject) {
         this.cancelclick = false;
-        var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
+        var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
           if (fired[i].returnValue === false) { ev.preventDefault(); }
@@ -991,7 +991,7 @@ if (vivehack) {
         elation.events.remove(this.container, 'mousemove,mouseout', this);
         this.pickingactive = false;
         if (this.picker.pickingobject) {
-          var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
+          var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
           this.pickingobject = false;
           for (var i = 0; i < fired.length; i++) {
             if (fired[i].cancelBubble) ev.stopPropagation();
@@ -1000,8 +1000,8 @@ if (vivehack) {
       }
     }
     this.mouseup = function(ev) {
-      if (this.pickingactive && this.pickingobject) {
-        var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
+      if (this.pickingactive && this.picker.pickingobject) {
+        var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble) ev.stopPropagation();
         }
@@ -1009,7 +1009,7 @@ if (vivehack) {
     }
     this.click = function(ev) {
       if (this.pickingactive && this.picker.pickingobject && !this.cancelclick) {
-        var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.pickingobject, [ev.clientX, ev.clientY])});
+        var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])});
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble && ev.stopPropagation) ev.stopPropagation();
         }
