@@ -899,16 +899,24 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       this.create();
     }
     this.create = function() {
-        var mousecontrols = elation.ui.panel({
+        var columns = elation.ui.panel_horizontal({
           append: this,
+          classname: 'controls_columns',
+        });
+        var controltypes = elation.ui.panel_vertical({
+          append: columns,
+          classname: 'controls_types',
+        });
+        var mousecontrols = elation.ui.panel({
+          append: controltypes,
           classname: 'engine_config_section controls_mouse',
         });
         var gamepadcontrols = elation.ui.panel({
-          append: this,
+          append: controltypes,
           classname: 'engine_config_section controls_gamepad',
         });
         var keyboardcontrols = elation.ui.panel({
-          append: this,
+          append: controltypes,
           classname: 'engine_config_section controls_keyboard',
         });
         var label = elation.ui.labeldivider({
@@ -974,7 +982,12 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           ]
         });
 */
-        elation.ui.content({ append: keyboardcontrols, content: '(TODO - build keybinding UI)'});
+        //elation.ui.content({ append: keyboardcontrols, content: '(TODO - build keybinding UI)'});
+
+        var bindingpanel = elation.engine.systems.controls.bindingviewer({  
+          append: columns, 
+          controlsystem: this.controlsystem 
+        });
     }
   }, elation.ui.panel);
 
@@ -1137,6 +1150,67 @@ console.log(rpoint, point, len);
     this.updatebutton = function(button) {
       this.button = button;
       this.refresh();
+    }
+  }, elation.ui.base);
+  elation.component.add('engine.systems.controls.bindingviewer', function() {
+    this.init = function() {
+      this.addclass('controls_bindings');
+      this.controlsystem = this.args.controlsystem;
+      this.tabs = elation.ui.tabs({
+        append: this,
+        classname: 'controls_binding_contexts',
+        items: Object.keys(this.controlsystem.contexts),
+        events: {
+          ui_tabs_change: elation.bind(this, this.updateBindingList)
+        } 
+      });
+      this.bindings = elation.ui.list({
+        append: this,
+        classname: 'controls_binding_list',
+        attrs: {
+          itemcomponent: 'engine.systems.controls.binding'
+        }
+      });
+      this.bindings.setItems([]);
+    }
+    this.updateBindingList = function(ev) {
+      var tab = ev.data;
+      var bindings = this.controlsystem.bindings[ev.data.name];
+      //console.log('set it!', tab.name, bindings);
+      var items = [];
+      var itemmap = {};
+      for (var binding in bindings) {
+        var action = bindings[binding];
+        var item = itemmap[action];
+        if (item) {
+          item.bindings.push(binding);
+        } else {
+          item = itemmap[action] = {
+            action: action,
+            bindings: [binding]
+          };
+          items.push(item);
+        }
+      }
+      
+      this.bindings.clear();
+      this.bindings.setItems(items);
+    }
+  }, elation.ui.base);
+  elation.component.add('engine.systems.controls.binding', function() {
+    this.init = function() {
+      this.bindings = this.args.bindings || [];
+
+      this.actionlabel = elation.ui.label({
+        append: this,
+        classname: 'controls_binding_action',
+        label: this.args.action
+      });
+      this.bindinglabel = elation.ui.label({
+        append: this,
+        classname: 'controls_binding_binding',
+        label: this.bindings.join(' ')
+      });
     }
   }, elation.ui.base);
 });
