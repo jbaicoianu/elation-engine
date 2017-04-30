@@ -156,6 +156,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   height: 12em;
+  border-radius: 0;
 } 
 .dark .ui_list.controls_binding_list>.ui_list_item {
   padding: 0;
@@ -176,4 +177,15 @@
 }
 .controls_binding_list .controls_binding_binding:hover {
   background: #222;
+}
+.controls_binding_footer {
+  display: flex;
+  background: rgba(255,255,255,.2);
+  box-shadow: 0 -5px 5px rgba(0,0,0,.2);
+}
+.controls_binding_footer>h3 {
+  flex-grow: 1;
+}
+.controls_binding_footer>.ui_select {
+  flex-grow: 0;
 }
