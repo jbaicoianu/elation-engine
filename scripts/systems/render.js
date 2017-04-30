@@ -128,7 +128,7 @@ elation.require([
       this.useWebVRPolyfill = elation.utils.any(this.args.useWebVRPolyfill, true);
       this.size = [0, 0];
       this.size_old = [0, 0];
-      this.scale = 100;
+      this.scale = 100 * devicePixelRatio;
       this.showstats = this.args.showstats || false;
       this.fullscreen = false;
       this.renderpasses = {};
