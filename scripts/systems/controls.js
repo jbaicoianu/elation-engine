@@ -270,6 +270,16 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
             continue;
           }
 
+          var firedev = elation.events.fire({
+            type: 'control_change', 
+            element: this, 
+            data: {
+              name: this.changes[i], 
+              value: this.state[this.changes[i]]
+            }
+          });
+
+//console.log('fired!', firedev);
           for (var j = 0; j < this.activecontexts.length; j++) {
             var context = this.activecontexts[j];
             var contextstate = this.contextstates[context] || {};
@@ -727,14 +737,14 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
       var keynamemod = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
           keyname = this.getBindingName("keyboard", ev.keyCode);
-      if (!this.state[keyname]) {
-        this.changes.push(keyname);
-      }
       if (!this.state[keynamemod]) {
         this.changes.push(keynamemod);
       }
-      this.state[keyname] = 1;
+      if (!this.state[keyname]) {
+        this.changes.push(keyname);
+      }
       this.state[keynamemod] = 1;
+      this.state[keyname] = 1;
 
       if (this.capturekeys.indexOf(keyname) != -1 ||
           this.capturekeys.indexOf(keynamemod) != -1) {
@@ -1030,7 +1040,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.update = function(ev) {
       this.gamepad = this.args.gamepad || this.controlsystem.gamepads[this.args.gamepadnum] || false;
-      //console.log('got a conrol update', ev, this.controlstate);
+      //console.log('got a control update', ev, this.controlstate);
       var point_left = {
         x: this.controlstate.axis_0_horizontal,
         y: this.controlstate.axis_0_vertical,
@@ -1171,30 +1181,81 @@ console.log(rpoint, point, len);
           itemcomponent: 'engine.systems.controls.binding'
         }
       });
+      this.footer = elation.ui.panel_horizontal({
+        append: this, 
+        classname: 'controls_binding_footer'
+      });
+      this.footerlabel = elation.ui.labeldivider({
+        append: this.footer,
+        label: '',
+      });
+      this.clearbutton = elation.ui.button({
+        append: this.footer,
+        label: 'Clear',
+        events: {
+          click: elation.bind(this, this.clearBindings)
+        }
+      });
+      this.savedconfigs = elation.ui.select({
+        append: this.footer,
+        label: 'Load',
+        items: ['default', 'thinger', 'whatsit']
+      });
       this.bindings.setItems([]);
+      elation.events.add(this.bindings, 'ui_list_select', elation.bind(this, this.rebind));
     }
     this.updateBindingList = function(ev) {
-      var tab = ev.data;
-      var bindings = this.controlsystem.bindings[ev.data.name];
-      //console.log('set it!', tab.name, bindings);
-      var items = [];
-      var itemmap = {};
+      if (ev && ev.data) {
+        var tab = ev.data;
+        this.context = tab.name;
+      }
+      var bindings = this.controlsystem.bindings[this.context];
+      var actions = this.controlsystem.contexts[this.context];
+      //console.log('set it!', this.context, bindings);
+      var actionmap = {};
       for (var binding in bindings) {
         var action = bindings[binding];
-        var item = itemmap[action];
+        var item = actionmap[action];
         if (item) {
           item.bindings.push(binding);
         } else {
-          item = itemmap[action] = {
+          actionmap[action] = {
             action: action,
             bindings: [binding]
           };
-          items.push(item);
         }
+      }
+      var items = [];
+      for (var action in actions) {
+        var item = {
+          action: action,
+          bindings: (actionmap[action] ? actionmap[action].bindings : []),
+          controlsystem: this.controlsystem
+        };
+        items.push(item);
       }
       
       this.bindings.clear();
       this.bindings.setItems(items);
+    }
+    this.rebind = function(ev) {
+      var bindobj = ev.target;
+      if (!this.binder) {
+        this.binder = elation.engine.systems.controls.bindcapture({append: bindobj});
+      } else {
+        this.binder.reparent(bindobj.container);
+      }
+      this.binder.captureInput().then(elation.bind(this, function(binding) {
+        this.controlsystem.bindings[this.context][binding] = bindobj.value.action;
+        this.updateBindingList();
+      }));
+    }
+    this.clearBindings = function() {
+      var bindings = this.controlsystem.bindings;
+      for (var context in bindings) {
+        bindings[context] = [];
+      }
+      this.updateBindingList();
     }
   }, elation.ui.base);
   elation.component.add('engine.systems.controls.binding', function() {
@@ -1209,8 +1270,98 @@ console.log(rpoint, point, len);
       this.bindinglabel = elation.ui.label({
         append: this,
         classname: 'controls_binding_binding',
-        label: this.bindings.join(' ')
+        label: this.bindings.join(' '),
       });
     }
   }, elation.ui.base);
+  elation.component.add('engine.systems.controls.bindcapture', function() {
+    this.init = function() {
+      this.bindings = this.args.bindings || [];
+      this.controlsystem = this.args.controlsystem;
+      this.active = false;
+      this.defaulttext = this.args.defaulttext || '(Press any key or button)';
+
+      var content = elation.ui.panel_vertical({});
+      this.input = elation.ui.input({
+        append: content,
+        value: this.defaulttext
+      });
+      this.window = elation.ui.window({
+        append: this,
+        resizable: false,
+        content: content
+      });
+
+      elation.events.add(this.input.inputelement, 'keydown', function(ev) { ev.preventDefault(); });
+      elation.events.add(this.input, 'blur', elation.bind(this, this.cancel));
+
+      // FIXME - binding so we can remove events later
+      this.handleControlChange = elation.bind(this, this.handleControlChange);
+      elation.events.add(this.controlsystem, 'control_change', this.handleControlChange);
+
+    }
+    this.captureInput = function() {
+      if (this.active) {
+        this.cancel();
+      }
+      this.activepromise = new Promise(elation.bind(this, function(resolve, reject) {
+        console.log('Begin capture...');
+        this.active = true;
+        this.promisefuncs = [resolve, reject];
+        this.show();
+        this.input.value = this.defaulttext;
+        this.input.focus();
+      }));
+      return this.activepromise;
+    }
+    this.handleControlChange = function(ev) {
+      if (this.active) {
+        console.log('control changed!', ev);
+        var control = ev.data;
+        var isModifier = this.isModifier(control.name);
+        if (control.value == 1 && !isModifier) {
+          // If it's a modifier, ignore the "press" event (value == 1)
+          this.input.value = control.name;
+          this.accept();
+        } else if (control.value == 0 && isModifier && this.input.value == this.defaulttext) {
+          // If it's a modifier and this is an "unpress" event (value == 0), only accept if no previous value was set
+          // This allows binding of shift/alt/ctrl keys by themselves, while also allowing shift_x ctrl_x etc.  
+          this.input.value = control.name;
+          this.accept();
+        }
+      }
+    }
+    this.isModifier = function(keyname) {
+      var parts = keyname.split('_');
+      var modifiers = ['shift', 'alt', 'ctrl'];
+      if (parts[0] == 'keyboard') {
+        if (parts[1] == 'nomod') return true;
+        return parts.length == 2 && parts[1] in modifiers;
+      }
+      return false;
+    }
+    this.cancel = function() {
+      if (this.active) {
+        this.hide();
+        this.active = false;
+        if (this.promisefuncs[1]) {
+          this.promisefuncs[1]();
+        }
+        this.promisefuncs = [];
+        console.log('Binding cancelled!');
+      }
+    }
+    this.accept = function() {
+      if (this.active) {
+        this.hide();
+        this.active = false;
+        console.log('Binding accepted!', this.input.value);
+        if (this.promisefuncs[0]) {
+          this.promisefuncs[0](this.input.value);
+        }
+        this.promisefuncs = [];
+      }
+    }
+  }, elation.ui.base);
+
 });
