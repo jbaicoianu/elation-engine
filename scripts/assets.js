@@ -86,7 +86,7 @@ if (!ENV_IS_BROWSER) return;
       for (var i = 0; i < urls.length; i++) {
         var subpromise = new Promise(function(resolve, reject) {
           var fullurl = urls[i];
-          if (corsproxy && fullurl.indexOf(corsproxy) != 0) fullurl = corsproxy + fullurl;
+          if (corsproxy && fullurl.indexOf(corsproxy) != 0 && fullurl.indexOf('blob:') != 0) fullurl = corsproxy + fullurl;
           if (!queue[fullurl]) {
             var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
               responseType: 'arraybuffer',
@@ -189,6 +189,9 @@ if (!ENV_IS_BROWSER) return;
       return (src[0] == '/' && src[1] != '/');
     },
     isURLLocal: function(src) {
+      if (this.isURLBlob(src)) {
+        return true;
+      }
       if (src.match(/^(https?:)?\/\//i)) {
         return (src.indexOf(self.location.origin) == 0);
       }
@@ -196,6 +199,10 @@ if (!ENV_IS_BROWSER) return;
         (src[0] == '/' && src[1] != '/') ||
         (src[0] != '/')
       );
+    },
+    isURLBlob: function(url) {
+      if (!url) return false;
+      return url.indexOf('blob:') == 0;
     },
     isURLProxied: function(url) {
       if (!url || !elation.engine.assets.corsproxy) return false;
@@ -205,12 +212,14 @@ if (!ENV_IS_BROWSER) return;
       if (!url) url = this.src;
       if (!baseurl) baseurl = this.baseurl;
       var fullurl = url;
-      if (this.isURLRelative(fullurl)) {
-        fullurl = baseurl + fullurl;
-      } else if (this.isURLProxied(fullurl)) {
-        fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
-      } else if (this.isURLAbsolute(fullurl)) {
-        fullurl = self.location.origin + fullurl;
+      if (!this.isURLBlob(fullurl)) {
+        if (this.isURLRelative(fullurl)) {
+          fullurl = baseurl + fullurl;
+        } else if (this.isURLProxied(fullurl)) {
+          fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
+        } else if (this.isURLAbsolute(fullurl)) {
+          fullurl = self.location.origin + fullurl;
+        }
       }
 
       return fullurl;
@@ -309,7 +318,7 @@ if (!ENV_IS_BROWSER) return;
     getCanvas: function() {
       if (!this.canvas) {
         var canvas = document.createElement('canvas');
-        var size = 512,
+        var size = 32,
             gridcount = 4,
             gridsize = size / gridcount;
         canvas.width = size;
@@ -515,18 +524,23 @@ if (!ENV_IS_BROWSER) return;
       // that pixel value with readPixels().  If there was any alpha in the original image, this final 
       // pixel should also be transparent.
 
-      var width = Math.min(128, canvas.width); 
-      var height = Math.min(128, canvas.height); 
+      var width = Math.min(64, canvas.width), 
+          height = Math.min(64, canvas.height); 
 
-      var checkcanvas = document.createElement('canvas');
+      if (!this._scratchcanvas) {
+        this._scratchcanvas = document.createElement('canvas');
+        this._scratchcanvasctx = this._scratchcanvas.getContext('2d');
+      }
+
+      var checkcanvas = this._scratchcanvas,
+          ctx = this._scratchcanvasctx;
+
       checkcanvas.width = width;
       checkcanvas.height = height;
 
-      var ctx = canvas.getContext('2d');
-      var ctx2 = checkcanvas.getContext('2d');
-      ctx2.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, width, height);
+      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, width, height);
 
-      var pixeldata = ctx2.getImageData(0, 0, width, height);
+      var pixeldata = ctx.getImageData(0, 0, width, height);
       var hasalpha = false;
       for (var i = 0; i < pixeldata.data.length; i+=4) {
         if (pixeldata.data[i+3] != 255) {
@@ -766,7 +780,7 @@ if (!ENV_IS_BROWSER) return;
       }
       group.traverse(function(n) { 
         if (n.material) {
-          var materials = (n.material instanceof THREE.MultiMaterial ? n.material.materials : [n.material]);
+          var materials = (elation.utils.isString(n.material) ? n.material : [n.material]);
           materials.forEach(function(m) {
             if (tex0) {
               //m.transparent = true; 
@@ -952,7 +966,7 @@ if (!ENV_IS_BROWSER) return;
 
       scene.traverse(elation.bind(this, function(n) { 
         if (n instanceof THREE.Mesh) {
-          var materials = (n.material instanceof THREE.MultiMaterial || n.material instanceof THREE.MeshFaceMaterial ? n.material.materials : [n.material]);
+          var materials = elation.utils.isArray(n.material) ? n.material : [n.material];
 
           materials.forEach(elation.bind(this, function(material) {
             types.forEach(elation.bind(this, function(texname) { 
@@ -973,7 +987,7 @@ if (!ENV_IS_BROWSER) return;
                       src: src,
                       baseurl: this.baseurl,
                       flipY: tex.flipY,
-                      invert: (texname == 'specularMap')
+                      invert: false
                     });
                   }
                   texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
