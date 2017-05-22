@@ -137,7 +137,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
 
     this.initcontrols = function() {
       if (!this.container) this.container = this.engine.systems.render.renderer.domElement;
-      elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll,touchstart,touchmove,touchend,gesturestart,gesturechange,gestureend", this);
+      elation.events.add(this.container, "mousedown,mousemove,mouseup,DOMMouseScroll,touchstart,touchmove,touchend,gesturestart,gesturechange,gestureend", this);
+      elation.events.add(this.container, "touchstart,touchmove,touchend,mousewheel", this, {passive: true});
       elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
       //elation.events.add(window, "deviceorientation,devicemotion", this);
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
@@ -735,16 +736,20 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.keydown = function(ev) {
       // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
-      var keynamemod = this.getBindingName("keyboard", ev.keyCode, this.getKeyboardModifiers(ev));
+      var mods = this.getKeyboardModifiers(ev);
+      var keynamemod = this.getBindingName("keyboard", ev.keyCode, mods);
           keyname = this.getBindingName("keyboard", ev.keyCode);
       if (!this.state[keynamemod]) {
         this.changes.push(keynamemod);
       }
-      if (!this.state[keyname]) {
-        this.changes.push(keyname);
-      }
       this.state[keynamemod] = 1;
-      this.state[keyname] = 1;
+
+      if (mods != 'alt') {
+        if (!this.state[keyname]) {
+          this.changes.push(keyname);
+        }
+        this.state[keyname] = 1;
+      }
 
       if (this.capturekeys.indexOf(keyname) != -1 ||
           this.capturekeys.indexOf(keynamemod) != -1) {
