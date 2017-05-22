@@ -23,20 +23,21 @@ elation.require([
 ], function() {
   elation.requireCSS('engine.systems.admin');
 
-  elation.template.add('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
-  elation.template.add('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" name="{fullname}" value="{value}">{/children}');
-  elation.template.add('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.name} ({type})</span>');
-  elation.template.add('engine.systems.admin.inspector.function', '<span class="engine_thing_function{?function.own} engine_thing_function_own{/function.own}" title="this.{function.name} = {function.content}">{function.name}</span>');
-
-  elation.template.add('engine.systems.admin.addthing', 'Add new <select name="type" data-elation-component="ui.select" data-elation-args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
-  elation.template.add('engine.systems.admin.definething', '<input name="thingtype" placeholder="type name"> <textarea name="thingdef">function() {}</textarea> <input type="submit">');
-  elation.template.add('engine.systems.admin.assets.material', '<div data-elation-component="engine.systems.admin.assets.material" data-elation-args.materialname="{name}"><data class="elation-args"></data>{name}</div>');
-  elation.template.add('engine.systems.admin.assets.geometry', '<div data-elation-component="engine.systems.admin.assets.geometry" data-elation-args.geometryname="{name}"><data class="elation-args"></data>{name}</div>');
-
   elation.extend("engine.systems.admin", function(args) {
     elation.implement(this, elation.engine.systems.system);
 
     this.cameraactive = true;
+
+    elation.template.addAsync('engine.systems.admin.scenetree.thing', '<span class="engine_thing">{name}</span> ({type})');
+    elation.template.addAsync('engine.systems.admin.inspector.property', '{?children}<span>{name}</span>{:else}<label for="engine_admin_inspector_properties_{fullname}">{name}</label><input id="engine_admin_inspector_properties_{fullname}" name="{fullname}" value="{value}">{/children}');
+    elation.template.addAsync('engine.systems.admin.inspector.object', '<span class="engine_thing_object engine_thing_object_{type}">{object.name} ({type})</span>');
+    elation.template.addAsync('engine.systems.admin.inspector.function', '<span class="engine_thing_function{?function.own} engine_thing_function_own{/function.own}" title="this.{function.name} = {function.content}">{function.name}</span>');
+
+    elation.template.addAsync('engine.systems.admin.addthing', 'Add new <select name="type" data-elation-component="ui.select" data-elation-args.items="{thingtypes}"></select> named <input name="name"> <input type="submit" value="add">');
+    elation.template.addAsync('engine.systems.admin.definething', '<input name="thingtype" placeholder="type name"> <textarea name="thingdef">function() {}</textarea> <input type="submit">');
+    elation.template.addAsync('engine.systems.admin.assets.material', '<div data-elation-component="engine.systems.admin.assets.material" data-elation-args.materialname="{name}"><data class="elation-args"></data>{name}</div>');
+    elation.template.addAsync('engine.systems.admin.assets.geometry', '<div data-elation-component="engine.systems.admin.assets.geometry" data-elation-args.geometryname="{name}"><data class="elation-args"></data>{name}</div>');
+
 
     this.system_attach = function(ev) {
       console.log('INIT: admin');
