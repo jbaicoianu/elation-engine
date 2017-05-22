@@ -81,7 +81,7 @@ elation.require([], function() {
         var size = params.size || new THREE.Vector3(1,1,1),
             offset = params.offset;
 
-        var geo = new THREE.CubeGeometry(size.x, size.y, size.z, 1, 1, 1);
+        var geo = new THREE.BoxBufferGeometry(size.x, size.y, size.z, 1, 1, 1);
         
         if (offset) {
           geo.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
