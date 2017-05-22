@@ -86,12 +86,16 @@ THREE.VREffect = function ( renderer, onError ) {
 		if ( scope.isPresenting ) {
 
 			var eyeParamsL = vrDisplay.getEyeParameters( 'left' );
-			renderer.setPixelRatio( 1 );
+			if (renderer.getPixelRatio() != 1) {
+				renderer.setPixelRatio( 1 );
+			}
 			renderer.setSize( eyeParamsL.renderWidth * 2, eyeParamsL.renderHeight, false );
 
 		} else {
 
-			renderer.setPixelRatio( rendererPixelRatio );
+			if (renderer.getPixelRatio() != rendererPixelRatio) {
+				renderer.setPixelRatio( rendererPixelRatio );
+			}
 			renderer.setSize( width, height, updateStyle );
 
 		}
