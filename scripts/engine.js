@@ -222,7 +222,7 @@ elation.require(deps, function() {
             controls: { label: 'Controls', content: controlpanel },
             video: { label: 'Video', content: videopanel },
             audio: { label: 'Audio', content: soundpanel },
-            sharing: { label: 'Sharing', content: sharepanel },
+            //sharing: { label: 'Sharing', content: sharepanel },
             //network: { label: 'Network', disabled: true },
           }
         });
