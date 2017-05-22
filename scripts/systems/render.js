@@ -153,7 +153,8 @@ elation.require([
       }
       elation.events.add(window, "resize", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
-      elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,mousewheel,dragover,click,touchstart,touchmove,touchend", this);
+      elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,dragover,click", this);
+      elation.events.add(this.container, "mousewheel,touchstart,touchmove,touchend", this, {passive: true});
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
       this.container.tabIndex = 1;
@@ -177,6 +178,8 @@ elation.require([
         elation.html.addclass(this.rendersystem.cssrenderer.domElement, 'engine_systems_render_css3d');
       }
       this.rendersystem.view_add(this.id, this);
+
+      this.getsize();
 
       var cam = new THREE.PerspectiveCamera(75, 4/3, 1e-2, 1e4);
       this.actualcamera = cam;
@@ -608,8 +611,8 @@ if (vivehack) {
               this.actualcamera.aspect != this.camera.aspect) {
           
             this.actualcamera.fov = this.camera.fov;
-            this.actualcamera.near = this.camera.near;
-            this.actualcamera.far = this.camera.far;
+            this.actualcamera.near = this.camera.near || 0.001;
+            this.actualcamera.far = this.camera.far || 10000;
             this.actualcamera.aspect = this.camera.aspect;
 
             this.actualcamera.updateProjectionMatrix();
@@ -881,13 +884,18 @@ if (vivehack) {
       this.rendersystem.renderer.domElement.style.transform = 'scale3d(' + [invscale, invscale, invscale].join(',') + ')';
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
-      this.rendersystem.renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1);
-      this.rendersystem.renderer.setSize(scaledwidth, scaledheight);  
+
+      if (this.vreffect && this.vreffect.isPresenting) {
+        this.vreffect.setSize(scaledwidth, scaledheight);
+      } else {
+        var pixelratio = (window.devicePixelRatio ? window.devicePixelRatio : 1);
+        if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
+          //this.rendersystem.renderer.setPixelRatio(pixelratio);
+        }
+        this.rendersystem.renderer.setSize(scaledwidth, scaledheight);
+      }
       if (this.composer) {
         this.composer.setSize(scaledwidth, scaledheight);  
-      }
-      if (this.vreffect) {
-        this.vreffect.setSize(scaledwidth, scaledheight);  
       }
       if (this.rendersystem.cssrenderer) {
         this.rendersystem.cssrenderer.setSize(width, height);  
