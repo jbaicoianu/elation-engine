@@ -14,11 +14,13 @@ elation.require(['engine.things.generic'], function() {
       return cam;
     }
     this.createChildren = function() {
+/*
       var camhelper = new THREE.CameraHelper(this.objects['3d']);
       var scene = this.objects['3d'];
       while (!(scene instanceof THREE.Scene)) {
         scene = scene.parent;
       }
+*/
       //scene.add(camhelper);
     }
   }, elation.engine.things.generic);
