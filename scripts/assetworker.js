@@ -4,6 +4,7 @@ elation.require([
     'engine.engine',
     'engine.assets',
     'engine.external.pako',
+    'engine.external.zlib.inflate',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader2', 'engine.external.xmldom',
     'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader', 'engine.external.three.PLYLoader'
   ], function() {
@@ -87,34 +88,62 @@ elation.require([
     },
     contentIsGzipped: function(databuf) {
       var c1 = databuf[0], c2 = databuf[1];
-      //console.log('gzip check?', [c1, c2], [0x1f, 0x8b]);
       if (c1 == 0x1f && c2 == 0x8b) {
         return true;
       }
       return false;
     },
     detectContentType: function(content) {
-      var foo = '';
-      for (var i = 0; i < 500; i++) {
-        foo += content[i];
-      }
       //content = foo;
       var tests = [
-        [/<COLLADA/im, 'collada'],
-        [/^\s*v\s+-?[\d\.]+\s+-?[\d\.]+\s+-?[\d\.]+\s*$/im, 'obj'],
-        [/FBXHeader/i, 'fbx'],
-        [/^ply$/im, 'ply'],
-        [/^\#VRML/, 'wrl'],
-        [/^\s*{/, 'gltf']
+        ['collada', '<COLLADA'],
+        ['fbx', 'FBXHeader'],
+        ['obj', '\nv '],
+        ['ply', 'ply'],
+        ['wrl', '#VRML'],
+        ['gltf', '"bufferView"']
       ];
 
       var type = false;
-      tests.forEach(function(t) {
-        if (content.match(t[0])) {
-          type = t[1];
+      var headerLengthLimit = 256;
+      var data = new Uint8Array(content);
+      var maxlength = Math.min(data.length, headerLengthLimit);
+
+      // To detect file type, we start at the beginning and scan through char by char.  If we find a char that matches the first char
+      // of one of our tests, then we start looking ahead to see if the rest of the line matches.  We return true on the first match
+
+      var uppercache = {},
+          lowercache = {};
+      for (var i = 0; i < tests.length; i++) {
+        var test = tests[i];
+        uppercache[test[0]] = test[1].toUpperCase();
+        lowercache[test[0]] = test[1].toLowerCase();
+      }
+
+      for (var i = 0; i < maxlength; i++) { 
+        var cbyte = data[i];
+        for (var k = 0; k < tests.length; k++) {
+          var t = tests[k];
+          var upper = uppercache[t[0]],
+              lower = lowercache[t[0]];
+          var len = maxlength - upper.length;
+
+          if (cbyte == upper.charCodeAt(0) || 
+              cbyte == lower.charCodeAt(0)) {
+            var match = true;
+            for (var j = 1; j < upper.length && match; j++) {
+              var chr = data[i + j],
+                  u = upper.charCodeAt(j),
+                  l = lower.charCodeAt(j);
+              match = match && (u == chr || l == chr);
+            }
+            if (match) {
+              return t[0];
+            }
+          }
         }
-      });
-      return type;
+      };
+      return false;
     },
     parse: function(data, job) {
       var type = this.detectContentType(data);
@@ -130,7 +159,8 @@ elation.require([
           modeldata = false;
 
       if (this.contentIsGzipped(databuf)) {
-        modeldata = window.pako.inflate(databuf, {to: 'string'});
+        var bytes = window.pako.inflate(databuf, {to: 'arraybuffer'});
+        modeldata = bytes.buffer;
       } else {
         var dataview = new DataView(rawdata);
         if (false && typeof TextDecoder !== 'undefined') {
@@ -138,7 +168,8 @@ elation.require([
           modeldata = decoder.decode(dataview);
         } else {
           // FIXME - do we really need to do this?  It should be handled on a per-modeltype basis, at least
-          modeldata = this.convertArrayBufferToString(rawdata);
+          //modeldata = this.convertArrayBufferToString(rawdata);
+          modeldata = rawdata;
         }
       }    
       if (modeldata) {
@@ -182,6 +213,10 @@ elation.require([
     convertArrayBufferToString: function(rawdata) {
       var converted = '';
 
+      if (typeof TextDecoder != 'undefined') {
+        return new TextDecoder().decode(rawdata);
+      }
+
       var bufview = new Uint8Array(rawdata);
       var l = bufview.length;
       var str = '';
@@ -200,7 +235,7 @@ elation.require([
   });
   elation.define('engine.assets.loaders.model_obj', {
     convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
-    parse: function(data, job) {
+    parse: function(bindata, job) {
       return new Promise(elation.bind(this, function(resolve, reject) { 
         var mtl = job.data.mtl || false;
 
@@ -214,6 +249,7 @@ elation.require([
           }
         }
 */
+        var data = this.convertArrayBufferToString(bindata);
         //var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
         var loader = new THREE.OBJLoader();
         var modeldata = false;
@@ -276,9 +312,11 @@ elation.require([
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_collada', {
+    convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
+
     parser: new DOMParser(),
 
-    parse: function(xml, job) {
+    parse: function(bindata, job) {
       return new Promise(elation.bind(this, function(resolve, reject) {
         try {
           var data = false;
@@ -286,6 +324,7 @@ elation.require([
           var loader = new THREE.ColladaLoader();
           loader.options.convertUpAxis = true;
           loader.options.upAxis = 'Y';
+          var xml = this.convertArrayBufferToString(bindata);
           var parsed = loader.parse(xml);
           var imageids = Object.keys(parsed.library.images);
           for (var i = 0; i < imageids.length; i++) {
@@ -317,9 +356,11 @@ elation.require([
     },
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_wrl', {
-    parse: function(data, job) {
-      return new Promise(function(resolve, reject) { 
+    convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
+    parse: function(bindata, job) {
+      return new Promise(elation.bind(this, function(resolve, reject) { 
         var loader = new THREE.VRMLLoader();
+        var data = this.convertArrayBufferToString(bindata);
         var modeldata = loader.parse(data);
 
         modeldata.traverse(function(n) {
@@ -330,7 +371,7 @@ elation.require([
         });
 
         resolve(modeldata.toJSON());
-      });
+      }));
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_fbx', {
@@ -343,8 +384,11 @@ elation.require([
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_gltf', {
-    parse: function(data, job) {
-      return new Promise(function(resolve, reject) { 
+    convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
+
+    parse: function(bindata, job) {
+      return new Promise(elation.bind(this, function(resolve, reject) { 
+        var data = this.convertArrayBufferToString(bindata);
         var json = JSON.parse(data);
         var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
         var proxypath = elation.engine.assets.corsproxy + path;
@@ -359,7 +403,7 @@ elation.require([
             reject();
           }
         }), proxypath);
-      });
+      }));
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.loaders.model_ply', {
@@ -378,7 +422,7 @@ elation.require([
         var geometry = loader.parse(data);
         var encoded = false;
 
-        if (!geometry.index || geometry.index.length == 0) {
+        if (!geometry.index || geometry.index.count == 0) {
           // No face data, render as point cloud
           geometry.index = null;
           var points = new THREE.Points(geometry, new THREE.PointsMaterial({
