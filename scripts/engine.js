@@ -195,37 +195,55 @@ elation.require(deps, function() {
       this.addclass('engine_configuration');
     }
     this.create = function() {
-        /* Control Settings */
-        var controlpanel = elation.engine.systems.controls.config({
-          controlsystem: this.engine.systems.controls
-        });
-
-        /* Video Settings */
-        var videopanel = elation.engine.systems.render.config({
-          client: this.client,
-          rendersystem: this.engine.systems.render,
-        });
-
-        /* Sound Settings */
-        var soundpanel = elation.engine.systems.sound.config({
-          client: this.client
-        });
-
-        /* Share Settings */
-        var sharepanel = elation.engine.sharing.config({
-          client: this.client
-        });
+        var panels = this.initPanels();
 
         var configtabs = elation.ui.tabbedcontent({
           append: this,
-          items: {
-            controls: { label: 'Controls', content: controlpanel },
-            video: { label: 'Video', content: videopanel },
-            audio: { label: 'Audio', content: soundpanel },
-            //sharing: { label: 'Sharing', content: sharepanel },
-            //network: { label: 'Network', disabled: true },
-          }
+          items: panels
         });
+        this.tabs = configtabs;
+    }
+    this.initPanels = function(panels) {
+      if (!panels) panels = {};
+
+      /* Control Settings */
+      panels['controls'] = {
+        label: 'Controls', 
+        content: elation.engine.systems.controls.config({
+          controlsystem: this.engine.systems.controls
+        })
+      };
+
+      /* Video Settings */
+      panels['video'] = {
+        label: 'Video',
+        content: elation.engine.systems.render.config({
+          client: this.client,
+          rendersystem: this.engine.systems.render,
+        })
+      };
+
+      /* Sound Settings */
+      panels['sound'] = {
+        label: 'Sound',
+        content: elation.engine.systems.sound.config({
+          client: this.client
+        })
+      };
+
+      /* Share Settings */
+      /*
+      panels['sharing'] = {
+        label: 'Sharing',
+        content: elation.engine.sharing.config({
+          client: this.client
+        });
+      };
+      */
+      return panels;
+    }
+    this.addPanel = function(name, component) {
+      this.tabs.add(name, {label: name, content: component});
     }
     this.toggleFullscreen = function() {
       var view = this.view;
