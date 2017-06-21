@@ -578,6 +578,17 @@ if (!ENV_IS_BROWSER) return;
       this._texture = new THREE.VideoTexture(video);
       this._texture.minFilter = THREE.LinearFilter;
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
+
+      if (this.auto_play) {
+        // FIXME - binding for easy event removal later. This should happen at a lower level
+        this.handleAutoplayStart = elation.bind(this, this.handleAutoplayStart);
+
+        // Bind on next tick to avoid time-ou firing prematurely due to load-time lag
+        setTimeout(elation.bind(this, function() {
+          elation.events.add(video, 'playing', this.handleAutoplayStart);
+          this._autoplaytimeout = setTimeout(elation.bind(this, this.handleAutoplayTimeout), 1000);
+        }), 0);
+      }
     },
     handleLoad: function() {
       this.loaded = true;
@@ -597,6 +608,16 @@ if (!ENV_IS_BROWSER) return;
     handleError: function(ev) {
       console.log('video uh oh!', ev);
       this._texture = false;
+    },
+    handleAutoplayStart: function(ev) {
+      if (this._autoplaytimeout) {
+        clearTimeout(this._autoplaytimeout);
+      }
+      elation.events.remove(this._video, 'playing', this.handleAutoplayStart);
+      elation.events.fire({element: this._texture, type: 'autoplaystart'});
+    },
+    handleAutoplayTimeout: function(ev) {
+      elation.events.fire({element: this._texture, type: 'autoplaytimeout'});
     },
     getInstance: function(args) {
       if (!this._texture) {
