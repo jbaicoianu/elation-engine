@@ -6,11 +6,9 @@ var deps = [
   "engine.sharing",
   "engine.things.generic",
   "engine.things.menu",
-  "engine.systems.admin",
   "engine.systems.ai",
   "engine.systems.controls",
   "engine.systems.physics",
-  "engine.systems.render",
   "engine.systems.sound",
   "engine.systems.world",
   "utils.math",
@@ -20,10 +18,12 @@ var deps = [
 if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
-    "engine.sharing"
+    "engine.sharing",
+    "engine.systems.render",
+    "engine.systems.admin",
   ]);
 } else if (elation.env.isNode) {
-  deps.push("engine.external.three.nodethree");
+  deps.push("engine.external.three.three");
 }
 
 elation.require(deps, function() {
