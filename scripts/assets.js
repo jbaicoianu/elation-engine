@@ -571,8 +571,8 @@ if (!ENV_IS_BROWSER) return;
     load: function() {
       var url = this.getProxiedURL(this.src);
       var video = document.createElement('video');
+      video.muted = false;
       video.src = url;
-      video.autoplay = this.auto_play;
       video.crossOrigin = 'anonymous';
       this._video = video;
       this._texture = new THREE.VideoTexture(video);
@@ -588,6 +588,16 @@ if (!ENV_IS_BROWSER) return;
           elation.events.add(video, 'playing', this.handleAutoplayStart);
           this._autoplaytimeout = setTimeout(elation.bind(this, this.handleAutoplayTimeout), 1000);
         }), 0);
+        var promise = video.play();
+        if (promise) {
+          promise.then(elation.bind(this, function() {
+            this.handleAutoplayStart();
+          })).catch(elation.bind(this, function(err) {
+            // If autoplay failed, retry with muted video
+            video.muted = true;
+            video.play().catch(elation.bind(this, this.handleAutoplayError));
+          }));
+        }
       }
     },
     handleLoad: function() {
@@ -618,6 +628,9 @@ if (!ENV_IS_BROWSER) return;
     },
     handleAutoplayTimeout: function(ev) {
       elation.events.fire({element: this._texture, type: 'autoplaytimeout'});
+    },
+    handleAutoplayFail: function(ev) {
+      elation.events.fire({element: this._texture, type: 'autoplayfail'});
     },
     getInstance: function(args) {
       if (!this._texture) {
