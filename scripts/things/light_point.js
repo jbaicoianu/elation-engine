@@ -11,7 +11,6 @@ elation.require(['engine.things.light'], function() {
       this.lightobj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
       var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
       //this.lightobj.add(helper);
-      this.lightobj.castShadow = false;
 
       var obj = this.lightobj || new THREE.Object3D();
       if (this.properties.render.mesh) {
