@@ -932,21 +932,21 @@ if (!ENV_IS_BROWSER) return;
         var parser = new THREE.ObjectLoader();
         parser.setCrossOrigin('anonymous');
         var scene = parser.parse(json);
-        
+
         this.removePlaceholders();
         this._model.userData.loaded = true;
         //this._model.add(scene);
         this.fillGroup(this._model, scene);
 
         this.extractTextures(scene);
-        this.assignTextures(scene);
+        //this.assignTextures(scene);
 
         this.instances.forEach(elation.bind(this, function(n) { 
           if (!n.userData.loaded) {
             n.userData.loaded = true;
             //n.add(scene.clone()); 
             this.fillGroup(n, scene);
-            this.assignTextures(n);
+            //this.assignTextures(n);
             elation.events.fire({type: 'asset_load', element: n});
             //elation.events.fire({type: 'asset_load_complete', element: this});
           }
@@ -988,7 +988,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progressdata});
     },
     extractTextures: function(scene) {
-      var types = ['map', 'bumpMap', 'lightMap', 'normalMap', 'specularMap'];
+      var types = ['map', 'bumpMap', 'lightMap', 'normalMap', 'specularMap', 'aoMap'];
       var textures = {};
       var texturepromises = [];
 
