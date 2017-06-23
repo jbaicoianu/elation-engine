@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.three.DDSLoader'], function() {
+elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif'], function() {
 
   THREE.Cache.enabled = true;
   elation.extend('engine.assets', {
