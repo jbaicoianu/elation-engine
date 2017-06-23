@@ -320,6 +320,8 @@ THREE.OBJLoader.prototype = {
 
 			addFace: function ( a, b, c, d, ua, ub, uc, ud, na, nb, nc, nd ) {
 
+				this.object.geometry.hasFaces = true;
+
 				var vLen = this.vertices.length;
 
 				var ia = this.parseVertexIndex( a, vLen );
@@ -391,7 +393,7 @@ THREE.OBJLoader.prototype = {
 
 			addLineGeometry: function ( vertices, uvs ) {
 
-				this.object.geometry.type = 'Line';
+				this.object.geometry.hasLines = true;
 
 				var vLen = this.vertices.length;
 				var uvLen = this.uvs.length;
@@ -577,7 +579,7 @@ THREE.OBJLoader.prototype = {
 					}
 
 				}
-				state.addLineGeometry( lineVertices, lineUVs );
+				//state.addLineGeometry( lineVertices, lineUVs );
 
 			} else if ( ( result = this.regexp.object_pattern.exec( line ) ) !== null ) {
 
@@ -645,7 +647,8 @@ THREE.OBJLoader.prototype = {
 			var object = state.objects[ i ];
 			var geometry = object.geometry;
 			var materials = object.materials;
-			var isLine = ( geometry.type === 'Line' );
+			var isLine = ( geometry.hasLines && !geometry.hasFaces );
+      isLine = false;
 
 			// Skip o/g line declarations that did not follow with any faces
 			if ( geometry.vertices.length === 0 ) continue;
