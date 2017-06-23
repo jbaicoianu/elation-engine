@@ -121,6 +121,41 @@ if (!ENV_IS_BROWSER) return;
       return Promise.all(promises);
     }
   });
+  elation.extend('engine.assetcache', new function() {
+    this.queued = [];
+    this.open = function(name) {
+      this.cachename = name;
+      caches.open(name).then(elation.bind(this, this.setCache));
+    }
+    this.setCache = function(cache) {
+      this.cache = cache;
+
+      // If we queued any cache lookups before the cache opened, resolve them
+      return Promises.all(this.queued);
+    }
+    this.get = function(key) {
+      if (this.cache) {
+        return new Promise(elation.bind(function(resolve, reject) {
+          var req = (key instanceof Request ? key : new Request(key));
+          this.cache.get(req).then(resolve);
+        }));
+      } else {
+        // TODO - queue it!
+        console.log('AssetCache warning: cache not open yet, cant get', key, this.cachename);
+      }
+    }
+    this.set = function(key, value) {
+      if (this.cache) {
+        return new Promise(elation.bind(function(resolve, reject) {
+          var req = (key instanceof Request ? key : new Request(key));
+          this.cache.get(req).then(resolve);
+        }));
+      } else {
+        // TODO - queue it!
+        console.log('AssetCache warning: cache not open yet, cant set', key, value, this.cachename);
+      }
+    }
+  });
 
   elation.define('engine.assets.corsproxyloader', {
     _construct: function(corsproxy, manager, dummy) {
