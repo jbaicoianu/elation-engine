@@ -760,26 +760,23 @@ if (!ENV_IS_BROWSER) return;
           });
         }
 */
-        group.add(source.clone());
+        var newguy = source.clone();
+        group.add(newguy);
+        newguy.updateMatrixWorld(true);
 
-/*
-        group.traverse(elation.bind(this, function(n) { 
-          if (n.material) {
-            var oldmat = n.material,
-                newmat = oldmat.clone();//this.copyMaterial(oldmat);
-
-            //n.material = newmat;
-            if (n.material instanceof THREE.MeshFaceMaterial) {
-              for (var i = 0; i < n.material.materials.length; i++) {
-                var oldmat = n.material.materials[i],
-                    newmat = oldmat.clone();//this.copyMaterial(oldmat);
-                //n.material.materials[i] = newmat;
-                //console.log('facemat', oldmat.name, oldmat.alphaTest, newmat.alphaTest);
-              }
-            }
+        newguy.traverse(function(n) {
+          if (n instanceof THREE.SkinnedMesh) {
+            n.rebindByName(newguy);
           }
-        }));
-*/
+        });
+
+        // FBX (and possibly other formats?) store a skeleton at the top level, even though the object is a THREE.Group
+        // so we try o call the SkinnedMesh class' rebindByName function to mke sure that skeleton is updated as well
+        try {
+          THREE.SkinnedMesh.prototype.rebindByName.call(newguy, newguy);
+        } catch (e) {
+          // Sometimes it fails, but if it fails it's not really important
+        }
       }
       return group;
     },
@@ -1067,6 +1064,31 @@ if (!ENV_IS_BROWSER) return;
           elation.events.fire({element: this, type: 'asset_load_complete'});
         }), 0);
       }
+    },
+    extractAnimations: function(scene) {
+      var animations = [];
+
+      if (!scene) scene = this._model;
+
+      scene.traverse(function(n) {
+        if (n.animations) {
+          console.log('ANIMATIONS:', n);
+          //animations[n.name] = n;
+          animations.push.apply(animations, n.animations);
+        }
+      });
+      return animations;
+    },
+    extractSkeleton: function(scene) {
+      var skeleton = false;
+
+      scene.traverse(function(n) {
+        if (n.skeleton && !skeleton) {
+          console.log('SKELETON:', n.skeleton);
+          skeleton = n.skeleton;
+        } 
+      });
+      return skeleton;
     },
     handleProgress: function(ev) {
       //console.log('model progress!', ev);
