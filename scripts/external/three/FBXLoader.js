@@ -714,6 +714,14 @@ console.log('FBX tree', FBXTree);
 		if ( subNodes.LayerElementUV ) {
 
 			var uvInfo = getUVs( subNodes.LayerElementUV[ 0 ] );
+ 
+      var uv2Info = false; 
+
+      if ( subNodes.LayerElementUV[ 1 ] ) {
+
+        uv2Info = getUVs( subNodes.LayerElementUV[ 1 ] );
+
+      }
 
 		}
 
@@ -836,6 +844,12 @@ console.log('FBX tree', FBXTree);
 
 			}
 
+			if ( uv2Info ) {
+
+				vertex.uv2.fromArray( getData( polygonVertexIndex, polygonIndex, vertexIndex, uv2Info ) );
+
+			}
+
 			if ( colorInfo ) {
 
 				vertex.color.fromArray( getData( polygonVertexIndex, polygonIndex, vertexIndex, colorInfo ) );
@@ -889,6 +903,11 @@ console.log('FBX tree', FBXTree);
 		if ( bufferInfo.uvBuffer.length > 0 ) {
 
 			geo.addAttribute( 'uv', new THREE.Float32BufferAttribute( bufferInfo.uvBuffer, 2 ) );
+
+		}
+		if ( bufferInfo.uv2Buffer.length > 0 ) {
+
+			geo.addAttribute( 'uv2', new THREE.Float32BufferAttribute( bufferInfo.uv2Buffer, 2 ) );
 
 		}
 		if ( subNodes.LayerElementColor ) {
@@ -1606,9 +1625,9 @@ console.log('FBX tree', FBXTree);
 			bones: modelArray
 		};
 
-		//var animations = parseAnimations( FBXTree, connections, sceneGraph );
+		var animations = parseAnimations( FBXTree, connections, sceneGraph );
 
-		//addAnimations( sceneGraph, animations );
+		addAnimations( sceneGraph, animations );
 
 		return sceneGraph;
 
@@ -2145,6 +2164,8 @@ console.log('FBX tree', FBXTree);
 			if ( curveNode.attr === 'R' ) {
 
 				var curves = curveNode.curves;
+        if (!(curves.x && curves.y && curves.z)) return;
+
 				curves.x.values = curves.x.values.map( degreeToRadian );
 				curves.y.values = curves.y.values.map( degreeToRadian );
 				curves.z.values = curves.z.values.map( degreeToRadian );
@@ -3295,6 +3316,12 @@ console.log('FBX tree', FBXTree);
 		this.uv = new THREE.Vector2();
 
 		/**
+		 * Second UV layer coordinates of the vertex.
+		 * @type {THREE.Vector2}
+		 */
+		this.uv2 = new THREE.Vector2();
+
+		/**
 		 * Color of the vertex
 		 * @type {THREE.Vector3}
 		 */
@@ -3323,6 +3350,7 @@ console.log('FBX tree', FBXTree);
 			returnVar.position.copy( this.position );
 			returnVar.normal.copy( this.normal );
 			returnVar.uv.copy( this.uv );
+			returnVar.uv2.copy( this.uv2 );
 			returnVar.skinIndices.copy( this.skinIndices );
 			returnVar.skinWeights.copy( this.skinWeights );
 
@@ -3330,11 +3358,12 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
 
 			this.position.toArray( vertexBuffer, vertexBuffer.length );
 			this.normal.toArray( normalBuffer, normalBuffer.length );
 			this.uv.toArray( uvBuffer, uvBuffer.length );
+			this.uv2.toArray( uv2Buffer, uv2Buffer.length );
 			this.color.toArray( colorBuffer, colorBuffer.length );
 			this.skinIndices.toArray( skinIndexBuffer, skinIndexBuffer.length );
 			this.skinWeights.toArray( skinWeightBuffer, skinWeightBuffer.length );
@@ -3371,13 +3400,13 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
 
 			var vertices = this.vertices;
 
 			for ( var i = 0, l = vertices.length; i < l; ++ i ) {
 
-				vertices[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
+				vertices[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
 
 			}
 
@@ -3430,14 +3459,14 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer ) {
 
 			var triangles = this.triangles;
 			var materialIndex = this.materialIndex;
 
 			for ( var i = 0, l = triangles.length; i < l; ++ i ) {
 
-				triangles[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
+				triangles[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
 				append( materialIndexBuffer, [ materialIndex, materialIndex, materialIndex ] );
 
 			}
@@ -3473,6 +3502,7 @@ console.log('FBX tree', FBXTree);
 			var vertexBuffer = [];
 			var normalBuffer = [];
 			var uvBuffer = [];
+			var uv2Buffer = [];
 			var colorBuffer = [];
 			var skinIndexBuffer = [];
 			var skinWeightBuffer = [];
@@ -3483,7 +3513,7 @@ console.log('FBX tree', FBXTree);
 
 			for ( var i = 0, l = faces.length; i < l; ++ i ) {
 
-				faces[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer );
+				faces[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer );
 
 			}
 
@@ -3491,6 +3521,7 @@ console.log('FBX tree', FBXTree);
 				vertexBuffer: vertexBuffer,
 				normalBuffer: normalBuffer,
 				uvBuffer: uvBuffer,
+				uv2Buffer: uv2Buffer,
 				colorBuffer: colorBuffer,
 				skinIndexBuffer: skinIndexBuffer,
 				skinWeightBuffer: skinWeightBuffer,
@@ -4960,6 +4991,13 @@ console.log('FBX tree', FBXTree);
 		if ( to === undefined ) to = buffer.byteLength;
 
 		var array = new Uint8Array( buffer, from, to );
+
+		if ( self.TextDecoder !== undefined ) {
+
+			return new TextDecoder().decode( array );
+
+		}
+
 
 		var s = '';
 
