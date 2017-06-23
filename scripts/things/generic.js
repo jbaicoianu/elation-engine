@@ -26,6 +26,8 @@ elation.component.add("engine.things.generic", function() {
     this.children = {};
     this.tags = [];
     this.sounds = {};
+    this.animations = false;
+    this.skeleton = false;
     
     this.tmpvec = new THREE.Vector3();
     this._proxies = {};
@@ -821,6 +823,8 @@ elation.component.add("engine.things.generic", function() {
     this.loadTextures(textures);
     elation.events.fire({ type: 'resource_load_finish', element: this, data: { type: 'model', url: url } });
 
+    this.extractAnimations(scene);
+
     this.refresh();
   }
   this.loadCollada = function(url) {
@@ -1130,6 +1134,88 @@ elation.component.add("engine.things.generic", function() {
       }
     });
     return ret;
+  }
+  this.extractAnimations = function(scene) {
+    var animations = [],
+        actions = {},
+        skeleton = false,
+        meshes = [],
+        num = 0;
+
+    scene.traverse(function(n) {
+      if (n.animations) {
+        //animations[n.name] = n;
+        animations.push.apply(animations, n.animations);
+        num++;
+      }
+      if (n.skeleton) {
+        skeleton = n.skeleton;
+      }
+      if (n instanceof THREE.SkinnedMesh) {
+        meshes.push(n);
+      }
+    });
+
+    if (skeleton) {
+      this.skeleton = skeleton;
+
+/*
+      scene.traverse(function(n) {
+        n.skeleton = skeleton;
+      });
+*/
+      if (true) { //meshes.length > 0) {
+        var mixer = this.animationmixer = new THREE.AnimationMixer(meshes[0]);
+        var skeletons = [skeleton];
+        for (var i = 0; i < meshes.length; i++) {
+          //meshes[i].bind(this.skeleton);
+          skeletons.push(meshes[i].skeleton);
+        }
+        // FIXME - shouldn't be hardcoded!
+        var then = performance.now();
+        setInterval(elation.bind(this, function() {
+          var now = performance.now(),
+              diff = now - then;
+          then = now;
+          this.animationmixer.update(diff / 1000);
+          this.skeletonhelper.update();
+          for (var i = 0; i < skeletons.length; i++) {
+            skeletons[i].update();
+          }
+        }), 16);
+      }
+    }
+    if (num > 0) {
+      this.animations = animations;
+      for (var i = 0; i < animations.length; i++) {
+        var anim = animations[i];
+        actions[anim.name] = mixer.clipAction(anim);
+      }
+      this.animationactions = actions;
+    }
+
+    if (this.skeletonhelper && this.skeletonhelper.parent) {
+      this.skeletonhelper.parent.remove(this.skeletonhelper);
+    }
+    this.skeletonhelper = new THREE.SkeletonHelper(this.objects['3d']);
+
+    //this.engine.systems.world.scene['world-3d'].add(this.skeletonhelper);
+
+  }
+  this.rebindAnimations = function() {
+    var rootobject = this.objects['3d'];
+
+    if (this.animationmixer) {
+      // Reset to t-pose before rebinding skeleton
+      this.animationmixer.stopAllAction();
+      this.animationmixer.update(0);
+    }
+
+    rootobject.traverse(function(n) {
+      if (n instanceof THREE.SkinnedMesh) {
+        n.rebindByName(rootobject);
+      }
+    });
   }
   this.loadTextures = function(textures) {
     this.pendingtextures = 0;
