@@ -811,7 +811,7 @@ if (!ENV_IS_BROWSER) return;
       }
       group.traverse(function(n) { 
         if (n.material) {
-          var materials = (elation.utils.isString(n.material) ? n.material : [n.material]);
+          var materials = (elation.utils.isArray(n.material) ? n.material : [n.material]);
           materials.forEach(function(m) {
             if (tex0) {
               //m.transparent = true; 
