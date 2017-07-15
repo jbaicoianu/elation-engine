@@ -619,6 +619,7 @@ if (!ENV_IS_BROWSER) return;
       this._texture = new THREE.VideoTexture(video);
       this._texture.minFilter = THREE.LinearFilter;
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
+      elation.events.add(video, 'error', elation.bind(this, this.handleError));
 
       if (this.auto_play) {
         // FIXME - binding for easy event removal later. This should happen at a lower level
@@ -635,8 +636,13 @@ if (!ENV_IS_BROWSER) return;
             this.handleAutoplayStart();
           })).catch(elation.bind(this, function(err) {
             // If autoplay failed, retry with muted video
-            video.muted = true;
-            video.play().catch(elation.bind(this, this.handleAutoplayError));
+            var strerr = err.toString();
+            if (strerr.indexOf('NotAllowedError') == 0) {
+              video.muted = true;
+              video.play().catch(elation.bind(this, this.handleAutoplayError));
+            } else if (strerr.indexOf('NotSupportedError') == 0) {
+              this.initHLS();
+            }
           }));
         }
       }
@@ -657,8 +663,9 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
     handleError: function(ev) {
-      console.log('video uh oh!', ev);
-      this._texture = false;
+      //console.log('video uh oh!', ev);
+      //this._texture = false;
+      //console.log('Video failed to load, try HLS');
     },
     handleAutoplayStart: function(ev) {
       if (this._autoplaytimeout) {
@@ -678,6 +685,22 @@ if (!ENV_IS_BROWSER) return;
         this.load();
       }
       return this._texture;
+    },
+    initHLS: function() {
+      if (typeof Hls != 'function') {
+        elation.file.get('js', 'https://cdn.jsdelivr.net/npm/hls.js@latest', elation.bind(this, this.initHLS));
+        return;
+      }
+      var hls = new Hls();
+      hls.loadSource(this.src);
+      hls.attachMedia(this._video);
+
+      if (this.auto_play) {
+        var video = this._video;
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          video.play();
+        });
+      }
     }
   }, elation.engine.assets.base);
   elation.define('engine.assets.material', {
