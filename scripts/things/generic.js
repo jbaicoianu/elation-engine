@@ -1192,7 +1192,6 @@ elation.component.add("engine.things.generic", function() {
               diff = now - then;
           then = now;
           this.animationmixer.update(diff / 1000);
-          this.skeletonhelper.update();
           for (var i = 0; i < skeletons.length; i++) {
             skeletons[i].update();
           }
