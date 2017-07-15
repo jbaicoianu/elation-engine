@@ -75,6 +75,21 @@ elation.require([
       var render = this.engine.systems.render;
       if (render.views['main']) {
         var view = render.views['main'];
+        this.clickpos = [0,0];
+
+        // Prevent object selection when dragging
+        elation.events.add(window, 'mousedown', elation.bind(this, function(ev) {
+          this.clicking = true;
+          this.clickpos = [ev.clientX, ev.clientY];
+          this.cancelClick = false;
+        }));
+        elation.events.add(window, 'mousemove', elation.bind(this, function(ev) {
+          var diff = [this.clickpos[0] - ev.clientX, this.clickpos[1] - ev.clientY];
+          if (this.clicking && (diff[0] || diff[1])) {
+            this.cancelClick = true;
+          }
+        }));
+        //elation.events.add(window, 'mouseup', elation.bind(this, function() { this.cancelClick = false; }));
 
         this.manipulator = new THREE.TransformControls(view.actualcamera, view.container);
         elation.events.add(this.manipulator, 'mouseDown', elation.bind(this, function() { if (this.manipulator.object && this.manipulator.object.userData.thing) { elation.events.fire({type: 'admin_edit_start', element: this, data: this.manipulator.object.userData.thing}); }}));
@@ -370,7 +385,7 @@ console.log('deeeeee', view.activething);
     }
     this.ui_treeview_select = function(ev) {
       var thing = ev.data.value;
-      if (thing.properties.pickable && !this.hidden) {
+      if (thing.properties.pickable && !this.hidden && !this.admin.cancelClick) {
         this.selectedthing = ev.data;
         elation.engine.systems.admin.inspector('admin').setThing(this.selectedthing);
       }
