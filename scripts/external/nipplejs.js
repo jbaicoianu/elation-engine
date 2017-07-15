@@ -1,10 +1,12 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.nipplejs = f()}})(function(){var define,module,exports;
 'use strict';
 
+var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this};
+
 // Constants
-var isTouch = !!('ontouchstart' in window);
-var isPointer = window.PointerEvent ? true : false;
-var isMSPointer = window.MSPointerEvent ? true : false;
+var isTouch = !!('ontouchstart' in g);
+var isPointer = g.PointerEvent ? true : false;
+var isMSPointer = g.MSPointerEvent ? true : false;
 var events = {
     touch: {
         start: 'touchstart',
@@ -101,13 +103,13 @@ u.prepareEvent = function (evt) {
 };
 
 u.getScroll = function () {
-    var x = (window.pageXOffset !== undefined) ?
-        window.pageXOffset :
+    var x = (g.pageXOffset !== undefined) ?
+        g.pageXOffset :
         (document.documentElement || document.body.parentNode || document.body)
             .scrollLeft;
 
-    var y = (window.pageYOffset !== undefined) ?
-        window.pageYOffset :
+    var y = (g.pageYOffset !== undefined) ?
+        g.pageYOffset :
         (document.documentElement || document.body.parentNode || document.body)
             .scrollTop;
     return {
@@ -1202,7 +1204,7 @@ function Manager (options) {
 
     // Listen for resize, to reposition every joysticks
     var resizeTimer;
-    u.bindEvt(window, 'resize', function (evt) {
+    u.bindEvt(g, 'resize', function (evt) {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
             var pos;
