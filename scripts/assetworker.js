@@ -240,7 +240,9 @@ elation.require([
         var mtl = job.data.mtl || false;
 
         var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
-/*
+
+        var data = this.convertArrayBufferToString(bindata);
+
         if (!mtl) {
           var re = /^mtllib (.*)$/im;
           var m = data.match(re);
@@ -248,8 +250,7 @@ elation.require([
             mtl = m[1];
           }
         }
-*/
-        var data = this.convertArrayBufferToString(bindata);
+
         //var loader = (mtl ? new THREE.OBJMTLLoader() : new THREE.OBJLoader());
         var loader = new THREE.OBJLoader();
         var modeldata = false;
@@ -284,6 +285,8 @@ elation.require([
                 //console.log('progress?', ev);
               },
               elation.bind(this, function(ev) {
+                // MTL failed to load, just parse the geometry and return it
+                modeldata = loader.parse(data);
                 resolve(this.convertToJSON(modeldata));
               })
             );
