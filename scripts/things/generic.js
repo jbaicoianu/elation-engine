@@ -663,6 +663,12 @@ elation.component.add("engine.things.generic", function() {
   }
   this.createForces = function() {
   }
+  this.addForce = function(type, args) {
+    return this.objects.dynamics.addForce(type, args);
+  }
+  this.removeForce = function(force) {
+    return this.objects.dynamics.removeForce(force);
+  }
   this.updateColliderFromGeometry = function(geom) {
       if (!geom) geom = this.objects['3d'].geometry;
       var collidergeom = false;
