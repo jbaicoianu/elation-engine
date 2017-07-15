@@ -745,7 +745,7 @@ elation.component.add("engine.things.generic", function() {
       }
       */
       if (collidergeom) {
-        var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
+        var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false, side: THREE.DoubleSide});
 
         if (this.collidermesh) {
           var collidermesh = this.collidermesh;
