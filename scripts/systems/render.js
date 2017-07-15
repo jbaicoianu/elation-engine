@@ -153,10 +153,12 @@ elation.require([
       }
       elation.events.add(window, "resize", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
-      elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,dragover,click", this);
-      elation.events.add(this.container, "mousewheel,touchstart,touchmove,touchend", this, {passive: true});
+      elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,click", this);
+      elation.events.add(this.container, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
+      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop,touchstart,touchmove,touchend", elation.bind(this, this.proxyEvent));
+
       this.container.tabIndex = 1;
       if (!this.args.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
@@ -322,6 +324,7 @@ elation.require([
             elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
             elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
             elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
+
             break;
           }
         }.bind(this));
@@ -964,9 +967,9 @@ if (vivehack) {
       this.mousepos[1] = ev.clientY;
       this.mousepos[2] = document.body.scrollTop;
     }
-    this.mousemove = function(ev) {
+    this.mousemove = function(ev, ignorePointerLock) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
-      if (el) {
+      if (el && !ignorePointerLock) {
         var dims = elation.html.dimensions(el);
         this.mousepos[0] = Math.round(dims.w / 2);
         this.mousepos[1] = Math.round(dims.h / 2);
@@ -981,12 +984,6 @@ if (vivehack) {
         this.mousepos[2] = document.body.scrollTop;
         //this.cancelclick = true;
       } 
-    }
-    this.dragover = function(ev) {
-      if (!this.pickingactive) {
-        this.pickingactive = true;
-      }
-      this.mousemove(ev);
     }
     this.mouseenter = function(ev) {
       this.rendersystem.setdirty();
@@ -1040,19 +1037,44 @@ if (vivehack) {
 */
         this.mousepos = [Math.round(ev.touches[0].clientX), Math.round(ev.touches[0].clientY), document.body.scrollTop];
         this.updatePickingObject();
-        this.mousedown(ev.touches[0]);
+        var fakeev = elation.events.clone(ev.touches[0], {});
+        fakeev.preventDefault = ev.preventDefault.bind(ev);
+        fakeev.stopPropagation = ev.stopPropagation.bind(ev);
+        this.mousedown(fakeev);
 //      }
 
     }
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
-      this.mousemove(ev.touches[0]);
+      var fakeev = elation.events.clone(ev.touches[0], {});
+      fakeev.preventDefault = ev.preventDefault.bind(ev);
+      this.mousemove(fakeev, true);
     }
     this.touchend = function(ev) {
-      this.mouseup(ev);
-      this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
-      if (this.pickingactive) {
-        this.pickingactive = false;
+      if (ev.touches.length == 0) {
+        this.mouseup(ev);
+        this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
+        if (this.pickingactive) {
+          this.pickingactive = false;
+        }
+      }
+    }
+    this.proxyEvent = function(ev) {
+      if (!this.pickingactive) {
+        this.pickingactive = true;
+      }
+      this.mousemove(ev);
+      if (this.picker.pickingobject) {
+        var fired = elation.events.fire({
+          type: ev.type,
+          element: this.getParentThing(this.picker.pickingobject),
+          event: ev,
+          data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), 
+        });
+        for (var i = 0; i < fired.length; i++) {
+          if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
+          if (fired[i].returnValue === false) { ev.preventDefault(); }
+        }
       }
     }
     this.change = function(ev) {
