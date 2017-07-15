@@ -150,6 +150,14 @@ elation.component.add("engine.things.generic", function() {
           value = new THREE.Vector3(+split[0], +split[1], +split[2]);
         }
         break;
+      case 'euler':
+        if (elation.utils.isArray(value)) {
+          value = new THREE.Euler(+value[0], +value[1], +value[2]);
+        } else if (elation.utils.isString(value)) {
+          var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
+          value = new THREE.Euler(+split[0], +split[1], +split[2]);
+        }
+        break;
       case 'quaternion':
         if (elation.utils.isArray(value)) {
           value = new THREE.Quaternion(+value[0], +value[1], +value[2], +value[3]);
