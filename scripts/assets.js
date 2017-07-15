@@ -1398,5 +1398,33 @@ if (!ENV_IS_BROWSER) return;
       return this._script;
     }
   }, elation.engine.assets.base);
+
+  elation.define('engine.assets.file', {
+    assettype: 'file',
+    src: false,
+
+    load: function() {
+      if (this.src) {
+        var fullurl = this.getFullURL(this.src);
+        if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
+          elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
+            elation.bind(this, function(events) {
+              var xhr = events[0].target;
+              var type = this.contenttype = xhr.getResponseHeader('content-type')
+              console.log('DUR', events, this);
+
+              this.state = 'processing';
+              elation.events.fire({element: this, type: 'asset_load_processing'});
+            }),
+            elation.bind(this, function(error) {
+              this.state = 'error';
+              elation.events.fire({element: this, type: 'asset_error'});
+            })
+          );
+          elation.events.fire({element: this, type: 'asset_load_queued'});
+        }
+      }
+    },
+  }, elation.engine.assets.base);
 });
 
