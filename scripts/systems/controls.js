@@ -111,7 +111,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     };
 
     this.capturekeys = [
-      'keyboard_f1'
+      'keyboard_f1',
+      'keyboard_f6',
     ];
 
     this.initialized = false;
@@ -138,7 +139,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.initcontrols = function() {
       if (!this.container) this.container = this.engine.systems.render.renderer.domElement;
       elation.events.add(this.container, "mousedown,mousemove,mouseup,DOMMouseScroll,touchstart,touchmove,touchend,gesturestart,gesturechange,gestureend", this);
-      elation.events.add(this.container, "touchstart,touchmove,touchend,mousewheel", this, {passive: true});
+      elation.events.add(this.container, "touchstart,touchmove,touchend,mousewheel", this);
       elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
       //elation.events.add(window, "deviceorientation,devicemotion", this);
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
@@ -626,13 +627,14 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         return ret;
       return "nomod";
     }
-    this.mousedown = function(ev) {
-      if (ev.button === 0 && !this.getPointerLockElement()) {
+    this.mousedown = function(ev, skiplock) {
+      if (!skiplock && ev.button === 0 && !this.getPointerLockElement()) {
         if (this.requestPointerLock()) {
           //ev.stopPropagation();
           ev.preventDefault();
         }
       }
+
       var bindid = "mouse_button_" + ev.button;
       if (!this.state[bindid]) {
         this.state[bindid] = 1;
@@ -781,7 +783,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         preventDefault: elation.bind(ev, ev.preventDefault),
       };
       this.lasttouchpos = [newev.clientX, newev.clientY];
-      this.mousedown(newev);
+      this.mousedown(newev, true);
       //ev.preventDefault();
     }
     this.touchmove = function(ev) {
@@ -806,21 +808,23 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
     }
     this.touchend = function(ev) {
-      var newev = {
-        button: 0,
-        type: 'mouseup',
-  /*
-        screenX: ev.touches[0].screenX,
-        screenY: ev.touches[0].screenY,
-        pageX: ev.touches[0].pageX,
-        pageY: ev.touches[0].pageY,
-        clientX: ev.touches[0].clientX,
-        clientY: ev.touches[0].clientY,
-  */
-        stopPropagation: elation.bind(ev, ev.stopPropagation),
-        preventDefault: elation.bind(ev, ev.preventDefault),
-      };
-      this.mouseup(newev);
+      if (ev.touches.length == 0) {
+        var newev = {
+          button: 0,
+          type: 'mouseup',
+    /*
+          screenX: ev.touches[0].screenX,
+          screenY: ev.touches[0].screenY,
+          pageX: ev.touches[0].pageX,
+          pageY: ev.touches[0].pageY,
+          clientX: ev.touches[0].clientX,
+          clientY: ev.touches[0].clientY,
+    */
+          stopPropagation: elation.bind(ev, ev.stopPropagation),
+          preventDefault: elation.bind(ev, ev.preventDefault),
+        };
+        this.mouseup(newev);
+      }
     }
     this.gesturestart = function(ev) {
       console.log('do a gesture', ev);
