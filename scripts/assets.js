@@ -86,7 +86,7 @@ if (!ENV_IS_BROWSER) return;
       for (var i = 0; i < urls.length; i++) {
         var subpromise = new Promise(function(resolve, reject) {
           var fullurl = urls[i];
-          if (corsproxy && fullurl.indexOf(corsproxy) != 0 && fullurl.indexOf('blob:') != 0) fullurl = corsproxy + fullurl;
+          if (corsproxy && fullurl.indexOf(corsproxy) != 0 && fullurl.indexOf('blob:') != 0 && fullurl.indexOf('data:') != 0) fullurl = corsproxy + fullurl;
           if (!queue[fullurl]) {
             var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
               responseType: 'arraybuffer',
@@ -224,7 +224,7 @@ if (!ENV_IS_BROWSER) return;
       return (src[0] == '/' && src[1] != '/');
     },
     isURLLocal: function(src) {
-      if (this.isURLBlob(src)) {
+      if (this.isURLBlob(src) || this.isURLData(src)) {
         return true;
       }
       if (src.match(/^(https?:)?\/\//i)) {
@@ -234,6 +234,10 @@ if (!ENV_IS_BROWSER) return;
         (src[0] == '/' && src[1] != '/') ||
         (src[0] != '/')
       );
+    },
+    isURLData: function(url) {
+      if (!url) return false;
+      return url.indexOf('data:') == 0;
     },
     isURLBlob: function(url) {
       if (!url) return false;
@@ -247,7 +251,7 @@ if (!ENV_IS_BROWSER) return;
       if (!url) url = this.src;
       if (!baseurl) baseurl = this.baseurl;
       var fullurl = url;
-      if (!this.isURLBlob(fullurl)) {
+      if (!this.isURLBlob(fullurl) && !this.isURLData(fullurl)) {
         if (this.isURLRelative(fullurl)) {
           fullurl = baseurl + fullurl;
         } else if (this.isURLProxied(fullurl)) {
@@ -317,7 +321,9 @@ if (!ENV_IS_BROWSER) return;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
         texture.flipY = this.flipY;
-        if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
+        if (this.isURLData(fullurl)) {
+          this.loadImageByURL();
+        } else if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
           elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
             elation.bind(this, function(events) {
               var xhr = events[0].target;
