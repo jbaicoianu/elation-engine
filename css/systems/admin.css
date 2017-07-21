@@ -12,7 +12,7 @@
   position: fixed;
   top: 4em;
   left: 1em;
-  width: 18em;
+  min-width: 18em;
 }
 .engine_admin_scenetree ul {
 }
@@ -22,7 +22,7 @@
 .engine_admin_scenetree .engine_admin_scenetree_list {
   overflow: auto;
   overflow-x: hidden;
-  height: 20em;
+  max-height: 20em;
 }
 /*
 .engine_admin_scenetree ul li:before {
