@@ -157,7 +157,7 @@ elation.require([
       elation.events.add(this.container, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
-      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop,touchstart,touchmove,touchend", elation.bind(this, this.proxyEvent));
+      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
 
       this.container.tabIndex = 1;
       if (!this.args.engine) {
@@ -996,28 +996,40 @@ if (vivehack) {
         elation.events.remove(this.container, 'mousemove,mouseout', this);
         this.pickingactive = false;
         if (this.picker.pickingobject) {
-          var fired = elation.events.fire({type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY});
+          var newev = {type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY};
+          /*
+          var fired = elation.events.fire(newev);
           this.pickingobject = false;
           for (var i = 0; i < fired.length; i++) {
             if (fired[i].cancelBubble) ev.stopPropagation();
           }
+          */
+          this.proxyEvent(newev);
         }
       }
     }
     this.mouseup = function(ev) {
       if (this.pickingactive && this.picker.pickingobject) {
-        var fired = elation.events.fire({type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button});
+        var newev = {type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button};
+        /*
+        var fired = elation.events.fire(newev);
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble) ev.stopPropagation();
         }
+        */
+        this.proxyEvent(newev);
       }
     }
     this.click = function(ev) {
       if (this.pickingactive && this.picker.pickingobject && !this.cancelclick) {
-        var fired = elation.events.fire({type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])});
+        var clickevent = {type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])};
+        /*
+        var fired = elation.events.fire(clickevent);
         for (var i = 0; i < fired.length; i++) {
           if (fired[i].cancelBubble && ev.stopPropagation) ev.stopPropagation();
         }
+        */
+        this.proxyEvent(clickevent);
       }
       if (ev && ev.preventDefault) {
         ev.preventDefault();
@@ -1029,6 +1041,9 @@ if (vivehack) {
         this.pickingactive = true;
       }
       this.cancelclick = false;
+      if (ev.touches.length == 1) {
+        this.touchstartpos = new THREE.Vector2(ev.touches[0].clientX, ev.touches[0].clientY);
+      }
 /*
       if (!this.isFullscreen()) {
         //this.toggleFullscreen(true);
@@ -1037,23 +1052,37 @@ if (vivehack) {
 */
         this.mousepos = [Math.round(ev.touches[0].clientX), Math.round(ev.touches[0].clientY), document.body.scrollTop];
         this.updatePickingObject();
+        this.proxyEvent(ev);
+
         var fakeev = elation.events.clone(ev.touches[0], {});
         fakeev.preventDefault = ev.preventDefault.bind(ev);
         fakeev.stopPropagation = ev.stopPropagation.bind(ev);
         this.mousedown(fakeev);
 //      }
-
+        ev.preventDefault();
     }
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
       var fakeev = elation.events.clone(ev.touches[0], {});
       fakeev.preventDefault = ev.preventDefault.bind(ev);
+      fakeev.stopPropagation = ev.stopPropagation.bind(ev);
       this.mousemove(fakeev, true);
+      this.proxyEvent(ev);
+
+      // Cancel click handling if we move more than 5 pixels, or if we're doing a multitouch gesture
+      var distance = this.touchstartpos.distanceTo(new THREE.Vector2(ev.touches[0].clientX, ev.touches[0].clientY));
+      if (ev.touches.length > 1 || distance > 5) {
+        this.cancelclick = true;
+      }
+
     }
     this.touchend = function(ev) {
       if (ev.touches.length == 0) {
+        this.proxyEvent(ev);
         this.mouseup(ev);
-        this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
+        if (!this.cancelclick) {
+          this.click({clientX: this.mousepos[0], clientY: this.mousepos[1]});
+        }
         if (this.pickingactive) {
           this.pickingactive = false;
         }
@@ -1063,18 +1092,36 @@ if (vivehack) {
       if (!this.pickingactive) {
         this.pickingactive = true;
       }
-      this.mousemove(ev);
+      //this.mousemove(ev);
       if (this.picker.pickingobject) {
-        var fired = elation.events.fire({
+        var element = this.getParentThing(this.picker.pickingobject),
+            data = this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]);
+
+        var event = elation.events.getEvent({
           type: ev.type,
-          element: this.getParentThing(this.picker.pickingobject),
-          event: ev,
-          data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), 
+          element: element,
+          event: elation.events.fix(ev),
+          data: data
         });
+        var fired = elation.events.fireEvent(event);
+        var bubble = true;
         for (var i = 0; i < fired.length; i++) {
-          if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
+          if (fired[i].cancelBubble === true) {
+            //ev.stopPropagation();
+            bubble = false;
+          }
           if (fired[i].returnValue === false) { ev.preventDefault(); }
         }
+
+        if (bubble) {
+          //console.log('bubble it!', event, element);
+          var obj = element;
+          while (obj = obj.parent) {
+            //console.log(' - ', obj);
+            elation.events.fireEvent(event, obj);
+          }
+        }
+
       }
     }
     this.change = function(ev) {
@@ -1126,6 +1173,7 @@ if (vivehack) {
         var dims = elation.html.dimensions(el);
         this.mousepos[0] = Math.round(dims.w / 2);
         this.mousepos[1] = Math.round(dims.h / 2);
+        this.pickingactive = true;
       }
     }
     this.screenshot = function(args) {
@@ -1550,18 +1598,26 @@ console.log('dun it', msaafilter);
           pickedthing = this.view.getParentThing(this.pickingobjects[pickid]);
           if (this.pickingobject) {
             //console.log('mouseout', this.pickingobject);
-            elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
+            var outevent = {type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])};
+            //elation.events.fire(outevent);
+            this.proxyEvent(moveevent);
           }
           this.pickingobject = this.pickingobjects[pickid];
           if (this.pickingobject) {
-            elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+            var overevent = {type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+            //elation.events.fire(overevent);
+            this.proxyEvent(moveevent);
           }
         }
-        elation.events.fire({type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+        var moveevent = {type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+        //elation.events.fire(moveevent);
+        this.proxyEvent(moveevent);
       } else {
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
-          elation.events.fire({type: "mouseout", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])});
+          var outevent = {type: "mouseout", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])};
+          //elation.events.fire(outevent);
+          this.proxyEvent(outevent);
           this.pickingobject = false;
         }
       }
@@ -1724,18 +1780,26 @@ console.log('dun it', msaafilter);
         if (this.pickingobject !== hit.object) {
           pickedthing = hit.object.userData.thing;
           if (this.pickingobject) {
-            elation.events.fire({type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: hit});
+            var outevent = {type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: hit};
+            //elation.events.fire(outevent);
+            this.view.proxyEvent(outevent);
           }
           this.pickingobject = hit.object;
           if (this.pickingobject) {
-            elation.events.fire({type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+            var overevent = {type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+            //elation.events.fire(overevent);
+            this.view.proxyEvent(overevent);
           }
         }
-        elation.events.fire({type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey});
+        var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+        //elation.events.fire(moveevent);
+        this.view.proxyEvent(moveevent);
       } else {
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
-          elation.events.fire({type: "mouseout", element: pickedthing, data: hit});
+          var outevent = {type: "mouseout", element: pickedthing, data: hit};
+          //elation.events.fire(outevent);
+          this.view.proxyEvent(outevent);
           this.pickingobject = false;
         }
       }
