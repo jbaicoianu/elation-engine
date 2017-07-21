@@ -100,17 +100,15 @@
 
 				if ( ! isFbxFormatASCII( FBXText ) ) {
 
+					self.manager.itemError( url );
 					throw new Error( 'FBXLoader: Unknown format.' );
-					//self.manager.itemError( url );
-					return;
 
 				}
 
 				if ( getFbxVersion( FBXText ) < 7000 ) {
 
-					throw new Error( 'FBXLoader: FBX version not supported for file at ' + '(unknown)' + ', FileVersion: ' + getFbxVersion( FBXText ) );
-					//self.manager.itemError( url );
-					return;
+					self.manager.itemError( url );
+					throw new Error( 'FBXLoader: FBX version not supported for file at ' + url + ', FileVersion: ' + getFbxVersion( FBXText ) );
 
 				}
 
@@ -118,7 +116,6 @@
 
 			}
 
-console.log('FBX tree', FBXTree);
 			// console.log( FBXTree );
 
 			var connections = parseConnections( FBXTree );
@@ -267,7 +264,7 @@ console.log('FBX tree', FBXTree);
 
 		}
 
-		return self.URL.createObjectURL( new Blob( [ array ], { type: type } ) );
+		return URL.createObjectURL( new Blob( [ array ], { type: type } ) );
 
 	}
 
@@ -351,6 +348,10 @@ console.log('FBX tree', FBXTree);
 		}
 
 		var currentPath = loader.path;
+if (!fileName) {
+  console.warn('FBXLoader: texture had no fileName', textureNode);
+    return;
+}
 
 		if ( fileName.indexOf( 'blob:' ) === 0 ) {
 
@@ -364,6 +365,18 @@ console.log('FBX tree', FBXTree);
 		var texture = loader.load( fileName );
 		texture.name = name;
 		texture.FBX_ID = FBX_ID;
+
+		var wrapModeU = textureNode.properties.WrapModeU;
+		var wrapModeV = textureNode.properties.WrapModeV;
+
+		var valueU = wrapModeU !== undefined ? wrapModeU.value : 0;
+		var valueV = wrapModeV !== undefined ? wrapModeV.value : 0;
+
+		// http://download.autodesk.com/us/fbx/SDKdocs/FBX_SDK_Help/files/fbxsdkref/class_k_fbx_texture.html#889640e63e2e681259ea81061b85143a
+		// 0: repeat(default), 1: clamp
+
+		texture.wrapS = valueU === 0 ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+		texture.wrapT = valueV === 0 ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
 
 		loader.setPath( currentPath );
 
@@ -418,13 +431,19 @@ console.log('FBX tree', FBXTree);
 
 		}
 
+		var connection = connections.get( FBX_ID );
+
+		if (!connection) {
+			return new THREE.MeshBasicMaterial({color: 0xff0000});
+		}
+
 		var children = connections.get( FBX_ID ).children;
 
 		var parameters = parseParameters( materialNode.properties, textureMap, children );
 
 		var material;
 
-		switch ( type ) {
+		switch ( type.toLowerCase() ) {
 
 			case 'phong':
 				material = new THREE.MeshPhongMaterial();
@@ -714,14 +733,6 @@ console.log('FBX tree', FBXTree);
 		if ( subNodes.LayerElementUV ) {
 
 			var uvInfo = getUVs( subNodes.LayerElementUV[ 0 ] );
- 
-      var uv2Info = false; 
-
-      if ( subNodes.LayerElementUV[ 1 ] ) {
-
-        uv2Info = getUVs( subNodes.LayerElementUV[ 1 ] );
-
-      }
 
 		}
 
@@ -737,8 +748,38 @@ console.log('FBX tree', FBXTree);
 
 		}
 
+		var weightTable = {};
+
+		if ( deformer ) {
+
+			var subDeformers = deformer.map;
+
+			for ( var key in subDeformers ) {
+
+				var subDeformer = subDeformers[ key ];
+				var indices = subDeformer.indices;
+
+				for ( var j = 0; j < indices.length; j ++ ) {
+
+					var index = indices[ j ];
+					var weight = subDeformer.weights[ j ];
+
+					if ( weightTable[ index ] === undefined ) weightTable[ index ] = [];
+
+					weightTable[ index ].push( {
+						id: subDeformer.index,
+						weight: weight
+					} );
+
+				}
+
+			}
+
+		}
+
 		var faceVertexBuffer = [];
 		var polygonIndex = 0;
+		var displayedWeightsWarning = false;
 
 		for ( var polygonVertexIndex = 0; polygonVertexIndex < indexBuffer.length; polygonVertexIndex ++ ) {
 
@@ -762,25 +803,14 @@ console.log('FBX tree', FBXTree);
 
 			if ( deformer ) {
 
-				var subDeformers = deformer.map;
+				if ( weightTable[ vertexIndex ] !== undefined ) {
 
-				for ( var key in subDeformers ) {
+					var array = weightTable[ vertexIndex ];
 
-					var subDeformer = subDeformers[ key ];
-					var indices = subDeformer.indices;
+					for ( var j = 0, jl = array.length; j < jl; j ++ ) {
 
-					for ( var j = 0; j < indices.length; j ++ ) {
-
-						var index = indices[ j ];
-
-						if ( index === vertexIndex ) {
-
-							weights.push( subDeformer.weights[ j ] );
-							weightIndices.push( subDeformer.index );
-
-							break;
-
-						}
+						weights.push( array[ j ].weight );
+						weightIndices.push( array[ j ].id );
 
 					}
 
@@ -788,7 +818,12 @@ console.log('FBX tree', FBXTree);
 
 				if ( weights.length > 4 ) {
 
-					console.warn( 'FBXLoader: Vertex has more than 4 skinning weights assigned to vertex.  Deleting additional weights.' );
+					if ( ! displayedWeightsWarning ) {
+
+						console.warn( 'FBXLoader: Vertex has more than 4 skinning weights assigned to vertex.  Deleting additional weights.' );
+						displayedWeightsWarning = true;
+
+					}
 
 					var WIndex = [ 0, 0, 0, 0 ];
 					var Weight = [ 0, 0, 0, 0 ];
@@ -841,12 +876,6 @@ console.log('FBX tree', FBXTree);
 			if ( uvInfo ) {
 
 				vertex.uv.fromArray( getData( polygonVertexIndex, polygonIndex, vertexIndex, uvInfo ) );
-
-			}
-
-			if ( uv2Info ) {
-
-				vertex.uv2.fromArray( getData( polygonVertexIndex, polygonIndex, vertexIndex, uv2Info ) );
 
 			}
 
@@ -903,11 +932,6 @@ console.log('FBX tree', FBXTree);
 		if ( bufferInfo.uvBuffer.length > 0 ) {
 
 			geo.addAttribute( 'uv', new THREE.Float32BufferAttribute( bufferInfo.uvBuffer, 2 ) );
-
-		}
-		if ( bufferInfo.uv2Buffer.length > 0 ) {
-
-			geo.addAttribute( 'uv2', new THREE.Float32BufferAttribute( bufferInfo.uv2Buffer, 2 ) );
 
 		}
 		if ( subNodes.LayerElementColor ) {
@@ -1621,9 +1645,12 @@ console.log('FBX tree', FBXTree);
 		// Silly hack with the animation parsing.  We're gonna pretend the scene graph has a skeleton
 		// to attach animations to, since FBXs treat animations as animations for the entire scene,
 		// not just for individual objects.
+/*
 		sceneGraph.skeleton = {
 			bones: modelArray
 		};
+*/
+    sceneGraph.skeleton = new THREE.Skeleton(modelArray);
 
 		var animations = parseAnimations( FBXTree, connections, sceneGraph );
 
@@ -2164,7 +2191,40 @@ console.log('FBX tree', FBXTree);
 			if ( curveNode.attr === 'R' ) {
 
 				var curves = curveNode.curves;
-        if (!(curves.x && curves.y && curves.z)) return;
+
+				// Seems like some FBX files have AnimationCurveNode
+				// which doesn't have any connected AnimationCurve.
+				// Setting animation parameter for them here.
+
+				if ( curves.x === null ) {
+
+					curves.x = {
+						version: null,
+						times: [ 0.0 ],
+						values: [ 0.0 ]
+					};
+
+				}
+
+				if ( curves.y === null ) {
+
+					curves.y = {
+						version: null,
+						times: [ 0.0 ],
+						values: [ 0.0 ]
+					};
+
+				}
+
+				if ( curves.z === null ) {
+
+					curves.z = {
+						version: null,
+						times: [ 0.0 ],
+						values: [ 0.0 ]
+					};
+
+				}
 
 				curves.x.values = curves.x.values.map( degreeToRadian );
 				curves.y.values = curves.y.values.map( degreeToRadian );
@@ -3316,12 +3376,6 @@ console.log('FBX tree', FBXTree);
 		this.uv = new THREE.Vector2();
 
 		/**
-		 * Second UV layer coordinates of the vertex.
-		 * @type {THREE.Vector2}
-		 */
-		this.uv2 = new THREE.Vector2();
-
-		/**
 		 * Color of the vertex
 		 * @type {THREE.Vector3}
 		 */
@@ -3350,7 +3404,6 @@ console.log('FBX tree', FBXTree);
 			returnVar.position.copy( this.position );
 			returnVar.normal.copy( this.normal );
 			returnVar.uv.copy( this.uv );
-			returnVar.uv2.copy( this.uv2 );
 			returnVar.skinIndices.copy( this.skinIndices );
 			returnVar.skinWeights.copy( this.skinWeights );
 
@@ -3358,12 +3411,11 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
 
 			this.position.toArray( vertexBuffer, vertexBuffer.length );
 			this.normal.toArray( normalBuffer, normalBuffer.length );
 			this.uv.toArray( uvBuffer, uvBuffer.length );
-			this.uv2.toArray( uv2Buffer, uv2Buffer.length );
 			this.color.toArray( colorBuffer, colorBuffer.length );
 			this.skinIndices.toArray( skinIndexBuffer, skinIndexBuffer.length );
 			this.skinWeights.toArray( skinWeightBuffer, skinWeightBuffer.length );
@@ -3400,13 +3452,13 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer ) {
 
 			var vertices = this.vertices;
 
 			for ( var i = 0, l = vertices.length; i < l; ++ i ) {
 
-				vertices[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
+				vertices[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
 
 			}
 
@@ -3459,14 +3511,14 @@ console.log('FBX tree', FBXTree);
 
 		},
 
-		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer ) {
+		flattenToBuffers: function ( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer ) {
 
 			var triangles = this.triangles;
 			var materialIndex = this.materialIndex;
 
 			for ( var i = 0, l = triangles.length; i < l; ++ i ) {
 
-				triangles[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
+				triangles[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer );
 				append( materialIndexBuffer, [ materialIndex, materialIndex, materialIndex ] );
 
 			}
@@ -3502,7 +3554,6 @@ console.log('FBX tree', FBXTree);
 			var vertexBuffer = [];
 			var normalBuffer = [];
 			var uvBuffer = [];
-			var uv2Buffer = [];
 			var colorBuffer = [];
 			var skinIndexBuffer = [];
 			var skinWeightBuffer = [];
@@ -3513,7 +3564,7 @@ console.log('FBX tree', FBXTree);
 
 			for ( var i = 0, l = faces.length; i < l; ++ i ) {
 
-				faces[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, uv2Buffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer );
+				faces[ i ].flattenToBuffers( vertexBuffer, normalBuffer, uvBuffer, colorBuffer, skinIndexBuffer, skinWeightBuffer, materialIndexBuffer );
 
 			}
 
@@ -3521,7 +3572,6 @@ console.log('FBX tree', FBXTree);
 				vertexBuffer: vertexBuffer,
 				normalBuffer: normalBuffer,
 				uvBuffer: uvBuffer,
-				uv2Buffer: uv2Buffer,
 				colorBuffer: colorBuffer,
 				skinIndexBuffer: skinIndexBuffer,
 				skinWeightBuffer: skinWeightBuffer,
@@ -4290,7 +4340,7 @@ console.log('FBX tree', FBXTree);
 
 					}
 
-					if ( self.Zlib === undefined ) {
+					if ( typeof Zlib == 'undefined' ) {
 
 						throw new Error( 'FBXLoader: Import inflate.min.js from https://github.com/imaya/zlib.js' );
 
@@ -4992,12 +5042,11 @@ console.log('FBX tree', FBXTree);
 
 		var array = new Uint8Array( buffer, from, to );
 
-		if ( self.TextDecoder !== undefined ) {
+		if ( typeof TextDecoder == 'undefined' ) {
 
 			return new TextDecoder().decode( array );
 
 		}
-
 
 		var s = '';
 
