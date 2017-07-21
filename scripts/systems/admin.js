@@ -246,8 +246,13 @@ console.log('deeeeee', view.activething);
   });
   elation.component.add("engine.systems.admin.scenetree", function() {
     this.init = function() {
-      this.args.controls = false;
+      this.args.controls = true;
+      this.args.width = '20em';
       this.args.movable = true;
+      this.args.minimize = false;
+      this.args.maximize = false;
+      this.args.close = false;
+      this.args.resizable = true;
       elation.engine.systems.admin.scenetree.extendclass.init.call(this);
 
       this.world = this.args.world;
@@ -283,6 +288,7 @@ console.log('deeeeee', view.activething);
   */
 
       var label = elation.ui.label({label: 'Scene:', append: panel});
+/*
       this.sceneselect = elation.ui.select({
           append: panel,
           items: overrides,
@@ -291,6 +297,7 @@ console.log('deeeeee', view.activething);
             ui_select_change: elation.bind(this, this.changeScene)
           }
         });
+*/
       var createbutton = elation.ui.button({
           append: panel,
           label: 'New',
