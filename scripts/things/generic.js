@@ -1289,20 +1289,24 @@ elation.component.add("engine.things.generic", function() {
   this.reload = function() {
     this.set('forcereload', true, true);
   }
-  this.worldToLocal = function(worldpos) {
+  this.worldToLocal = function(worldpos, clone) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    if (clone) worldpos = worldpos.clone();
     return this.objects['3d'].worldToLocal(worldpos);
   }
-  this.localToWorld = function(localpos) {
+  this.localToWorld = function(localpos, clone) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    if (clone) localpos = localpos.clone();
     return this.objects['3d'].localToWorld(localpos);
   }
-  this.worldToParent = function(worldpos) {
+  this.worldToParent = function(worldpos, clone) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    if (clone) worldpos = worldpos.clone();
     return this.objects['3d'].parent.worldToLocal(worldpos);
   }
-  this.localToParent = function(localpos) {
+  this.localToParent = function(localpos, clone) {
     if (this.objects['3d'].matrixWorldNeedsUpdate) this.objects['3d'].updateMatrixWorld();
+    if (clone) localpos = localpos.clone();
     return localpos.applyMatrix4(this.objects['3d'].matrix);
   }
   this.localToWorldOrientation = function(orient) {
