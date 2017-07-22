@@ -113,6 +113,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.capturekeys = [
       'keyboard_f1',
       'keyboard_f6',
+      'keyboard_tab',
     ];
 
     this.initialized = false;
