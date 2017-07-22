@@ -955,11 +955,15 @@ if (vivehack) {
     this.mousedown = function(ev) {
       if (this.pickingactive && this.picker.pickingobject) {
         this.cancelclick = false;
-        var fired = elation.events.fire({type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey});
+        var newev = {type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey};
+        /*
+        var fired = elation.events.fire(newev);
         for (var i = 0; i < fired.length; i++) {
-          if (fired[i].cancelBubble === true) { ev.stopPropagation(); }
-          if (fired[i].returnValue === false) { ev.preventDefault(); }
+          if (fired[i].cancelBubble === true || ev.cancelBubble === true) { ev.stopPropagation(); }
+          if (fired[i].returnValue === false || ev.returnValue === false) { ev.preventDefault(); }
         }
+        */
+        this.proxyEvent(newev);
       }
     }
     this.mousewheel = function(ev) {
@@ -1022,7 +1026,7 @@ if (vivehack) {
     }
     this.click = function(ev) {
       if (this.pickingactive && this.picker.pickingobject && !this.cancelclick) {
-        var clickevent = {type: 'click', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])};
+        var clickevent = {type: 'click', event: ev, element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])};
         /*
         var fired = elation.events.fire(clickevent);
         for (var i = 0; i < fired.length; i++) {
@@ -1100,17 +1104,19 @@ if (vivehack) {
         var event = elation.events.getEvent({
           type: ev.type,
           element: element,
-          event: elation.events.fix(ev),
+          event: elation.events.fix(ev.event || ev),
           data: data
         });
         var fired = elation.events.fireEvent(event);
         var bubble = true;
         for (var i = 0; i < fired.length; i++) {
-          if (fired[i].cancelBubble === true) {
+          if (fired[i].cancelBubble === true || ev.cancelBubble === true) {
             //ev.stopPropagation();
             bubble = false;
           }
-          if (fired[i].returnValue === false) { ev.preventDefault(); }
+          if (fired[i].returnValue === false || ev.returnValue === false) {
+            ev.preventDefault();
+          }
         }
 
         if (bubble) {
@@ -1791,9 +1797,12 @@ console.log('dun it', msaafilter);
             this.view.proxyEvent(overevent);
           }
         }
-        var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
-        //elation.events.fire(moveevent);
-        this.view.proxyEvent(moveevent);
+        if (!this.lastmove || !this.lastmove.equals(hit.point)) {
+          var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+          //elation.events.fire(moveevent);
+          this.view.proxyEvent(moveevent);
+          this.lastmove = hit.point;
+        }
       } else {
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
