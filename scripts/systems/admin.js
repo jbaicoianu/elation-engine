@@ -143,7 +143,6 @@ elation.require([
         //this.inspector.hide();
         //view.toggleStats(false);
 
-console.log('enable the active guy?', this.lastactivething);
         if (this.lastactivething) {
           this.engine.client.setActiveThing(this.lastactivething);
           this.lastactivething.enable();
@@ -167,7 +166,6 @@ console.log('enable the active guy?', this.lastactivething);
 
         if (view.activething) {
           this.lastactivething = view.activething;
-console.log('deeeeee', view.activething);
           //this.lastactivething = this.engine.client.player;
           if (this.lastactivething) {
             this.lastactivething.disable();
@@ -446,11 +444,13 @@ console.log('deeeeee', view.activething);
     this.show = function() {
       elation.engine.systems.admin.scenetree.extendclass.show.call(this);
       elation.engine.systems.admin.inspector('admin').show();
+      this.treeview.enable();
       this.inspector.show();
     }
     this.hide = function() {
       elation.engine.systems.admin.scenetree.extendclass.hide.call(this);
       elation.engine.systems.admin.inspector('admin').hide();
+      this.treeview.disable();
       this.inspector.hide();
     }
   }, elation.ui.window);
