@@ -351,6 +351,14 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
 
           144: 'numlock',
 
+          173: 'volume_mute',
+          174: 'volume_down',
+          175: 'volume_up',
+          176: 'media_next',
+          177: 'media_prev',
+          178: 'media_stop',
+          179: 'media_playpause',
+
           186: 'semicolon',
           187: 'equals',
           188: 'comma',
