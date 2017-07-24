@@ -701,7 +701,7 @@ elation.component.add("engine.things.generic", function() {
         }
       }
   }
-  this.setCollider = function(type, args, rigidbody) {
+  this.setCollider = function(type, args, rigidbody, reuseMesh) {
     //console.log('set collider', type, args, rigidbody, this.collidable);
     if (!rigidbody) rigidbody = this.objects['dynamics'];
     if (this.properties.collidable) {
@@ -750,7 +750,7 @@ elation.component.add("engine.things.generic", function() {
       if (collidergeom) {
         var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false, side: THREE.DoubleSide});
 
-        if (this.collidermesh) {
+        if (reuseMesh && this.collidermesh) {
           var collidermesh = this.collidermesh;
           collidermesh.geometry = collidergeom;
         } else {
