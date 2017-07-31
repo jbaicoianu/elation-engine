@@ -334,6 +334,10 @@ elation.component.add("engine.things.generic", function() {
             newobj = this.createObject3D();
 
         this.objects['3d'] = newobj;
+        this.objects['3d'].bindPosition(this.properties.position);
+        this.objects['3d'].bindQuaternion(this.properties.orientation);
+        this.objects['3d'].bindScale(this.properties.scale);
+        this.objects['3d'].userData.thing = this;
 
         if (parent) {
           parent.remove(oldobj);
