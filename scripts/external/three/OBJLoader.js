@@ -505,8 +505,8 @@ THREE.OBJLoader = ( function () {
 
 					for (var idx = 1; idx < numFaces; idx++) {
 
-						var v3 = faceVertices[idx],
-						    v2 = faceVertices[idx+1];
+						var v2 = faceVertices[idx],
+						    v3 = faceVertices[idx+1];
 
 						state.addFace(
 							v1[ 0 ], v2[ 0 ], v3[ 0 ], undefined,
