@@ -447,7 +447,9 @@ if (!ENV_IS_BROWSER) return;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
         if (this.hasalpha === null) {
-          this.hasalpha = this.canvasHasAlpha(canvas);
+          if (!this.src.match(/\.jpg$/i)) {
+            this.hasalpha = this.canvasHasAlpha(canvas);
+          }
         }
         this._texture.generateMipmaps = elation.config.get('engine.assets.image.mipmaps', true);
         if (this.invert) {
@@ -1085,12 +1087,13 @@ if (!ENV_IS_BROWSER) return;
                       invert: false
                     });
                   }
-                  texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
-                    elation.events.add(asset, 'asset_load_complete', resolve);
-                    elation.events.add(asset, 'asset_error', reject);
-                  })));
-                  
-                  elation.events.fire({element: this, type: 'asset_load_dependency', data: asset});
+                  if (!asset.loaded) {
+                    texturepromises.push(new Promise(elation.bind(this, function(resolve, reject) {
+                      elation.events.add(asset, 'asset_load_complete', resolve);
+                      elation.events.add(asset, 'asset_error', reject);
+                    })));
+                    elation.events.fire({element: this, type: 'asset_load_dependency', data: asset});
+                  }
                   tex = asset.getInstance();
                   material[texname] = textures[src] = tex;
                 } else {
