@@ -345,10 +345,7 @@ elation.require([
       }
     }
     this.destroy = function() {
-      if (this.vrdisplay && this.vrdisplay.isPresenting) {
-        // FIXME - doesn't really help...
-        this.vrdisplay.exitPresent();
-      }
+      // TODO - deeallocate resources
     }
     this.createRenderPath = function(passes, target) {
       // this.createRenderPath(['picking', 'oculus_deform'], depthTarget)
