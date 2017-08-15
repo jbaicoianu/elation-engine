@@ -332,7 +332,7 @@ elation.require([
           var imageids = Object.keys(parsed.library.images);
           for (var i = 0; i < imageids.length; i++) {
             var img = parsed.library.images[imageids[i]].build;
-            img.src = this.getProxiedURL(baseurl + img.src);
+            img.src = this.getProxiedURL(img.src, baseurl);
           }
           parsed.scene.traverse(function(n) {
             if ((n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) ||
