@@ -362,6 +362,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       }
       if (hmd.linearVelocity) {
         this.head.objects.dynamics.velocity.fromArray(hmd.linearVelocity).multiplyScalar(scale);
+      } else {
+        this.head.objects.dynamics.velocity.set(0,0,0);
       }
 
       var o = hmd.orientation;
