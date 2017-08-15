@@ -185,7 +185,8 @@ elation.component.add("engine.things.generic", function() {
         }
         break;
       case 'bool':
-        value = !(value === false || value === 'false' || value === 0 || value === '0' || value === '' || value === null || typeof value == 'undefined');
+      case 'boolean':
+        value = !(value === false || (elation.utils.isString(value) && value.toLowerCase() === 'false') || value === 0 || value === '0' || value === '' || value === null || typeof value == 'undefined');
         break;
       case 'float':
         value = +value;
