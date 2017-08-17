@@ -202,6 +202,7 @@ if (!ENV_IS_BROWSER) return;
     preview: false,
     baseurl: '',
     src: false,
+    proxy: true,
     instances: [],
 
     _construct: function(args) {
@@ -265,7 +266,7 @@ if (!ENV_IS_BROWSER) return;
     },
     getProxiedURL: function(url, baseurl) {
       var proxiedurl = this.getFullURL(url, baseurl);
-      if (proxiedurl && elation.engine.assets.corsproxy && !this.isURLLocal(proxiedurl) && proxiedurl.indexOf(elation.engine.assets.corsproxy) == -1) {
+      if (this.proxy && this.proxy != 'false' && proxiedurl && elation.engine.assets.corsproxy && !this.isURLLocal(proxiedurl) && proxiedurl.indexOf(elation.engine.assets.corsproxy) == -1) {
         var re = /:\/\/([^\/\@]+@)/;
         var m = proxiedurl.match(re);
         // Check it asset has authentication info, and pass it through if it does
