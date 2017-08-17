@@ -62,7 +62,7 @@ elation.require([
     this.createUI = function() {
       this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
       this.assets = elation.engine.systems.admin.assets(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
-      this.worldcontrol = elation.engine.systems.admin.worldcontrol(null, elation.html.create({append: document.body}), {engine: this.engine});
+      //this.worldcontrol = elation.engine.systems.admin.worldcontrol(null, elation.html.create({append: document.body}), {engine: this.engine});
     }
     this.engine_frame = function(ev) {
       if (!this.hidden) {
@@ -139,7 +139,7 @@ elation.require([
       if (forceshow !== true && !this.hidden) {
         this.hidden = true;
         this.scenetree.hide();
-        this.worldcontrol.hide();
+        if (this.worldcontrol) this.worldcontrol.hide();
         //this.inspector.hide();
         //view.toggleStats(false);
 
@@ -160,7 +160,7 @@ elation.require([
         }
         this.hidden = false;
         this.scenetree.show();
-        this.worldcontrol.show();
+        if (this.worldcontrol) this.worldcontrol.show();
         //this.inspector.show();
         //view.toggleStats(true);
 
