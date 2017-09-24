@@ -633,23 +633,21 @@ if (!ENV_IS_BROWSER) return;
           elation.events.add(video, 'playing', this.handleAutoplayStart);
           this._autoplaytimeout = setTimeout(elation.bind(this, this.handleAutoplayTimeout), 1000);
         }), 0);
-        video.addEventListener('canplaythrough', function() {
-          var promise = video.play();
-          if (promise) {
-            promise.then(elation.bind(this, function() {
-              this.handleAutoplayStart();
-            })).catch(elation.bind(this, function(err) {
-              // If autoplay failed, retry with muted video
-              var strerr = err.toString();
-              if (strerr.indexOf('NotAllowedError') == 0) {
-                video.muted = true;
-                video.play().catch(elation.bind(this, this.handleAutoplayError));
-              } else if (strerr.indexOf('NotSupportedError') == 0) {
-                this.initHLS();
-              }
-            }));
-          }
-        });
+        var promise = video.play();
+        if (promise) {
+          promise.then(elation.bind(this, function() {
+            this.handleAutoplayStart();
+          })).catch(elation.bind(this, function(err) {
+            // If autoplay failed, retry with muted video
+            var strerr = err.toString();
+            if (strerr.indexOf('NotAllowedError') == 0) {
+              video.muted = true;
+              video.play().catch(elation.bind(this, this.handleAutoplayError));
+            } else if (strerr.indexOf('NotSupportedError') == 0) {
+              this.initHLS();
+            }
+          }));
+        }
       }
     },
     handleLoad: function() {
