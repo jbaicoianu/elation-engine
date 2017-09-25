@@ -302,6 +302,7 @@ if (!ENV_IS_BROWSER) return;
   elation.define('engine.assets.image', {
     assettype: 'image',
     src: false,
+    canvas: false,
     sbs3d: false,
     ou3d: false,
     reverse3d: false,
@@ -310,6 +311,7 @@ if (!ENV_IS_BROWSER) return;
     flipY: true,
     invert: false,
     imagetype: '',
+    tex_linear: true,
     hasalpha: null,
     rawimage: null,
 
@@ -346,6 +348,14 @@ if (!ENV_IS_BROWSER) return;
           );
           elation.events.fire({element: this, type: 'asset_load_queued'});
         }
+      } else if (this.canvas) {
+        var texture = this._texture = new THREE.Texture();
+        texture.image = this.canvas;
+        texture.image.originalSrc = '';
+        texture.sourceFile = '';
+        texture.needsUpdate = true;
+        texture.flipY = this.flipY;
+        this.sendLoadEvents();
       }
     },
     loadImageByURL: function() {
