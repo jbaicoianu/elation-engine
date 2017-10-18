@@ -107,6 +107,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         emulateGamepad: true
       },
       hmd: {
+      },
+      leapmotion: {
+        enabled: false,
+        mount: 'VR'
       }
     };
 
@@ -947,6 +951,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           append: controltypes,
           classname: 'engine_config_section controls_keyboard',
         });
+        var leapmotioncontrols = elation.ui.panel({
+          append: controltypes,
+          classname: 'engine_config_section controls_leapmotion',
+        });
         var label = elation.ui.labeldivider({
           append: mousecontrols, 
           label: 'Mouse'
@@ -1011,6 +1019,23 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         });
 */
         //elation.ui.content({ append: keyboardcontrols, content: '(TODO - build keybinding UI)'});
+        var leaplabel = elation.ui.labeldivider({
+          append: leapmotioncontrols,
+          label: 'Leap Motion'
+        });
+        var leapenabled = elation.ui.toggle({
+          append: leapmotioncontrols,
+          classname: 'controls_leapmotion_enabled',
+          label: 'Enabled',
+          bindvar: [this.controlsystem.settings.leapmotion, 'enabled']
+        });
+        var leapmount = elation.ui.select({
+          append: leapmotioncontrols,
+          classname: 'controls_leapmotion_mount',
+          label: 'Mount',
+          items: ['VR', 'Desktop'],
+          bindvar: [this.controlsystem.settings.leapmotion, 'mount']
+        });
 
         var bindingpanel = elation.engine.systems.controls.bindingviewer({  
           append: columns, 
