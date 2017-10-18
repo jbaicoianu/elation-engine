@@ -18,9 +18,11 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     loadAssetPack: function(url, baseurl) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
       this.assetroot.load()
+      return this.assetroot;
     },
     loadJSON: function(json, baseurl) {
-      var assetroot = new elation.engine.assets.pack({name: "asdf", baseurl: baseurl, json: json});
+      var assetpack = new elation.engine.assets.pack({name: "asdf", baseurl: baseurl, json: json});
+      return assetpack;
     },
     get: function(asset) {
 if (!ENV_IS_BROWSER) return;
@@ -203,6 +205,7 @@ if (!ENV_IS_BROWSER) return;
     baseurl: '',
     src: false,
     proxy: true,
+    preload: false,
     instances: [],
 
     _construct: function(args) {
@@ -211,6 +214,9 @@ if (!ENV_IS_BROWSER) return;
     },
     init: function() {
       this.instances = [];
+      if (this.preload && this.preload !== 'false') {
+        this.load();
+      }
     },
     load: function() {
       console.log('engine.assets.base load() should not be called directly', this);
@@ -314,6 +320,7 @@ if (!ENV_IS_BROWSER) return;
     tex_linear: true,
     hasalpha: null,
     rawimage: null,
+    preload: true,
 
     load: function() {
       if (this.src) {
@@ -326,7 +333,7 @@ if (!ENV_IS_BROWSER) return;
         texture.flipY = this.flipY;
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
-        } else if (!elation.engine.assetdownloader.isUrlInQueue(fullurl)) {
+        } else {
           elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
             elation.bind(this, function(events) {
               var xhr = events[0].target;
@@ -936,9 +943,7 @@ if (!ENV_IS_BROWSER) return;
         
         var loadargs = {src: this.getFullURL()};
         if (this.mtl) loadargs.mtl = this.getFullURL(this.mtl, this.getBaseURL(loadargs.src));
-        if (!elation.engine.assetdownloader.isUrlInQueue(loadargs.src)) {
-          this.queueForDownload(loadargs);
-        }
+        this.queueForDownload(loadargs);
       } else {
         this.removePlaceholders();
       }
@@ -1095,7 +1100,7 @@ if (!ENV_IS_BROWSER) return;
                       src: src,
                       baseurl: this.baseurl,
                       flipY: tex.flipY,
-                      invert: false
+                      invert: (texname == 'specularMap')
                     });
                   }
                   if (!asset.loaded) {
@@ -1196,9 +1201,12 @@ if (!ENV_IS_BROWSER) return;
     assettype: 'pack',
     src: false,
     json: false,
-    assets: [],
+    assets: null,
+    assetmap: null,
   
     init: function() {
+      this.assets = [];
+      this.assetmap = {};
       this.load();
     },
     load: function() {
@@ -1220,18 +1228,39 @@ if (!ENV_IS_BROWSER) return;
       });
     },
     loadJSON: function(json) {
-      this.json = json;
+      //this.json = json;
       var baseurl = (this.baseurl && this.baseurl.length > 0 ? this.baseurl : this.getBaseURL());
-      this.assets = [];
-      json.forEach(elation.bind(this, function(assetdef) {
+      if (!this.assets) this.assets = [];
+      for (var i = 0; i < json.length; i++) {
+        var assetdef = json[i];
         assetdef.baseurl = baseurl;
-        var existing = elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
+        var existing = elation.utils.arrayget(this.assetmap, assetdef.assettype + '.' + assetdef.name); //elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
         if (!existing) {
           var asset = elation.engine.assets.get(assetdef);
           this.assets.push(asset);
+          if (!this.assetmap[asset.assettype]) this.assetmap[asset.assettype] = {};
+          this.assetmap[asset.assettype][asset.name] = asset;
         }
         //asset.load();
-      }));
+      }
+    },
+    get: function(type, name, create) {
+      if (this.assetmap[type] && this.assetmap[type][name]) {
+        return this.assetmap[type][name];
+      }
+
+      if (create) {
+        // If requested, create a new asset if it doesn't exist yet
+        // FIXME - right now we're assuming the name is a url, which sometimes leads to 404s
+
+        var assetargs = {assettype: type, name: name, src: name};
+        if (typeof create == 'object') {
+          elation.utils.merge(create, assetargs);
+        }
+        this.loadJSON([assetargs]);
+        return this.assetmap[type][name];
+      }
+      return;
     },
     _construct: function(args) {
       elation.engine.assets.base.call(this, args);
@@ -1416,6 +1445,7 @@ if (!ENV_IS_BROWSER) return;
   elation.define('engine.assets.file', {
     assettype: 'file',
     src: false,
+    content: false,
 
     load: function() {
       if (this.src) {
@@ -1425,10 +1455,11 @@ if (!ENV_IS_BROWSER) return;
             elation.bind(this, function(events) {
               var xhr = events[0].target;
               var type = this.contenttype = xhr.getResponseHeader('content-type')
-              console.log('DUR', events, this);
 
               this.state = 'processing';
               elation.events.fire({element: this, type: 'asset_load_processing'});
+              this.content = xhr.response;
+              elation.events.fire({element: this, type: 'asset_load'});
             }),
             elation.bind(this, function(error) {
               this.state = 'error';
@@ -1439,6 +1470,20 @@ if (!ENV_IS_BROWSER) return;
         }
       }
     },
+    getInstance: function(args) {
+      if (!this.content) {
+        this.load();
+      }
+      return this.arrayToString(this.content);
+    },
+    arrayToString: function(arr) {
+      var str = '';
+      var bytes = new Uint8Array(arr);
+      for (var i = 0; i < bytes.length; i++) {
+        str += String.fromCharCode(bytes[i]);
+      }
+      return str;
+    }
   }, elation.engine.assets.base);
 });
 
