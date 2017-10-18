@@ -6,7 +6,7 @@ elation.require([
     'engine.external.pako',
     'engine.external.zlib.inflate',
     'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader2', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTFLoader', 'engine.external.three.PLYLoader'
+    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTF2Loader', 'engine.external.three.PLYLoader', 'engine.external.three.BVHLoader'
   ], function() {
 
   elation.define('engine.assetworker', {
@@ -59,6 +59,7 @@ elation.require([
         'ply': new elation.engine.assets.loaders.model_ply(),
         'wrl': new elation.engine.assets.loaders.model_wrl(),
         'gltf': new elation.engine.assets.loaders.model_gltf(),
+        'bvh': new elation.engine.assets.loaders.model_bvh(),
       }
     },
     getFullURL: function(src) {
@@ -100,6 +101,7 @@ elation.require([
         ['fbx', 'FBXHeader'],
         ['obj', '\nv '],
         ['ply', 'ply'],
+        ['bvh', 'HIERARCHY\n'],
         ['wrl', '#VRML'],
         ['gltf', '"bufferView"']
       ];
@@ -395,11 +397,11 @@ elation.require([
         var json = JSON.parse(data);
         var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
         var proxypath = elation.engine.assets.corsproxy + path;
-
-        THREE.GLTFLoader.Shaders.removeAll();
-        var loader = new THREE.GLTFLoader();
-        loader.parse(json, elation.bind(this, function(modeldata) {
+        //THREE.GLTFLoader.Shaders.removeAll();
+        var loader = new THREE.GLTF2Loader();
+        loader.parse(bindata, proxypath, elation.bind(this, function(modeldata) {
           if (modeldata.scene) {
+            modeldata.scene.updateMatrixWorld(true);
             var encoded = modeldata.scene.toJSON();
             resolve(encoded);
           } else {
@@ -449,6 +451,20 @@ elation.require([
       });
     },
 
+  }, elation.engine.assets.base);
+
+  elation.define('engine.assets.loaders.model_bvh', {
+    convertArrayBufferToString: elation.engine.assets.loaders.model.prototype.convertArrayBufferToString,
+    parse: function(data, job) {
+      return new Promise(elation.bind(this, function(resolve, reject) { 
+        var loader = new THREE.BVHLoader();
+        var modeldata = loader.parse(this.convertArrayBufferToString(data));
+        var group = new THREE.Group();
+        group.skeleton = modeldata.skeleton;
+        group.animations = modeldata.animations;
+        resolve(group.toJSON());
+      }));
+    }
   }, elation.engine.assets.base);
 
 });
