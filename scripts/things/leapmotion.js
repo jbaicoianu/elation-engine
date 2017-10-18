@@ -42,9 +42,9 @@ elation.require(['engine.external.leapmotion.leap'], function() {
       //var palmsize = [.07,.01,.05];
       var palmsize = [1,.01,1];
       this.materials = {
-        bones: new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 0.4, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground}),
-        joints: new THREE.MeshPhongMaterial({color: 0xccffcc, transparent: false, opacity: 0.6, blending: THREE.NormalBlending}),
-        tips: new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: false, opacity: 0.3, blending: THREE.NormalBlending})
+        bones: new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 1, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground}),
+        joints: new THREE.MeshPhongMaterial({color: 0xccffcc, transparent: false, opacity: 1, blending: THREE.NormalBlending}),
+        tips: new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: false, opacity: 1, blending: THREE.NormalBlending})
       };
       this.palm = new THREE.Mesh(new THREE.BoxGeometry(palmsize[0], palmsize[1], palmsize[2]), this.materials.bones);
       this.palm.geometry.applyMatrix(new THREE.Matrix4().setPosition(new THREE.Vector3(0, 0, -palmsize[2] / 4)));
