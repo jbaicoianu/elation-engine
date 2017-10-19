@@ -167,8 +167,12 @@ elation.component.add("engine.things.generic", function() {
         }
         break;
       case 'color':
+        var clamp = elation.utils.math.clamp;
         if (value instanceof THREE.Vector3) {
-          value = new THREE.Color(value.x, value.y, value.z);
+          value = new THREE.Color(clamp(value.x, 0, 1), clamp(value.y, 0, 1), clamp(value.z, 0, 1));
+        } else if (value instanceof THREE.Vector4) {
+          this.opacity = clamp(value.w, 0, 1);
+          value = new THREE.Color(clamp(value.x, 0, 1), clamp(value.y, 0, 1), clamp(value.z, 0, 1));
         } else if (elation.utils.isString(value)) {
           var splitpos = value.indexOf(' ');
           if (splitpos == -1) splitpos = value.indexOf(',');
@@ -176,7 +180,10 @@ elation.component.add("engine.things.generic", function() {
             value = new THREE.Color(value);
           } else {
             var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
-            value = new THREE.Color(+split[0], +split[1], +split[2]);
+            value = new THREE.Color(clamp(split[0], 0, 1), clamp(split[1], 0, 1), clamp(split[2], 0, 1));
+            if (split.length > 3) {
+              this.opacity = clamp(split[3], 0, 1);
+            }
           }
         } else if (elation.utils.isArray(value)) {
           value = new THREE.Color(+value[0], +value[1], +value[2]);
