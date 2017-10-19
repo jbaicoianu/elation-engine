@@ -8,6 +8,7 @@ elation.require([
 
 elation.component.add("engine.things.generic", function() {
   this.init = function() {
+    this._proxies = {};
     this._thingdef = {
       properties: {},
       events: {},
@@ -30,7 +31,6 @@ elation.component.add("engine.things.generic", function() {
     this.skeleton = false;
     
     this.tmpvec = new THREE.Vector3();
-    this._proxies = {};
     
     this.interp = {
       rate: 20,
