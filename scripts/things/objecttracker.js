@@ -195,7 +195,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     })()
     this.handleLeapLoop = function(frame) {
       var framehands = {};
-      
+
       if (!this.leapDetected) {
         this.leapDetected = true;
         this.hands = {
