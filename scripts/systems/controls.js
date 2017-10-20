@@ -966,18 +966,23 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           snap: 1,
           label: 'Sensitivity',
           classname: 'controls_mouse_sensitivity',
-          handle:
-            {
-              name: 'handle_one',
-              value: this.controlsystem.settings.mouse.sensitivity,
-              bindvar: [this.controlsystem.settings.mouse, 'sensitivity'],
-            }
+          handle: {
+            name: 'handle_one',
+            value: this.controlsystem.settings.mouse.sensitivity,
+            bindvar: [this.controlsystem.settings.mouse, 'sensitivity'],
+          },
+          events: {
+            ui_slider_change: elation.bind(this, this.fireSettingsChangeEvent)
+          }
         });
         var invertY = elation.ui.toggle({
           append: mousecontrols,
           classname: 'controls_mouse_inverty',
           label: 'Invert Y',
-          bindvar: [this.controlsystem.settings.mouse, 'invertY']
+          bindvar: [this.controlsystem.settings.mouse, 'invertY'],
+          events: {
+            toggle: elation.bind(this, this.fireSettingsChangeEvent)
+          }
         });
 
         label = elation.ui.labeldivider({
@@ -1027,20 +1032,30 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           append: leapmotioncontrols,
           classname: 'controls_leapmotion_enabled',
           label: 'Enabled',
-          bindvar: [this.controlsystem.settings.leapmotion, 'enabled']
+          bindvar: [this.controlsystem.settings.leapmotion, 'enabled'],
+          events: {
+            toggle: elation.bind(this, this.fireSettingsChangeEvent)
+          }
         });
         var leapmount = elation.ui.select({
           append: leapmotioncontrols,
           classname: 'controls_leapmotion_mount',
           label: 'Mount',
           items: ['VR', 'Desktop'],
-          bindvar: [this.controlsystem.settings.leapmotion, 'mount']
+          bindvar: [this.controlsystem.settings.leapmotion, 'mount'],
+          events: {
+            ui_select_change: elation.bind(this, this.fireSettingsChangeEvent)
+          }
         });
 
         var bindingpanel = elation.engine.systems.controls.bindingviewer({  
           append: columns, 
           controlsystem: this.controlsystem 
         });
+    }
+    this.fireSettingsChangeEvent = function() {
+      console.log('settings changed!');
+      elation.events.fire({element: this.controlsystem, type: 'settings_change'});
     }
   }, elation.ui.panel);
 
