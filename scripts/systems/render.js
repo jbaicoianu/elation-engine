@@ -885,10 +885,10 @@ if (vivehack) {
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
 
+      var pixelratio = (window.devicePixelRatio ? window.devicePixelRatio : 1);
       if (this.vreffect && this.vreffect.isPresenting) {
         this.vreffect.setSize(scaledwidth, scaledheight);
       } else {
-        var pixelratio = (window.devicePixelRatio ? window.devicePixelRatio : 1);
         if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
           //this.rendersystem.renderer.setPixelRatio(pixelratio);
         }
@@ -899,6 +899,7 @@ if (vivehack) {
       }
       if (this.rendersystem.cssrenderer) {
         this.rendersystem.cssrenderer.setSize(width, height);  
+        //this.rendersystem.cssrenderer.setPixelRatio(pixelratio);
       }
       //this.composer.setSize(scaledwidth, scaledheight);
       if (this.pickingcomposer) {
