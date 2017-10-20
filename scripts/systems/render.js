@@ -1603,18 +1603,15 @@ console.log('dun it', msaafilter);
           if (this.pickingobject) {
             //console.log('mouseout', this.pickingobject);
             var outevent = {type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: this.getPickingData(this.pickingobject, [x, y])};
-            //elation.events.fire(outevent);
-            this.proxyEvent(moveevent);
+            this.proxyEvent(outevent);
           }
           this.pickingobject = this.pickingobjects[pickid];
           if (this.pickingobject) {
             var overevent = {type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
-            //elation.events.fire(overevent);
-            this.proxyEvent(moveevent);
+            this.proxyEvent(overevent);
           }
         }
         var moveevent = {type: "mousemove", element: pickedthing, data: this.getPickingData(this.pickingobject, [x, y]), clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
-        //elation.events.fire(moveevent);
         this.proxyEvent(moveevent);
       } else {
         if (this.pickingobject) {
@@ -1785,29 +1782,25 @@ console.log('dun it', msaafilter);
           pickedthing = hit.object.userData.thing;
           if (this.pickingobject) {
             var outevent = {type: "mouseout", element: oldpickedthing, relatedTarget: pickedthing, data: hit};
-            //elation.events.fire(outevent);
             this.view.proxyEvent(outevent);
           }
           this.pickingobject = hit.object;
           if (this.pickingobject) {
             var overevent = {type: "mouseover", element: pickedthing, relatedTarget: oldpickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
-            //elation.events.fire(overevent);
             this.view.proxyEvent(overevent);
           }
         }
         if (!this.lastmove || !this.lastmove.equals(hit.point)) {
           var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
-          //elation.events.fire(moveevent);
           this.view.proxyEvent(moveevent);
+
           this.lastmove = hit.point;
         }
       } else {
         if (this.pickingobject) {
           //console.log('mouseout', this.pickingobject);
           var outevent = {type: "mouseout", element: pickedthing, data: hit};
-          //elation.events.fire(outevent);
           this.view.proxyEvent(outevent);
-          this.pickingobject = false;
         }
       }
       return true;
