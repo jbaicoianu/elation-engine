@@ -3,10 +3,13 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
     this.postinit = function() {
       elation.engine.things.objecttracker.extendclass.postinit.call(this);
       this.defineProperties({
-        player: { type: 'object' }
+        player: { type: 'object' },
+        leapenabled: { type: 'boolean', default: false },
+        leapmount: { type: 'string', default: 'VR' }
       });
       this.controllers = [];
       this.hands = {};
+      this.leapDetected = false;
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.updatePositions));
       elation.events.add(window, "webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", elation.bind(this, this.updateTrackedObjects));
 
@@ -24,10 +27,19 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         'vive_right': /HTC Vive/,
         'daydream': /^Daydream Controller$/,
       };
+      this.controllerIsLocal = {
+        touch_left: true,
+        touch_right: true
+      };
     }
     this.createChildren = function() {
-      Leap.loop(elation.bind(this, this.handleLeapLoop));
       this.updateTrackedObjects();
+    }
+    this.initLeap = function() {
+      this.leapcontroller = Leap.loop({
+        optimizeHMD: (this.engine.systems.controls.settings.leapmotion.mount == 'VR'),
+        frameEventName: 'deviceFrame'
+      }, elation.bind(this, this.handleLeapLoop));
     }
     this.updatePositions = function() {
       this.updateTrackedObjects();
@@ -45,6 +57,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           var pose = c.data.pose;
           if (pose.position) {
             c.model.position.fromArray(pose.position).multiplyScalar(1);
+            //player.neck.worldToLocal(player.neck.localToWorld(c.model.position));
             //hand.position.fromArray(pose.position);
           } else {
             c.model.position.set(.2, (handname == "right" ? -.3 : .3), .2);
@@ -62,6 +75,22 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       }
     }
     this.updateTrackedObjects = function() {
+      if (!this.leapenabled && this.engine.systems.controls.settings.leapmotion.enabled) {
+        this.leapenabled = true;
+        this.initLeap();
+      }
+      if (this.leapcontroller && this.leapmount != this.engine.systems.controls.settings.leapmotion.mount) {
+        this.leapmount = this.engine.systems.controls.settings.leapmotion.mount;
+        this.leapcontroller.setOptimizeHMD(this.leapmount == 'VR');
+
+        if (this.handroot) {
+          var attachment = this.getHandAttachment(this.leapmount);
+          if (attachment.parent != this.handroot.parent) {
+            attachment.parent.add(this.handroot);
+            this.handroot.properties.orientation.setFromEuler(attachment.rotation);
+          }
+        }
+      }
       var controls = this.engine.systems.controls;
       this.vrdisplay = this.engine.systems.render.views.main.vrdisplay;
       var gamepads = controls.gamepads;
@@ -120,8 +149,15 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       return this.controllers.length > 0 || this.hands.left || this.hands.right;
     }
     this.getHand = function(hand) {
+      if (!this.handroot) {
+        var attachment = this.getHandAttachment(this.leapmount);
+        this.handroot = attachment.parent.spawn('generic', null, {
+          position: new THREE.Vector3(0, 0, 0),
+          orientation: new THREE.Quaternion().setFromEuler(attachment.rotation)
+        });
+      }
       if (!this.hands[hand]) {
-        this.hands[hand] = this.player.shoulders.spawn('leapmotion_hand', 'hand_' + hand, { position: new THREE.Vector3(0, 0, 0) });
+        this.hands[hand] = this.handroot.spawn('leapmotion_hand', 'hand_' + hand, { position: new THREE.Vector3(0, 0, 0) });
       }
       return this.hands[hand];
     }
@@ -140,9 +176,33 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       }
       return false;
     }
+    this.getHandAttachment = (function() {
+      var orient_vr = new THREE.Euler(-Math.PI/2, Math.PI, 0, 'XYZ'),
+          orient_desktop = new THREE.Euler(0, 0, 0, 'XYZ');
+      return function(mount) {
+        if (mount == 'VR') {
+          return {
+            parent: this.player.head,
+            rotation: orient_vr,
+          };
+        } else if (mount == 'Desktop') {
+          return {
+            parent: this.player.shoulders,
+            rotation: orient_desktop,
+          };
+        }
+      };
+    })()
     this.handleLeapLoop = function(frame) {
       var framehands = {};
       
+      if (!this.leapDetected) {
+        this.leapDetected = true;
+        this.hands = {
+          left: this.getHand('left'),
+          right: this.getHand('right')
+        };
+      }
       for (var i = 0; i < frame.hands.length; i++) {
         framehands[frame.hands[i].type] = frame.hands[i];
       }
