@@ -186,6 +186,15 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness, offset: new THREE.Vector3(0, this.fatness, 0)});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
+      this.createBodyParts();
+      this.tracker = this.spawn('objecttracker', null, {player: this});
+      this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
+      this.camera.objects['3d'].add(this.ears);
+
+      //var camhelper = new THREE.CameraHelper(this.camera.camera);
+      //this.engine.systems.world.scene['world-3d'].add(camhelper);
+    }
+    this.createBodyParts = function() {
       this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
         'position': [0,1,0]
       });
@@ -198,12 +207,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
         'position': [0,0,0]
       });
-      this.tracker = this.spawn('objecttracker', null, {player: this});
-      this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
-      this.camera.objects['3d'].add(this.ears);
-
-      //var camhelper = new THREE.CameraHelper(this.camera.camera);
-      //this.engine.systems.world.scene['world-3d'].add(camhelper);
     }
     this.getGroundHeight = function() {
       
