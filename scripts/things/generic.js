@@ -277,6 +277,7 @@ elation.component.add("engine.things.generic", function() {
             propval, proxydef, true
           );
           /*
+          // FIXME - listening for proxy_change events would let us respond to changes for individual vector elements, but it gets expensive
           elation.events.add(propval, 'proxy_change', elation.bind(this, function(ev) {
             //this.refresh();
             //this.set('exists', this.properties.exists, prop.refreshGeometry);
@@ -751,6 +752,8 @@ elation.component.add("engine.things.generic", function() {
           radialSegments: 8,
           offset: args.offset,
         });
+      } else if (type == 'threejs') {
+        // TODO - stub for compound mesh colliders
       }
       /*
       if (this.collidermesh) {
