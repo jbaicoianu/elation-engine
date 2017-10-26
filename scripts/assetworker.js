@@ -1,7 +1,7 @@
 elation.require([
     'utils.events',
     'utils.worker',
-    'engine.engine',
+    //'engine.engine',
     'engine.assets',
     'engine.external.pako',
     'engine.external.zlib.inflate',
