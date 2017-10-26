@@ -759,6 +759,17 @@ elation.component.add("engine.things.generic", function() {
         this.collidermesh = false;
       }
       */
+      // Reset colliders
+/*
+      while (this.colliders.children.length > 0) {
+        this.colliders.remove(this.colliders.children[0]);
+      }
+      for (var k in this.children) {
+        if (this.children[k].colliders) {
+          this.colliders.add(this.children[k].colliders);
+        }
+      }
+*/
       if (collidergeom) {
         var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false, side: THREE.DoubleSide});
 
