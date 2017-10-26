@@ -867,16 +867,16 @@ THREEcapVideo.prototype.on = function(event, callback) {
 };
 
 THREEcapVideo.prototype.saveFile = function(fileName) {
-    var a = document.createElement("a");
-    document.body.appendChild(a);
-    a.style.display = "none";
+  var a = document.createElement("a");
+  document.body.appendChild(a);
+  a.style.display = "none";
 
-    var url = window.URL.createObjectURL(this.file);
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }
+  var url = window.URL.createObjectURL(this.file);
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
 "use strict";
 /**
  * THREEcapUI - simple video capture UI
