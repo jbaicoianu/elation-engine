@@ -1002,9 +1002,9 @@ elation.component.add("engine.things.generic", function() {
 
     obj.traverse(function(n) { 
       if (n instanceof THREE.Mesh && n.material) {  
-        var materials = [n.material];
-        if (n.material instanceof THREE.MeshFaceMaterial) {
-          materials = n.material.materials;
+        var materials = n.material;
+        if (!elation.utils.isArray(n.material)) {
+          materials = [n.material];
         } 
         for (var i = 0; i < materials.length; i++) {
           var m = materials[i];
