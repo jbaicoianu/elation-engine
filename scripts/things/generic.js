@@ -532,9 +532,6 @@ elation.component.add("engine.things.generic", function() {
           case 'lambert':
             material = new THREE.MeshLambertMaterial(materialparams);
             break;
-          case 'face':
-            material = new THREE.MeshFaceMaterial();
-            break;
           case 'depth':
             material = new THREE.MeshDepthMaterial();
             break;
@@ -830,7 +827,7 @@ elation.component.add("engine.things.generic", function() {
   this.processJSON = function(geometry, materials) {
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
-    var mesh = new THREE.Mesh(geometry, new THREE.MeshFaceMaterial(materials));
+    var mesh = new THREE.Mesh(geometry, materials);
     mesh.doubleSided = false;
     mesh.castShadow = false;
     mesh.receiveShadow = false;
@@ -1139,9 +1136,9 @@ elation.component.add("engine.things.generic", function() {
     var mapnames = ['map', 'lightMap', 'bumpMap', 'normalMap', 'specularMap', 'envMap'];
     object.traverse(function(n) {
       if (n instanceof THREE.Mesh) {
-        var materials = [n.material];
-        if (n.material instanceof THREE.MeshFaceMaterial) {
-          materials = n.material.materials;
+        var materials = n.material;
+        if (!elation.utils.isArray(n.material)) {
+          materials = [n.material];
         }
         
         for (var materialidx = 0; materialidx < materials.length; materialidx++) {
