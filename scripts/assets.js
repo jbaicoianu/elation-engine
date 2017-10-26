@@ -513,7 +513,7 @@ if (!ENV_IS_BROWSER) return;
       gif.load(function() {
         var canvas = gif.get_canvas();
 
-        var doGIFFrame = function(static) {
+        var doGIFFrame = function(isstatic) {
           framenum = (framenum + 1) % gif.get_length();
           var frame = frames[framenum];
           if (!frame) {
@@ -547,7 +547,7 @@ if (!ENV_IS_BROWSER) return;
             elation.events.fire({element: texture, type: 'asset_update', data: frametex});
           }
 
-          if (!static) {
+          if (!isstatic) {
             var delay = (frame && frame.delay > 0 ? frame.delay : 10);
             setTimeout(doGIFFrame, delay * 10);
           }
