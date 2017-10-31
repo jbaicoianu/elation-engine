@@ -278,12 +278,16 @@ elation.component.add("engine.things.generic", function() {
           this._proxies[propname] = new elation.proxy(
             propval, proxydef, true
           );
+          // FIXME - listening for proxy_change events would let us respond to changes for individual vector elements, but it gets expensive, and can lead to weird infinite loops
           /*
-          // FIXME - listening for proxy_change events would let us respond to changes for individual vector elements, but it gets expensive
           elation.events.add(propval, 'proxy_change', elation.bind(this, function(ev) {
             //this.refresh();
             //this.set('exists', this.properties.exists, prop.refreshGeometry);
             //this[propname] = this[propname];
+            var propdef = this._thingdef.properties[propname];
+            if (propdef && propdef.set) {
+              propdef.set.apply(this, [propname, propval]);
+            }
           }));
           */
         }
