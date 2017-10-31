@@ -11,7 +11,7 @@ elation.require(['engine.things.light'], function() {
     }
     this.updateLight = function() {
       if (this.lightobj) {
-        this.lightobj.color.copy(this.color);
+        //this.lightobj.color.copy(this.color);
       }
     }
   }, elation.engine.things.light);
