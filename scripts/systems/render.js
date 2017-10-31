@@ -1057,6 +1057,7 @@ if (vivehack) {
         this.proxyEvent(ev);
 
         var fakeev = elation.events.clone(ev.touches[0], {});
+        fakeev.button = 0;
         fakeev.preventDefault = ev.preventDefault.bind(ev);
         fakeev.stopPropagation = ev.stopPropagation.bind(ev);
         this.mousedown(fakeev);
@@ -1066,6 +1067,7 @@ if (vivehack) {
     this.touchmove = function(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
       var fakeev = elation.events.clone(ev.touches[0], {});
+      fakeev.button = 0;
       fakeev.preventDefault = ev.preventDefault.bind(ev);
       fakeev.stopPropagation = ev.stopPropagation.bind(ev);
       this.mousemove(fakeev, true);
