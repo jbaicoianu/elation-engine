@@ -156,6 +156,8 @@ elation.component.add("engine.things.generic", function() {
         } else if (elation.utils.isString(value)) {
           var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
           value = new THREE.Euler(+split[0], +split[1], +split[2]);
+        } else if (value instanceof THREE.Vector3) {
+          value = new THREE.Euler(value.x, value.y, value.z);
         }
         break;
       case 'quaternion':
@@ -311,6 +313,17 @@ elation.component.add("engine.things.generic", function() {
         case 'vector4':
         case 'quaternion':
         case 'color':
+          if (currval === null)  {
+            elation.utils.arrayset(this.properties, property, propval);
+            changed = true;
+          } else {
+            if (!currval.equals(propval)) {
+              currval.copy(propval);
+              changed = true
+            }
+          }
+          break;
+        case 'euler':
           if (currval === null)  {
             elation.utils.arrayset(this.properties, property, propval);
             changed = true;
