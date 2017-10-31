@@ -16350,7 +16350,7 @@
 		var clearAlpha = 0;
 
 		var planeCamera, planeMesh;
-		var boxCamera, boxMesh;
+		var boxCamera, boxMesh, boxMeshMatrix = new THREE.Matrix4();
 
 		function render( scene, camera, forceClear ) {
 
@@ -16391,14 +16391,18 @@
 							fog: false
 						} )
 					);
-
 				}
 
 				boxCamera.projectionMatrix.copy( camera.projectionMatrix );
 
 				boxCamera.matrixWorld.extractRotation( camera.matrixWorld );
-				boxCamera.matrixWorldInverse.getInverse( boxCamera.matrixWorld );
 
+				// FIXME - hack to rotate skybox 180 degrees
+/*
+				boxMeshMatrix.extractRotation( camera.matrixWorld );
+				boxCamera.matrixWorld.set(-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1).multiply(boxMeshMatrix);
+*/
+				boxCamera.matrixWorldInverse.getInverse( boxCamera.matrixWorld );
 				boxMesh.material.uniforms[ "tCube" ].value = background;
 				boxMesh.modelViewMatrix.multiplyMatrices( boxCamera.matrixWorldInverse, boxMesh.matrixWorld );
 
