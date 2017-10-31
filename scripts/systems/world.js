@@ -112,10 +112,8 @@ elation.require([
       //elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
       this.attachEvents(ev.data.thing);
 
-      if (ev.data.thing && ev.data.thing.objects['3d']) {
-        if (this.hasLights(ev.data.thing)) {
-          this.refreshLights();
-        }
+      if (this.hasLights(ev.data.thing)) {
+        this.refreshLights();
       }
     }
     this.remove = function(thing) {
@@ -261,6 +259,10 @@ elation.require([
       elation.events.fire({type: 'world_change', element: this});
     }
     this.hasLights = function(thing) {
+      if (!thing.objects['3d']) {
+        console.warn('Thing has no object!', thing);
+        return false;
+      }
       var object = thing.objects['3d'];
       var hasLight = object instanceof THREE.Light;
       if (!hasLight && object.children.length > 0) {
