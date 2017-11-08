@@ -712,7 +712,7 @@ if (!ENV_IS_BROWSER) return;
         return;
       }
       var hls = new Hls();
-      hls.loadSource(this.src);
+      hls.loadSource(this.getProxiedURL());
       hls.attachMedia(this._video);
 
       if (this.auto_play) {
