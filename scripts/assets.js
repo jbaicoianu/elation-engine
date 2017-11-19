@@ -999,6 +999,10 @@ if (!ENV_IS_BROWSER) return;
       this._model.userData.loaded = false;
       if (!elation.engine.assets.loaderpool) {
         var numworkers = elation.config.get('engine.assets.workers', 4);
+        if (numworkers == 'auto') {
+          // 'auto' means use all cores, minus one for the main thread
+          numworkers = Math.max(1, navigator.hardwareConcurrency - 1);
+        }
         elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', scriptsuffix: 'assetworker', num: numworkers});
       }
       elation.engine.assets.loaderpool.addJob(jobdata)
