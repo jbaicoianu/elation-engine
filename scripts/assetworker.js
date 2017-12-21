@@ -100,6 +100,8 @@ elation.require([
         ['collada', '<COLLADA'],
         ['fbx', 'FBXHeader'],
         ['obj', '\nv '],
+        ['obj', '\nvn '],
+        ['obj', '\nusemtl '],
         ['ply', 'ply'],
         ['bvh', 'HIERARCHY\n'],
         ['wrl', '#VRML'],
@@ -118,16 +120,16 @@ elation.require([
           lowercache = {};
       for (var i = 0; i < tests.length; i++) {
         var test = tests[i];
-        uppercache[test[0]] = test[1].toUpperCase();
-        lowercache[test[0]] = test[1].toLowerCase();
+        uppercache[i] = test[1].toUpperCase();
+        lowercache[i] = test[1].toLowerCase();
       }
 
       for (var i = 0; i < maxlength; i++) { 
         var cbyte = data[i];
         for (var k = 0; k < tests.length; k++) {
           var t = tests[k];
-          var upper = uppercache[t[0]],
-              lower = lowercache[t[0]];
+          var upper = uppercache[k],
+              lower = lowercache[k];
           var len = maxlength - upper.length;
 
           if (cbyte == upper.charCodeAt(0) || 
