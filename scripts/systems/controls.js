@@ -122,6 +122,67 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
 
     this.initialized = false;
 
+    // FIXME - this is a temporary workaround for a Windows/Chrome bug: https://bugs.chromium.org/p/chromium/issues/detail?id=781182
+    // It could however be extended as a feature, to provide configuurable mouse input curves (filtering + acceleration)
+    this.mousesmooth = new function() {
+      this.x = 0;
+      this.y = 0;
+
+      this.filtermax = 300;
+      this.filtermin = 80;
+      this.filtermult = 5;
+
+      this.history = {
+        x: [],
+        y: []
+      };
+      this.idx = 0;
+      this.frames = 3;
+
+      this.add = function(x, y) {
+        this.history.x[this.idx] = x;
+        this.history.y[this.idx] = y;
+        this.removeOutlier();
+        this.idx = (this.idx + 1) % this.frames;
+        //this.average();
+      }
+      this.average = function() {
+        var x = 0,
+            y = 0;
+        var len = this.history.x.length;
+        for (var i = 0; i < len; i++) {
+          x += this.history.x[i];
+          y += this.history.y[i];
+        }
+        this.x = x / len;
+        this.y = y / len;
+      }
+      this.removeOutlier = function() {
+        var idx1 = this.idx,
+            idx2 = (this.idx + this.frames - 1) % this.frames,
+            idx3 = (this.idx + this.frames - 2) % this.frames;
+
+        var x1 = this.history.x[idx1],
+            y1 = this.history.y[idx1],
+            x2 = this.history.x[idx2],
+            y2 = this.history.y[idx2],
+            x3 = this.history.x[idx3],
+            y3 = this.history.y[idx3];
+
+        // Compare the last 3 values.  If our middle value is a big spike, throw it out!  Otherwise, we'll use the middle value as our current value
+        // This introduces one frame of mouse latency, but works around a Windows Creator's Update bug with Chrome
+        if (Math.abs(x2) > this.filtermin && Math.abs(x2 / x1) > this.filtermult && Math.abs(x2 / x3) > this.filtermult) {
+          this.x = x1;
+          this.y = y1;
+          console.log('MOUSE SKIP', x1, x2, x3);
+        } else {
+          this.x = x2;
+          this.y = y2;
+        }
+      }
+    };
+
+
     this.system_attach = function(ev) {
       console.log('INIT: controls');
       if (this.loadonstart) {
@@ -622,9 +683,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           movementX = elation.utils.any(ev.movementX, ev.mozMovementX),
           movementY = elation.utils.any(ev.movementY, ev.mozMovementY);
 
+      this.mousesmooth.add(movementX, movementY);
+
       var deltas = [
-            scaleX * movementX / width,
-            scaleY * movementY / height
+            scaleX * this.mousesmooth.x / width,
+            scaleY * this.mousesmooth.y / height
           ];
       return deltas;
     }
