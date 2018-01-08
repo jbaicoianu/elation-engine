@@ -393,9 +393,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       var angular = new THREE.Vector3(),
           tmpquat = new THREE.Quaternion();
 
-      return function(ev) {
-        if (this.engine.systems.controls.pointerLockActive) {
+      return function(ev, force) {
+        if (this.engine.systems.controls.pointerLockActive || force) {
           var mouselook = ev.data.mouse_look;
+          var changed = false;
           if (mouselook[0]) {
             angular.set(0, -mouselook[0] * this.properties.turnspeed / 60, 0);
             var theta = angular.length();
@@ -403,6 +404,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             tmpquat.setFromAxisAngle(angular, theta);
             this.properties.orientation.multiply(tmpquat);
             ev.data.mouse_turn = 0;
+            ev.data.mouse_look[0] = 0;
+            changed = true;
           }
 
           if (mouselook[1]) {
@@ -412,9 +415,14 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             tmpquat.setFromAxisAngle(angular, theta);
             this.head.properties.orientation.multiply(tmpquat);
             ev.data.mouse_pitch = 0;
+            ev.data.mouse_look[1] = 0;
+            changed = true;
+          }
+
+          if (changed) {
+            this.refresh();
           }
         }
-        this.refresh();
       };
     })();
     this.handleCreate = function(ev) {
