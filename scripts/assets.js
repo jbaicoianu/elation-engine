@@ -88,7 +88,14 @@ if (!ENV_IS_BROWSER) return;
       for (var i = 0; i < urls.length; i++) {
         var subpromise = new Promise(function(resolve, reject) {
           var fullurl = urls[i];
-          if (corsproxy && fullurl.indexOf(corsproxy) != 0 && fullurl.indexOf('blob:') != 0 && fullurl.indexOf('data:') != 0) fullurl = corsproxy + fullurl;
+          if (corsproxy &&
+              fullurl.indexOf(corsproxy) != 0 &&
+              fullurl.indexOf('blob:') != 0 &&
+              fullurl.indexOf('data:') != 0 &&
+              fullurl.indexOf(self.location.origin) != 0)
+          {
+                fullurl = corsproxy + fullurl;
+          }
           if (!queue[fullurl]) {
             var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
               responseType: 'arraybuffer',
