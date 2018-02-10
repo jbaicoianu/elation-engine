@@ -204,7 +204,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
 
     this.initcontrols = function() {
       if (!this.container) this.container = this.engine.systems.render.renderer.domElement;
-      elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,DOMMouseScroll,gesturestart,gesturechange,gestureend", this);
+      elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,click,DOMMouseScroll,gesturestart,gesturechange,gestureend", this);
       //elation.events.add(this.container, "touchstart,touchmove,touchend, this);
       elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
       //elation.events.add(window, "deviceorientation,devicemotion", this);
@@ -704,9 +704,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       return "nomod";
     }
     this.mousedown = function(ev, skiplock) {
+      this.cancelclick = false;
       if (!skiplock && ev.button === 0 && !this.getPointerLockElement()) {
         if (this.requestPointerLock()) {
-          //ev.stopPropagation();
+          this.cancelclick = true;
+          ev.stopPropagation();
           ev.preventDefault();
         }
       }
@@ -786,6 +788,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
     }
     this.mouseup = function(ev) {
+      if (this.cancelclick) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        return;
+      }
       var bindid = "mouse_button_" + ev.button;
       //elation.events.remove(window, "mousemove", this);
       if (this.state[bindid]) {
@@ -798,6 +805,13 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           this.changes.push("mouse_drag_x");
           this.changes.push("mouse_drag_y");
         }
+      }
+    }
+    this.click = function(ev) {
+      if (this.cancelclick) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        return;
       }
     }
     this.DOMMouseScroll = function(ev) {
