@@ -1803,6 +1803,7 @@ console.log('dun it', msaafilter);
           //console.log('mouseout', this.pickingobject);
           var outevent = {type: "mouseout", element: pickedthing, data: hit};
           this.view.proxyEvent(outevent);
+          this.pickingobject = false;
         }
       }
       return true;
