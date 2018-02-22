@@ -327,12 +327,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             if (this.headconstraint) this.headconstraint.enabled = (!this.vrdevice);// || !this.vrdevice.isPresenting);
             this.neck.objects.dynamics.setAngularVelocity(this.lookVector);
             this.neck.objects.dynamics.updateState();
-            this.neck.refresh();
+            //this.neck.refresh();
           }
         }
         //this.handleTargeting();
 
-        this.refresh();
+        //this.refresh();
         //elation.events.fire({type: 'thing_change', element: this});
       }
     })();
