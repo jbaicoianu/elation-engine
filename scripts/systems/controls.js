@@ -74,7 +74,7 @@
  **/
 elation.requireCSS('engine.systems.controls');
 
-elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent', 'engine.external.nipplejs'], function() {
+elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent'], function() {
   elation.extend("engine.systems.controls", function(args) {
     elation.implement(this, elation.engine.systems.system);
 
@@ -86,6 +86,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.contextstates = {};
     this.changes = [];
     this.gamepads = [];
+    this.virtualgamepads = [];
     this.viewport = [];
     this.hmdframes = [];
 
@@ -104,7 +105,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         deadzone: 0.2
       },
       touchpad: {
-        emulateGamepad: true
+        emulateGamepad: false
       },
       hmd: {
       },
@@ -211,7 +212,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
       elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
 
-      if (this.settings.touchpad && this.settings.touchpad.emulateGamepad) {
+      if (false && this.settings.touchpad && this.settings.touchpad.emulateGamepad) {
         var touchzone = document.createElement('div');
         touchzone.style.position = 'fixed';
         touchzone.style.bottom = 0;
@@ -523,8 +524,24 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.updateConnectedGamepads = function() {
       var func = navigator.getGamepads || navigator.webkitGetGamepads;
       if (typeof func == 'function') {
-        this.gamepads = func.call(navigator);
+        var realgamepads = func.call(navigator),
+            virtualgamepads = this.virtualgamepads;
+        for (var i = 0; i < realgamepads.length; i++) {
+          this.gamepads[i] = realgamepads[i];
+        }
+        for (var i = 0; i < virtualgamepads.length; i++) {
+          this.gamepads[realgamepads.length + i] = virtualgamepads[i];
+        }
         //console.log(this.gamepads);
+      }
+    }
+    this.addVirtualGamepad = function(gamepad) {
+      this.virtualgamepads.push(gamepad);
+    }
+    this.removeVirtualGamepad = function(gamepad) {
+      var idx = this.virtualgamepads.indexOf(gamepad);
+      if (idx) {
+        this.virtualgamepads.splice(idx, 1);
       }
     }
     this.getGamepads = function() {
@@ -1498,5 +1515,4 @@ console.log(rpoint, point, len);
       }
     }
   }, elation.ui.base);
-
 });
