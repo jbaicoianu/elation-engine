@@ -369,6 +369,8 @@ if (!ENV_IS_BROWSER) return;
         texture.sourceFile = '';
         texture.needsUpdate = true;
         texture.flipY = this.flipY;
+
+        elation.events.add(this.canvas, 'update', () => texture.needsUpdate = true);
         this.sendLoadEvents();
       }
     },
