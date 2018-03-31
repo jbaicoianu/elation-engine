@@ -20059,6 +20059,7 @@
 		var currentSize, currentPixelRatio;
 
 		function onVRDisplayPresentChange() {
+			if (!device) return;
 
 			if ( device.isPresenting ) {
 
