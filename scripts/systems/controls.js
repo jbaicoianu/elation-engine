@@ -483,11 +483,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
               var bindname_any_y = this.getBindingName('gamepad', 'any', 'axis_' + (a+1));
               // FIXME - Vive hack
               var axisscale = 1;
-              if (this.hmds && this.hmds.length > 0) {
-                var hmdname = this.hmds[0].displayName;
-                if (hmdname.match('Vive')) {
-                  axisscale = -1;
-                }
+              if (gamepad.id == 'OpenVR Gamepad') {
+                axisscale = -1;
               }
               var values = this.deadzone(gamepad.axes[a], axisscale * gamepad.axes[a+1]);
               if (this.state[bindname_x] != values[0]) {
