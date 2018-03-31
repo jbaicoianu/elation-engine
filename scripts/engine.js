@@ -481,18 +481,18 @@ elation.require(deps, function() {
     }
     this.toggleFullscreen = function(ev) {
       var view = this.view;
-      if (view && (ev.value == 1 || typeof ev.value == 'undefined')) {
+      if (view && (typeof ev == 'undefined' || ev.value == 1 || typeof ev.value == 'undefined')) {
         view.toggleFullscreen();
       }
     }
     this.toggleVR = function(ev) {
       var view = this.view;
-      if (view && (ev.value == 1 || typeof ev.value == 'undefined')) {
+      if (view && (typeof ev == 'undefined' || ev.value == 1 || typeof ev.value == 'undefined')) {
         view.toggleVR();
       }
     }
     this.calibrateVR = function(ev) {
-      if (this.engine.systems.controls && ev.value == 1) {
+      if (this.engine.systems.controls && (typeof ev == 'undefined' || ev.value == 1)) {
         this.engine.systems.controls.calibrateHMDs();
       }
     }
