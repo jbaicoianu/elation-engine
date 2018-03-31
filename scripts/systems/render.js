@@ -1,3 +1,7 @@
+  if (typeof THREE == 'undefined') {
+    THREE = {};
+  }
+
 elation.require([
   "engine.external.three.three",
   "engine.external.three.stats",
@@ -213,7 +217,8 @@ elation.require([
           format: THREE.RGBAFormat,
           stencilBuffer: true
         });
-      this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
+      //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -1448,6 +1453,7 @@ if (vivehack) {
           events: { ui_slider_change: elation.bind(this.rendersystem, this.rendersystem.setdirty) }
         });
 
+if (false) {
         var bloomfilter = this.view.effects['bloom']
         var bloom = elation.ui.slider({
           append: displaypanel,
@@ -1495,6 +1501,7 @@ console.log('dun it', msaafilter);
           }
 */
         });
+}
 
 
       // Capture Settings

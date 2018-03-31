@@ -1161,7 +1161,7 @@ THREE.ColladaLoader.prototype = {
 		function buildGeometry( data ) {
 
 			var group = {};
-
+console.log('build geometry!', data);
 			var sources = data.sources;
 			var vertices = data.vertices;
 			var primitives = data.primitives;

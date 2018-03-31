@@ -44,6 +44,7 @@ elation.require(deps, function() {
     this.name = name;
     this.useAnimationFrame = true;
     this.targetFramerate = 60;
+    this.scratchobjects = {};
 
     this.init = function() {
       this.client = elation.engine.client(this.name);
@@ -131,6 +132,12 @@ elation.require(deps, function() {
     }
     this.getThingById = function(id) {
       return this.systems.world.getThingById(id);
+    }
+    this.getScratchObject = function(name, type) {
+      if (!this.scratchobjects[name]) {
+        this.scratchobjects[name] = (type ? new type() : {});
+      }
+      return this.scratchobjects[name];
     }
 
     this.init();

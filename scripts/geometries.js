@@ -66,6 +66,31 @@ elation.require([], function() {
         }
         return geom;
       },
+      'triangle': function(params) {
+        var p1 = params.p1 || new THREE.Vector3(),
+            p2 = params.p2 || new THREE.Vector3(),
+            p3 = params.p3 || new THREE.Vector3();
+        var geo = new THREE.BufferGeometry();
+        var positions = new Float32Array(3 * 3);
+
+        positions[0] = p1.x;
+        positions[1] = p1.y;
+        positions[2] = p1.z;
+
+        positions[3] = p2.x;
+        positions[4] = p2.y;
+        positions[5] = p2.z;
+
+        positions[6] = p3.x;
+        positions[7] = p3.y;
+        positions[8] = p3.z;
+
+        geo.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.computeFaceNormals();
+        geo.computeVertexNormals();
+
+        return geo;
+      },
       'sphere': function(params) {
         var radius = params.radius,
             widthSegments = params.heightSegments || 8,

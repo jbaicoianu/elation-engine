@@ -325,6 +325,7 @@ elation.require([
 
     parse: function(bindata, job) {
       return new Promise(elation.bind(this, function(resolve, reject) {
+console.log('load the collada', bindata);
         try {
           var data = false;
           var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
@@ -346,8 +347,18 @@ elation.require([
             }
             // Convert to BufferGeometry for better loading efficiency
             if (n.geometry && n.geometry instanceof THREE.Geometry) {
+console.log('MERGE THE VERTS');
+              n.geometry.mergeVertices();
               var bufgeo = new THREE.BufferGeometry().fromGeometry(n.geometry);
               n.geometry = bufgeo;
+            } else if (n.geometry && n.geometry instanceof THREE.BufferGeometry) {
+/*
+              var geo = new THREE.Geometry().fromBufferGeometry(n.geometry);
+              geo.mergeVertices();
+              geo.computeVertexNormals();
+              n.geometry = new THREE.BufferGeometry().fromGeometry(geo);
+*/
+console.log('no merge');
             }
           });
           data = parsed;        

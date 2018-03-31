@@ -766,8 +766,13 @@ elation.component.add("engine.things.generic", function() {
           radialSegments: 8,
           offset: args.offset,
         });
-      } else if (type == 'threejs') {
-        // TODO - stub for compound mesh colliders
+      } else if (type == 'triangle') {
+        collidergeom = elation.engine.geometries.generate('triangle', {
+          p1: args.p1,
+          p2: args.p2,
+          p3: args.p3
+        });
+      } else if (type == 'mesh') {
       }
       /*
       if (this.collidermesh) {

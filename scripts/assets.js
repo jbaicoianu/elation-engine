@@ -415,6 +415,10 @@ if (!ENV_IS_BROWSER) return;
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       this.loaded = true;
+      this.uploaded = false;
+      texture.onUpdate = (ev) => {
+        console.log('texture updated!', texture, this);
+      }
 
       this.sendLoadEvents();
     },
@@ -1073,13 +1077,13 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({type: 'asset_error', element: this});
     },
     handleLoadProgress: function(progress) {
-      //console.log('Model loading progress', this, progress);
+      console.log('Model loading progress', this, progress.loaded, progress.total, progress);
       var progressdata = {
         src: progress.target.responseURL,
         loaded: progress.loaded,
         total: progress.total,
       };
-      this.size = progress.total;
+      this.size = (progress.total >= progress.loaded ? progress.total : progress.loaded);
       elation.events.fire({element: this, type: 'asset_load_progress', data: progressdata});
     },
     extractTextures: function(scene) {
@@ -1207,6 +1211,34 @@ if (!ENV_IS_BROWSER) return;
           this._model.remove(placeholder);
         }
       }
+    },
+    stats: function(stats) {
+      var obj = this._model;
+      if (!stats) {
+        stats = {
+          objects: 0,
+          faces: 0,
+          materials: 0
+        };
+      }
+      obj.traverse((n) => {
+        if (n instanceof THREE.Mesh) {
+          stats.objects++;
+          var geo = n.geometry;
+          if (geo instanceof THREE.BufferGeometry) {
+            stats.faces += geo.attributes.position.count / 3;
+          } else {
+            stats.faces += geofaces.length;
+          }
+
+          if (n.material instanceof THREE.Material) {
+            stats.materials++;
+          } else if (elation.utils.isArray(n.material)) {
+            stats.materials += n.material.length;
+          }
+        }
+      });
+      return stats;
     }
   }, elation.engine.assets.base);
 
@@ -1250,6 +1282,7 @@ if (!ENV_IS_BROWSER) return;
         var existing = elation.utils.arrayget(this.assetmap, assetdef.assettype + '.' + assetdef.name); //elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
         if (!existing) {
           var asset = elation.engine.assets.get(assetdef);
+console.log('NEW ASS', asset, assetdef);
           this.assets.push(asset);
           if (!this.assetmap[asset.assettype]) this.assetmap[asset.assettype] = {};
           this.assetmap[asset.assettype][asset.name] = asset;
