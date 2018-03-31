@@ -10,6 +10,16 @@
   left: 0;
   right: 0;
 }
+.engine_view.vr_presenting {
+  margin: 0 auto;
+  overflow: hidden;
+  width: 50%;
+}
+.engine_view.vr_presenting canvas {
+  width: 200% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
 .engine_view.state_cursor {
   cursor: pointer;
 }
