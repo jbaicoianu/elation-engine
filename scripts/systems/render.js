@@ -1748,38 +1748,42 @@ console.log('dun it', msaafilter);
 
       var vrdisplay = this.view.vrdisplay;
 
-      var camera = (vrdisplay && vrdisplay.isPresenting ? this.view.camera : this.view.actualcamera);
-      this.scene.updateMatrixWorld();
-      camera.updateMatrixWorld();
+      try {
+        var camera = (vrdisplay && vrdisplay.isPresenting ? this.view.camera : this.view.actualcamera);
+        this.scene.updateMatrixWorld();
+        camera.updateMatrixWorld();
 
-      this.raycaster.setFromCamera(this.mousevec, camera);
-/*
-      if (!this.rayviz) {
-        this.rayviz = new THREE.ArrowHelper(this.raycaster.ray.direction.clone(), this.raycaster.ray.origin.clone(), 100);
-        this.scene.add(this.rayviz);
-      } else {
-        this.rayviz.position.copy(this.raycaster.ray.origin);
-        this.rayviz.setDirection(this.raycaster.ray.direction.clone().normalize());
-        this.view.rendersystem.setdirty();
-//console.log(this.mousevec.toArray(), this.raycaster.ray.origin.toArray(), this.raycaster.ray.direction.toArray());
-      }
-*/
-      
-      var intersects = this.raycaster.intersectObjects(this.scene.children, true);
-      var hit = false;
-      var fired = false;
-      while (intersects.length > 0) {
-        hit = intersects.shift();
-        if (!(hit.object instanceof THREE.EdgesHelper)) {
-          if (hit !== this.lasthit) {
-            this.lasthit = hit; // FIXME - hack for demo
-          }
-          fired = this.firePickingEvents(hit, x, y);
-          break;
+        this.raycaster.setFromCamera(this.mousevec, camera);
+        /*
+        if (!this.rayviz) {
+          this.rayviz = new THREE.ArrowHelper(this.raycaster.ray.direction.clone(), this.raycaster.ray.origin.clone(), 100);
+          this.scene.add(this.rayviz);
+        } else {
+          this.rayviz.position.copy(this.raycaster.ray.origin);
+          this.rayviz.setDirection(this.raycaster.ray.direction.clone().normalize());
+          this.view.rendersystem.setdirty();
+          //console.log(this.mousevec.toArray(), this.raycaster.ray.origin.toArray(), this.raycaster.ray.direction.toArray());
         }
-      }
-      if (!fired) {
-          this.firePickingEvents();
+        */
+
+        var intersects = this.raycaster.intersectObjects(this.scene.children, true);
+        var hit = false;
+        var fired = false;
+        while (intersects.length > 0) {
+          hit = intersects.shift();
+          if (!(hit.object instanceof THREE.EdgesHelper)) {
+            if (hit !== this.lasthit) {
+              this.lasthit = hit; // FIXME - hack for demo
+            }
+            fired = this.firePickingEvents(hit, x, y);
+            break;
+          }
+        }
+        if (!fired) {
+            this.firePickingEvents();
+        }
+      } catch (e) {
+        console.log('[renderer] Picking error:', e);
       }
     }
     this.firePickingEvents = function(hit, x, y) {
