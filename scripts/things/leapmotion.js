@@ -42,15 +42,17 @@ elation.require(['engine.external.leapmotion.leap'], function() {
       //var palmsize = [.07,.01,.05];
       var palmsize = [1,.01,1];
       this.materials = {
-        bones: new THREE.MeshPhongMaterial({color: 0xffffff, transparent: false, opacity: 1, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.render.bckground}),
+        bones: new THREE.MeshStandardMaterial({color: 0xdddddd, transparent: false, opacity: 1, blending: THREE.NormalBlending, side: THREE.DoubleSide, envMap: this.engine.systems.world.scene["world-3d"].background, roughness: .75}),
         joints: new THREE.MeshPhongMaterial({color: 0xccffcc, transparent: false, opacity: 1, blending: THREE.NormalBlending}),
-        tips: new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: false, opacity: 1, blending: THREE.NormalBlending})
+        tips: new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .2, blending: THREE.NormalBlending})
       };
       this.palm = new THREE.Mesh(new THREE.BoxGeometry(palmsize[0], palmsize[1], palmsize[2]), this.materials.bones);
       this.palm.geometry.applyMatrix(new THREE.Matrix4().setPosition(new THREE.Vector3(0, 0, -palmsize[2] / 4)));
       this.palm.scale.set(.01,.01,.01);
       this.palm.updateMatrix();
       this.palm.matrixAutoUpdate = false;
+      this.palm.castShadow = true;
+      this.palm.receiveShadow = true;
       this.objects['3d'].add(this.palm);
 
       this.arm = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.5, 1, undefined, undefined, true), this.materials.bones);
@@ -59,6 +61,8 @@ elation.require(['engine.external.leapmotion.leap'], function() {
       this.arm.scale.set(.01,.01,.01);
       this.arm.updateMatrix();
       this.arm.matrixAutoUpdate = false;
+      this.arm.castShadow = true;
+      this.arm.receiveShadow = true;
       this.objects['3d'].add(this.arm);
 
       this.wrist = new THREE.Mesh(new THREE.SphereGeometry(0.5), this.materials.joints);
@@ -139,6 +143,11 @@ elation.require(['engine.external.leapmotion.leap'], function() {
           this.wrist.scale.set(scale[0], scale[1], scale[1]/4);
         }
 
+        if (!this.materials.bones.envMap) {
+          this.materials.bones.needsUpdate = true;
+        }
+        var worldbg = this.engine.systems.world.scene["world-3d"].background;
+        this.materials.bones.envMap = worldbg;
         this.refresh();
       };
     })();
@@ -288,12 +297,16 @@ elation.require(['engine.external.leapmotion.leap'], function() {
         return fingersizes[i];
       }
       for (var i = 0; i < 4; i++) {
-        this.phalanges[i] = new THREE.Mesh(new THREE.CylinderGeometry(fingerSize(i), fingerSize(i+1), 1, 6, 2, true), material);
+        this.phalanges[i] = new THREE.Mesh(new THREE.CylinderGeometry(fingerSize(i), fingerSize(i+1), 1, 6, 2, false), material);
         this.joints[i] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize(i+1)), jointmaterial);
+        this.joints[i].castShadow = true;
+        this.joints[i].receiveShadow = true;
         this.phalanges[i].geometry.applyMatrix(new THREE.Matrix4().makeRotationX(Math.PI/2));
         this.phalanges[i].scale.z = .01;
         this.phalanges[i].updateMatrix();
         this.phalanges[i].matrixAutoUpdate = false;
+        this.phalanges[i].castShadow = true;
+        this.phalanges[i].receiveShadow = true;
         obj.add(this.phalanges[i]);
         if (i > 0) {
           obj.add(this.joints[i]);
