@@ -18,6 +18,8 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         touch_right: 'controller_touch_right',
         vive_left: 'controller_vive',
         vive_right: 'controller_vive',
+        openvr_left: 'controller_touch_left',
+        openvr_right: 'controller_touch_right',
         daydream: 'controller_daydream'
       };
       this.controllerMap = {
@@ -25,6 +27,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         'touch_right': /^Oculus Touch \(Right\)$/,
         'vive_left': /HTC Vive/,
         'vive_right': /HTC Vive/,
+        'openvr': /OpenVR/,
         'daydream': /^Daydream Controller$/,
       };
       this.controllerIsLocal = {
@@ -41,39 +44,57 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         frameEventName: 'deviceFrame'
       }, elation.bind(this, this.handleLeapLoop));
     }
-    this.updatePositions = function() {
-      this.updateTrackedObjects();
-      if (!this.vrdisplay) {
-        return;
-      }
+    this.updatePositions = (function() {
+      // Closure scratch variables
+      var sittingToStanding = new THREE.Matrix4();
 
-      var player = this.engine.client.player,
-          stage = this.vrdisplay.stageParameters;
-      for (var i = 0; i < this.controllers.length; i++) {
-        var c = this.controllers[i],
-            handname = c.hand || (i ? 'left' : 'right');
-        if (c && c.data.pose) {
-          //var hand = c.model;
-          var pose = c.data.pose;
-          if (pose.position) {
-            c.model.position.fromArray(pose.position).multiplyScalar(1);
-            //player.neck.worldToLocal(player.neck.localToWorld(c.model.position));
-            //hand.position.fromArray(pose.position);
-          } else {
-            c.model.position.set(.2, (handname == "right" ? -.3 : .3), .2);
-            //c.model.children[0].position.z = .1;
-            var dyn = this.player.neck.objects.dynamics;
-            player.objects.dynamics.worldToLocalPos(dyn.localToWorldPos(c.model.position).sub(player.position));
-          }
+      return function() {
+        this.updateTrackedObjects();
+        if (!this.vrdisplay) {
+          return;
+        }
 
-          //c.model.scale.set(stage.sizeX, stage.sizeX, stage.sizeZ); // FIXME - does this get weird for non-square rooms?
-          if (pose.orientation) {
-            c.model.quaternion.fromArray(pose.orientation);
-            //hand.properties.orientation.fromArray(pose.orientation);
+        var player = this.engine.client.player,
+            stage = this.vrdisplay.stageParameters;
+        sittingToStanding.fromArray(stage.sittingToStandingTransform);
+        for (var i = 0; i < this.controllers.length; i++) {
+          var c = this.controllers[i];
+          if (c) {
+            var controllerid = this.getControllerID(c.data.id, c.data.hand);
+            if (!c.data.connected) {
+              this.removeTrackedController(i);
+            } else if (c.data.pose) {
+              if (c.controllerid != controllerid) {
+                this.setTrackedController(i, c.data);
+              }
+              //console.log('hand', c.data.pose, c.data, c.model);
+              var handname = c.hand || (i ? 'left' : 'right');
+              //var hand = c.model;
+              var pose = c.data.pose;
+              if (pose.hasOrientation && pose.orientation && !pose.orientation.includes(NaN)) {
+                c.model.quaternion.fromArray(pose.orientation);
+                //hand.properties.orientation.fromArray(pose.orientation);
+                this.refresh();
+              }
+              if (pose.hasPosition && pose.position && !pose.position.includes(NaN)) {
+                c.model.position.fromArray(pose.position).multiplyScalar(1);
+                //player.neck.worldToLocal(player.neck.localToWorld(c.model.position));
+                //hand.position.fromArray(pose.position);
+                //c.model.matrix.compose(c.model.position, c.model.quaternion, c.model.scale);
+                //c.model.matrix.multiplyMatrices(player.torso.objects['3d'].matrix, player.neck.objects['3d'].matrix).multiply(c.model.matrix);
+                //c.model.matrix.decompose(c.model.position, c.model.quaternion, c.model.scale);
+                this.refresh();
+              } else {
+                c.model.position.set(.2, (handname == "right" ? -.3 : .3), .2);
+                //c.model.children[0].position.z = .1;
+                var dyn = this.player.neck.objects.dynamics;
+                player.objects.dynamics.worldToLocalPos(dyn.localToWorldPos(c.model.position).sub(player.position));
+              }
+            }
           }
         }
       }
-    }
+    })();
     this.updateTrackedObjects = function() {
       if (!this.leapenabled && this.engine.systems.controls.settings.leapmotion.enabled) {
         this.leapenabled = true;
@@ -95,34 +116,54 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
       this.vrdisplay = this.engine.systems.render.views.main.vrdisplay;
       var gamepads = controls.gamepads;
       for (var i = 0; i < gamepads.length; i++) {
-        if (gamepads[i] && !this.controllers[i]) {
+        if (gamepads[i] && (!this.controllers[i] || this.controllers[i].data !== gamepads[i])) {
           this.setTrackedController(i, gamepads[i]);
+        //} else if (this.controllers[i] && !gamepads[i]) {
+          //this.removeTrackedController(i);
         }
       }
     }
     this.setTrackedController = function(i, controller) {
+      if (this.controllers[i] && controller !== this.controllers[i].data && this.controllers[i].model) {
+        this.objects['3d'].remove(this.controllers[i].model);
+      }
       this.controllers[i] = {
         model: this.getControllerModel(controller),
-        data: controller
+        data: controller,
+        controllerid: this.getControllerID(controller.id, controller.hand)
       };
       this.objects['3d'].add(this.controllers[i].model);
       return this.controllers[i];
     }
+    this.removeTrackedController = function(i) {
+      if (this.controllers[i]) {
+        if (this.controllers[i].model && this.controllers[i].model.parent == this.objects['3d']) {
+          this.objects['3d'].remove(this.controllers[i].model);
+        }
+        this.controllers[i] = null;
+      }
+    }
     this.getControllerModel = function(controller) {
       //(this.controllers[i] ? this.controllers[i].model : this.createPlaceholder()),
+      var hand = controller.hand || false;
+      if (!hand || hand == '') hand = 'right'; // FIXME - sometimes hand is just an empty string, and then it gets filled in later
       for (var k in this.controllerMap) {
         if (controller.id.match(this.controllerMap[k])) {
-          var assetid = this.controllerModels[k];
+          var controllerid = this.getControllerID(k, hand);
+          var assetid = this.controllerModels[controllerid];
           if (assetid) {
             var asset = elation.engine.assets.find('model', assetid);
             var obj = new THREE.Object3D();
             obj.add(asset);
-            asset.position.set(0,0,-0.1);
+            //asset.position.set(0,0,-0.1);
             return obj;
           }
         }
       }
       return new THREE.Object3D();
+    }
+    this.getControllerID = function(name, hand) {
+      return name + (hand && this.controllerModels[name + '_' + hand] ? '_' + hand : '');
     }
     this.createPlaceholder = function() {
       // TODO - For now, we make a rudimentary Vive controller model.  We should be 
