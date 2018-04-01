@@ -187,7 +187,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
       this.createBodyParts();
-      this.tracker = this.spawn('objecttracker', null, {player: this});
+      // FIXME - the object tracker needs some work.  Some systems report tracked objects relative to the world, and some relative to the head
+      //          The hardcoded offset is also specific to my own personal set-up, and helps to keep leap motion and tracked controllers in sync
+      this.tracker = this.neck.spawn('objecttracker', null, {player: this, position: [0, -.05, -.185]});
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
 
@@ -205,7 +207,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'position': [0,0.6,0]
       });
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
-        'position': [0,0,0]
+        'position': [0,0,0],
+        'mass': 1
       });
     }
     this.getGroundHeight = function() {
@@ -324,11 +327,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
-            if (this.headconstraint) this.headconstraint.enabled = (!this.vrdevice);// || !this.vrdevice.isPresenting);
             this.neck.objects.dynamics.setAngularVelocity(this.lookVector);
             this.neck.objects.dynamics.updateState();
             //this.neck.refresh();
           }
+          if (this.headconstraint) this.headconstraint.enabled = (!this.vrdevice || !this.vrdevice.isPresenting);
         }
         //this.handleTargeting();
 
@@ -336,57 +339,65 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //elation.events.fire({type: 'thing_change', element: this});
       }
     })();
-    this.updateHMD = function(vrdevice) {
-      if (vrdevice) {
-        var pose = false;
-        if (!this.framedata) {
-          this.framedata = (vrdevice.isPolyfilled ? new WebVRPolyfillFrameData() : new VRFrameData());
-        }
-        if (vrdevice.getFrameData && this.framedata) {
-          if (vrdevice.getFrameData(this.framedata)) {
-            pose = this.framedata.pose;
+    this.updateHMD = (function() {
+      // closure scratch vars
+      var standingMatrix = new THREE.Matrix4();
+
+      return function(vrdevice) {
+        var hmd = this.hmdstate.hmd;
+        if (vrdevice && vrdevice.isPresenting) {
+          var pose = false;
+          if (!this.framedata) {
+            this.framedata = (vrdevice.isPolyfilled ? new WebVRPolyfillFrameData() : new VRFrameData());
           }
-        } else if (vrdevice.getPose) {
-          pose = vrdevice.getPose();
+          if (vrdevice.getFrameData && this.framedata) {
+            if (vrdevice.getFrameData(this.framedata)) {
+              pose = this.framedata.pose;
+            }
+          } else if (vrdevice.getPose) {
+            pose = vrdevice.getPose();
+          }
+          if (pose) this.hmdstate.hmd = pose;
+          this.vrdevice = vrdevice;
+          if (this.headconstraint) this.headconstraint.enabled = false;
+
+          if (pose.position && !pose.position.includes(NaN)) {
+            var pos = this.head.objects.dynamics.position;
+            pos.fromArray(pose.position);
+            //pos.y += this.properties.height * .8 - this.properties.fatness;
+          }
+          if (pose.linearVelocity && !pose.linearVelocity.includes(NaN)) {
+            this.head.objects.dynamics.velocity.fromArray(pose.linearVelocity);
+          } else {
+            this.head.objects.dynamics.velocity.set(0,0,0);
+          }
+          var o = pose.orientation;
+          if (o && !o.includes(NaN)) {
+            this.head.objects.dynamics.orientation.fromArray(o);
+          }
+          if (pose.angularVelocity) {
+            //this.head.objects.dynamics.angular.fromArray(hmd.angularVelocity);
+          }
+          this.waspresentingvr = true;
+          this.head.objects.dynamics.updateState();
+          this.refresh();
+        } else {
+          if (this.headconstraint) this.headconstraint.enabled = true;
+          if (this.waspresentingvr) {
+            this.resetHead();
+            this.waspresentingvr = false;
+          }
         }
-        if (pose) this.hmdstate.hmd = pose;
-        this.vrdevice = vrdevice;
-        if (this.headconstraint) this.headconstraint.enabled = false;
-      } else {
-        if (this.headconstraint) this.headconstraint.enabled = true;
-      }
 
-      var scale = 1;
-      var hmd = this.hmdstate.hmd;
-      if (hmd.position) {
-        var pos = this.head.objects.dynamics.position;
-        pos.fromArray(hmd.position).multiplyScalar(scale);
-        //pos.y += this.properties.height * .8 - this.properties.fatness;
-      }
-      if (hmd.linearVelocity) {
-        this.head.objects.dynamics.velocity.fromArray(hmd.linearVelocity).multiplyScalar(scale);
-      } else {
-        this.head.objects.dynamics.velocity.set(0,0,0);
-      }
+        var view = this.engine.systems.render.views.main;
+        if (view.size[0] == 0 || view.size[1] == 0) {
+          view.getsize();
+        }
+        //view.mousepos = [view.size[0] / 2, view.size[1] / 2, 0];
+        view.pickingactive = true;
 
-      var o = hmd.orientation;
-      if (o) {
-        this.head.objects.dynamics.orientation.fromArray(o);
       }
-      if (hmd.angularVelocity) {
-        //this.head.objects.dynamics.angular.fromArray(hmd.angularVelocity);
-      }
-
-      var view = this.engine.systems.render.views.main;
-      if (view.size[0] == 0 || view.size[1] == 0) {
-        view.getsize();
-      }
-      //view.mousepos = [view.size[0] / 2, view.size[1] / 2, 0];
-      view.pickingactive = true;
-
-      this.head.objects.dynamics.updateState();
-      this.refresh();
-    }
+    })();
     this.updateControls = function() {
     }
     this.updateMouseControls = (function() {
@@ -590,5 +601,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         return false;
       }
     })();
+    this.resetHead = function() {
+      this.head.objects.dynamics.position.set(0,0,0);
+      this.head.objects.dynamics.velocity.set(0,0,0);
+      this.head.objects.dynamics.angular.set(0,0,0);
+      this.head.objects.dynamics.orientation.set(0,0,0,1);
+    }
   }, elation.engine.things.generic);
 });
