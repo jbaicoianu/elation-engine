@@ -816,6 +816,7 @@ if (!ENV_IS_BROWSER) return;
     color: false,
     modeltype: '',
     compression: 'none',
+    object: false,
 
     loadworkers: [
     ],
@@ -948,7 +949,13 @@ if (!ENV_IS_BROWSER) return;
       return this.placeholder;
     },
     load: function() {
-      if (this.src) {
+      if (this.object) {
+        this.loading = false;
+        this.loaded = true;
+        this.state = 'complete';
+        this._model = new THREE.Group();
+        setTimeout(() => this.complete(this.object), 0);
+      } else if (this.src) {
         this.loading = true;
         this.loaded = false;
 
@@ -1025,35 +1032,38 @@ if (!ENV_IS_BROWSER) return;
           //elation.bind(this, this.handleLoadProgress)
         );
     },
+    complete: function(object) {
+      this.removePlaceholders();
+      this._model.userData.loaded = true;
+      //this._model.add(scene);
+      this.fillGroup(this._model, object);
+
+      this.extractTextures(object);
+      //this.assignTextures(scene);
+
+      this.instances.forEach(elation.bind(this, function(n) {
+        if (!n.userData.loaded) {
+          n.userData.loaded = true;
+          //n.add(scene.clone());
+          this.fillGroup(n, object);
+          //this.assignTextures(n);
+          elation.events.fire({type: 'asset_load', element: n});
+          //elation.events.fire({type: 'asset_load_complete', element: this});
+        }
+      }));
+
+      this.state = 'complete';
+      elation.events.fire({element: this, type: 'asset_load_processed'});
+      elation.events.fire({type: 'asset_load', element: this});
+    },
+
     handleLoadJSON: function(json) {
       if (json) {
         this.loaded = true;
         var parser = new THREE.ObjectLoader();
         parser.setCrossOrigin('anonymous');
         var scene = parser.parse(json);
-
-        this.removePlaceholders();
-        this._model.userData.loaded = true;
-        //this._model.add(scene);
-        this.fillGroup(this._model, scene);
-
-        this.extractTextures(scene);
-        //this.assignTextures(scene);
-
-        this.instances.forEach(elation.bind(this, function(n) { 
-          if (!n.userData.loaded) {
-            n.userData.loaded = true;
-            //n.add(scene.clone()); 
-            this.fillGroup(n, scene);
-            //this.assignTextures(n);
-            elation.events.fire({type: 'asset_load', element: n});
-            //elation.events.fire({type: 'asset_load_complete', element: this});
-          }
-        }));
-
-        this.state = 'complete';
-        elation.events.fire({element: this, type: 'asset_load_processed'});
-        elation.events.fire({type: 'asset_load', element: this});
+        this.complete(scene);
       } else {
         // no model data, error!
         elation.events.fire({type: 'asset_error', element: this});
