@@ -1077,7 +1077,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({type: 'asset_error', element: this});
     },
     handleLoadProgress: function(progress) {
-      console.log('Model loading progress', this, progress.loaded, progress.total, progress);
+      //console.log('Model loading progress', this, progress.loaded, progress.total, progress);
       var progressdata = {
         src: progress.target.responseURL,
         loaded: progress.loaded,
@@ -1282,7 +1282,6 @@ if (!ENV_IS_BROWSER) return;
         var existing = elation.utils.arrayget(this.assetmap, assetdef.assettype + '.' + assetdef.name); //elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
         if (!existing) {
           var asset = elation.engine.assets.get(assetdef);
-console.log('NEW ASS', asset, assetdef);
           this.assets.push(asset);
           if (!this.assetmap[asset.assettype]) this.assetmap[asset.assettype] = {};
           this.assetmap[asset.assettype][asset.name] = asset;
