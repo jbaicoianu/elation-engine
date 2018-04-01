@@ -105,11 +105,11 @@ elation.require([
         ['ply', 'ply'],
         ['bvh', 'HIERARCHY\n'],
         ['wrl', '#VRML'],
-        ['gltf', '"bufferView"']
+        ['gltf', '{']
       ];
 
       var type = false;
-      var headerLengthLimit = 256;
+      var headerLengthLimit = 8192;
       var data = new Uint8Array(content);
       var maxlength = Math.min(data.length, headerLengthLimit);
 
@@ -416,6 +416,13 @@ console.log('no merge');
           if (modeldata.scene) {
             modeldata.scene.updateMatrixWorld(true);
             var encoded = modeldata.scene.toJSON();
+
+            // FIXME - the glTF loader we're using wants our textures unflipped, but doesn't set that flag - so we set it here
+            if (encoded.textures) {
+              for (var i = 0; i < encoded.textures.length; i++) {
+                encoded.textures[i].flipY = false;
+              }
+            }
             resolve(encoded);
           } else {
             reject();
