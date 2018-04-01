@@ -166,15 +166,8 @@ elation.require([
         var bytes = window.pako.inflate(databuf, {to: 'arraybuffer'});
         modeldata = bytes.buffer;
       } else {
-        var dataview = new DataView(rawdata);
-        if (false && typeof TextDecoder !== 'undefined') {
-          var decoder = new TextDecoder('utf-8');
-          modeldata = decoder.decode(dataview);
-        } else {
-          // FIXME - do we really need to do this?  It should be handled on a per-modeltype basis, at least
-          //modeldata = this.convertArrayBufferToString(rawdata);
-          modeldata = rawdata;
-        }
+        // Pass the binary data through to be handled per-modeltype
+        modeldata = rawdata;
       }    
       if (modeldata) {
         this.parse(modeldata, job).then(function(data) {
