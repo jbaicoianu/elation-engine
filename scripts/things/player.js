@@ -372,7 +372,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.head.objects.dynamics.velocity.set(0,0,0);
           }
           var o = pose.orientation;
-          if (o && !o.includes(NaN)) {
+          // FIXME - why am I getting NaN / Infinity values here?  This makes no sense.
+          if (o && !o.includes(NaN) && !o.includes(Infinity) && !o.includes(-Infinity)) {
             this.head.objects.dynamics.orientation.fromArray(o);
           }
           if (pose.angularVelocity) {
