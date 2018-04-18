@@ -227,9 +227,11 @@ THREE.VREffect = function ( renderer, onError ) {
 	// render
 
 	var cameraL = new THREE.PerspectiveCamera();
+	cameraL.name = 'left';
 	cameraL.layers.enable( 1 );
 
 	var cameraR = new THREE.PerspectiveCamera();
+	cameraR.name = 'right';
 	cameraR.layers.enable( 2 );
 
 	this.render = function ( scene, camera, renderTarget, forceClear ) {
