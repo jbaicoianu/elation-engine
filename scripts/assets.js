@@ -1,6 +1,40 @@
 elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif'], function() {
 
   THREE.Cache.enabled = true;
+
+  // TODO - submit pull request to add these to three.js
+  THREE.SBSTexture = function ( image, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+    THREE.Texture.call( this, image, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+
+    this.repeat.x = 0.5;
+  }
+  THREE.SBSTexture.prototype = Object.create( THREE.Texture.prototype );
+  THREE.SBSTexture.prototype.constructor = THREE.SBSTexture;
+  THREE.SBSTexture.prototype.setEye = function(eye) {
+    if (eye == 'left') {
+      this.offset.x = (this.reverse ? 0.5 : 0);
+    } else {
+      this.offset.x = (this.reverse ? 0 : 0.5);
+    }
+    this.eye = eye;
+  }
+  THREE.SBSTexture.prototype.swap = function() {
+    if (this.eye == 'right') {
+      this.setEye('left');
+    } else {
+      this.setEye('right');
+    }
+  }
+
+  THREE.SBSVideoTexture = function ( video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy ) {
+    THREE.VideoTexture.call( this, video, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy );
+
+    this.repeat.x = 0.5;
+    this.reverse = false;
+  }
+  THREE.SBSVideoTexture.prototype = Object.create( THREE.SBSTexture.prototype );
+  THREE.SBSVideoTexture.prototype.constructor = THREE.SBSVideoTexture;
+
   elation.extend('engine.assets', {
     assets: {},
     types: {},
@@ -332,7 +366,13 @@ if (!ENV_IS_BROWSER) return;
     load: function() {
       if (this.src) {
         var fullurl = this.getFullURL(this.src);
-        var texture = this._texture = new THREE.Texture();
+        var texture;
+        if (this.sbs3d) {
+          texture = this._texture = new THREE.SBSTexture();
+          texture.reverse = this.reverse3d;
+        } else {
+          texture = this._texture = new THREE.Texture();
+        }
         texture.image = this.canvas = this.getCanvas();
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
@@ -640,6 +680,7 @@ if (!ENV_IS_BROWSER) return;
     src: false,
     sbs3d: false,
     ou3d: false,
+    reverse3d: false,
     auto_play: false,
     texture: false,
     load: function() {
@@ -649,7 +690,12 @@ if (!ENV_IS_BROWSER) return;
       video.src = url;
       video.crossOrigin = 'anonymous';
       this._video = video;
-      this._texture = new THREE.VideoTexture(video);
+      if (this.sbs3d) {
+        this._texture = new THREE.SBSVideoTexture(video);
+        this._texture.reverse = this.reverse3d;
+      } else {
+        this._texture = new THREE.VideoTexture(video);
+      }
       this._texture.minFilter = THREE.LinearFilter;
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
       elation.events.add(video, 'error', elation.bind(this, this.handleError));
