@@ -1004,6 +1004,7 @@ elation.component.add("engine.things.generic", function() {
   this.extractEntities = function(scene) {
     this.cameras = [];
     this.parts = {};
+    if (!scene) scene = this.objects['3d'];
     scene.traverse(elation.bind(this, function ( node ) { 
       if ( node instanceof THREE.Camera ) {
         this.cameras.push(node);
