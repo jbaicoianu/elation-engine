@@ -456,9 +456,6 @@ if (!ENV_IS_BROWSER) return;
       texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       this.loaded = true;
       this.uploaded = false;
-      texture.onUpdate = (ev) => {
-        console.log('texture updated!', texture, this);
-      }
 
       this.sendLoadEvents();
     },
