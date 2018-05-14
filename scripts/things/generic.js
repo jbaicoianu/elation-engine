@@ -1657,7 +1657,7 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     });
     return bounds; 
   }
-  this.getBoundingBox = function() {
+  this.getBoundingBox = function(local) {
     // Iterate over all children and expand our bounding box to encompass them.  
     // This gives us the total size of the whole thing
 
@@ -1669,6 +1669,12 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
       bounds.expandByPoint(bounds.min);
       bounds.expandByPoint(bounds.max);
     }
+
+    if (local) {
+      this.worldToLocal(bounds.min);
+      this.worldToLocal(bounds.max);
+    }
+
     return bounds; 
   }
 });
