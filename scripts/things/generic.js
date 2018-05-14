@@ -1648,8 +1648,11 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     var childworldpos = new THREE.Vector3();
     this.objects['3d'].traverse(function(n) {
       childworldpos.set(0,0,0).applyMatrix4(n.matrixWorld);
-      if (n.boundingSphere) {
-        var newradius = worldpos.distanceTo(childworldpos) + n.boundingSphere.radius;
+      if (n instanceof THREE.Mesh) {
+        if (!n.geometry.boundingSphere) {
+          n.geometry.computeBoundingSphere();
+        }
+        var newradius = worldpos.distanceTo(childworldpos) + n.geometry.boundingSphere.radius * Math.max(n.scale.x, n.scale.y, n.scale.z);
         if (newradius > bounds.radius) {
           bounds.radius = newradius;
         }
