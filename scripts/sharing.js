@@ -200,10 +200,10 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         var size = this.resolution.value.split('x');
         width = size[0];
         height = size[1];
-        client.view.setrendersize(width, height);
-        // Force a render after resizing
-        client.view.render(0);
       }
+      client.view.setrendersize(width, height);
+      // Force a render after resizing
+      client.view.render(0);
       
       client.screenshot({width: width, height: height, format: this.format.value}).then(elation.bind(this, function(data) {
         var imgdata = data.split(',')[1]; //data.image.data;
