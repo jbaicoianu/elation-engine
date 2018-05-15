@@ -57,7 +57,7 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: false});
+      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: false, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
