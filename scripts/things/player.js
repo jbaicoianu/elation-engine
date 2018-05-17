@@ -75,6 +75,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
       elation.events.add(this, 'thing_create', elation.bind(this, this.handleCreate));
+      elation.events.add(document, "pointerlockchange", elation.bind(this, this.handlePointerLockChange));
     }
     this.createObjectDOM = function() {
       //this.strengthmeter = elation.ui.progressbar(null, elation.html.create({append: document.body, classname: 'player_strengthmeter'}), {orientation: 'vertical'});
@@ -240,7 +241,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.disable = function() {
       var controls = this.engine.systems.controls;
       controls.deactivateContext('player');
-      controls.enablePointerLock(false);
+      controls.releasePointerLock();
       if (this.engine.systems.render.views.main) {
         //this.engine.systems.render.views.main.enablePicking();
       }
@@ -613,6 +614,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.head.objects.dynamics.velocity.set(0,0,0);
       this.head.objects.dynamics.angular.set(0,0,0);
       this.head.objects.dynamics.orientation.set(0,0,0,1);
+    }
+    this.handlePointerLockChange = function(ev) {
+      if (document.pointerLockElement) {
+        this.enable();
+        if (document.pointerLockElement.tabIndex == -1) {
+          document.pointerLockElement.setAttribute( 'tabindex', 0 );
+        }
+        document.pointerLockElement.focus();
+      } else {
+        this.disable();
+      }
     }
   }, elation.engine.things.generic);
 });
