@@ -69,6 +69,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
       this.target = false;
       this.addTag('player');
+      this.viewfrustum = new THREE.Frustum();
+      this.viewmatrix = new THREE.Matrix4();
 
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
@@ -337,6 +339,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
         //this.refresh();
         //elation.events.fire({type: 'thing_change', element: this});
+
+        // Store the player's current view frustum so we can do visibility testing in scripts
+        this.camera.camera.updateProjectionMatrix(); // FIXME - this should only be needed if camera parameters change
+        this.viewfrustum.setFromMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
       }
     })();
     this.updateHMD = (function() {
