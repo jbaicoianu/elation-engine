@@ -218,7 +218,7 @@ elation.require([
           stencilBuffer: true
         });
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode, 'msaa', 'bloom'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', 'bloom'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
