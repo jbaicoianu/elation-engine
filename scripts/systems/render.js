@@ -972,9 +972,12 @@ if (vivehack) {
       }
     }
     this.mousewheel = function(ev) {
-      this.mousepos[0] = ev.clientX;
-      this.mousepos[1] = ev.clientY;
+      //this.mousepos[0] = ev.clientX;
+      //this.mousepos[1] = ev.clientY;
       this.mousepos[2] = document.body.scrollTop;
+
+      var newev = {type: 'wheel', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, deltaX: ev.deltaX, deltaY: ev.deltaY, deltaZ: ev.deltaZ, deltaMode: ev.deltaMode};
+      this.proxyEvent(newev);
     }
     this.mousemove = function(ev, ignorePointerLock) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
