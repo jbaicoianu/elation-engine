@@ -1667,12 +1667,6 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     var bounds = new THREE.Box3();
     bounds.setFromObject(this.objects['3d']);
 
-    for (var k in this.children) {
-      var childbounds = this.children[k].getBoundingBox();
-      bounds.expandByPoint(bounds.min);
-      bounds.expandByPoint(bounds.max);
-    }
-
     if (local) {
       this.worldToLocal(bounds.min);
       this.worldToLocal(bounds.max);
