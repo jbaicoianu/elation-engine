@@ -74,7 +74,7 @@
  **/
 elation.requireCSS('engine.systems.controls');
 
-elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent', 'engine.external.nipplejs'], function() {
+elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 'ui.list', 'ui.tabbedcontent'], function() {
   elation.extend("engine.systems.controls", function(args) {
     elation.implement(this, elation.engine.systems.system);
 
@@ -105,7 +105,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         deadzone: 0.2
       },
       touchpad: {
-        emulateGamepad: true
+        emulateGamepad: false
       },
       hmd: {
       },
@@ -212,7 +212,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
       elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
 
-      if (this.settings.touchpad && this.settings.touchpad.emulateGamepad) {
+      if (false && this.settings.touchpad && this.settings.touchpad.emulateGamepad) {
         var touchzone = document.createElement('div');
         touchzone.style.position = 'fixed';
         touchzone.style.bottom = 0;
