@@ -312,7 +312,7 @@ elation.require(['engine.external.leapmotion.leap'], function() {
           obj.add(this.joints[i]);
         }
       }
-      this.joints[4] = new THREE.Mesh(new THREE.SphereBufferGeometry(fingerSize(5)), tipmaterial);
+      this.joints[4] = new THREE.Mesh(new THREE.SphereBufferGeometry(fingerSize(5)), tipmaterial.clone());
       this.fingertip = this.joints[4];
       obj.add(this.joints[4]);
       return obj;
