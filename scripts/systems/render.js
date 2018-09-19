@@ -155,14 +155,6 @@ elation.require([
       if (this.args.crosshair == 1) {
         elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this.container});
       }
-      elation.events.add(window, "resize", this);
-      elation.events.add(document.body, "mouseenter,mouseleave", this);
-      elation.events.add(this.container, "mouseover,mousedown,mousemove,mouseup,click", this);
-      elation.events.add(this.container, "mousewheel,touchstart,touchmove,touchend", this);
-      elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
-      elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
-      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
-
       this.container.tabIndex = 1;
       if (!this.args.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
@@ -172,6 +164,15 @@ elation.require([
         this.engine = elation.engine.instances[this.args.engine];
         this.create();
       }
+      this.canvas = this.rendersystem.renderer.domElement;
+      elation.events.add(window, "resize", this);
+      elation.events.add(document.body, "mouseenter,mouseleave", this);
+      elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
+      elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
+      elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
+      elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
+      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
+
     }
     this.create = function() {
       this.rendersystem = this.engine.systems.render;
