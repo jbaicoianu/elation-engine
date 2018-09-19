@@ -209,7 +209,11 @@ if (!ENV_IS_BROWSER) return;
     },
     load: function ( url, onLoad, onProgress, onError ) {
       var fullurl = url;
-      if (this.corsproxy != '' && url.indexOf(this.corsproxy) != 0) {
+      if (this.corsproxy != '' &&
+          url.indexOf(this.corsproxy) != 0 &&
+          url.indexOf('blob:') != 0 &&
+          url.indexOf('data:') != 0 &&
+          url.indexOf(self.location.origin) != 0) {
         fullurl = this.corsproxy + url;
       }
       if (!this.dummy) {
