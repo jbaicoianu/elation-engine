@@ -1440,7 +1440,7 @@ THREE.GLTF2Loader = ( function () {
 
 	function convertUint8ArrayToString( array ) {
 
-		if ( window.TextDecoder !== undefined ) {
+		if ( TextDecoder !== undefined ) {
 
 			return new TextDecoder().decode( array );
 
@@ -1889,7 +1889,7 @@ THREE.GLTF2Loader = ( function () {
 
 							var bufferView = dependencies.bufferViews[ source.bufferView ];
 							var blob = new Blob( [ bufferView ], { type: source.mimeType } );
-							urlCreator = window.URL || window.webkitURL;
+							urlCreator = URL || webkitURL;
 							sourceUri = urlCreator.createObjectURL( blob );
 
 						}
