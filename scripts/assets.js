@@ -872,7 +872,9 @@ if (!ENV_IS_BROWSER) return;
     getInstance: function(args) {
       var group = new THREE.Group();
       if (!this._model) {
-        this.load();
+        if (!this.loading) {
+          this.load();
+        }
         var mesh;
         if (elation.engine.assets.placeholders.model) {
           mesh = elation.engine.assets.placeholders.model.clone();
