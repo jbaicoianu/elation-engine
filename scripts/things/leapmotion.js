@@ -321,7 +321,7 @@ elation.require(['engine.external.leapmotion.leap'], function() {
       for (var i = 0; i < data.bones.length; i++) {
         var bone = data.bones[i];
         var center = bone.center();
-        var length = Math.abs(bone.length * scalefactor);
+        var length = Math.abs(Math.max(bone.length, .1) * scalefactor);
 
         if (length > 0) {
           //this.phalanges[i].scale.z = length * scalefactor;
