@@ -366,6 +366,7 @@ if (!ENV_IS_BROWSER) return;
     hasalpha: null,
     rawimage: null,
     preload: true,
+    maxsize: null,
 
     load: function() {
       if (this.src) {
@@ -513,7 +514,7 @@ if (!ENV_IS_BROWSER) return;
         canvas.src = this.src;
         canvas.originalSrc = this.src;
 
-        var imagemax = elation.config.get('engine.assets.image.maxsize', Infinity);
+        var imagemax = elation.utils.any(this.maxsize, elation.config.get('engine.assets.image.maxsize', Infinity));
         canvas.width = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.width));
         canvas.height = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.height));
         var ctx = canvas.getContext("2d");
