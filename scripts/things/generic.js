@@ -261,6 +261,7 @@ elation.component.add("engine.things.generic", function() {
             x: ['property', 'x'],
             y: ['property', 'y'],
             z: ['property', 'z'],
+            clone: ['function', 'clone']
         };
         if (prop.type == 'quaternion') {
           proxydef.w = ['property', 'w'];
