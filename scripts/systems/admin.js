@@ -319,6 +319,13 @@ elation.require([
             click: elation.bind(this, function() { this.admin.manipulator.setMode('rotate'); })
           }
         });
+      var scalebutton = elation.ui.button({
+          append: panel,
+          label: '⛞',
+          events: {
+            click: elation.bind(this, function() { this.admin.manipulator.setMode('scale'); })
+          }
+        });
       
 
       //this.window = elation.ui.window(null, elation.html.create({tag: 'div', classname: 'style_box engine_admin_scenetree', append: document.body}), {title: title, controls: false});
