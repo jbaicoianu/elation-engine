@@ -625,6 +625,7 @@ if (vivehack) {
 
             this.actualcamera.updateProjectionMatrix();
           }
+          this.actualcamera.layers.mask = this.camera.layers.mask;
         }
         if (this.skycamera) {
           // Sky camera needs to use our camera's world rotation, and nothing else
