@@ -18,10 +18,11 @@
 }
 .engine_admin_scenetree ul li {
   cursor: pointer;
+  overflow: visible;
 }
 .engine_admin_scenetree .engine_admin_scenetree_list {
   overflow: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   max-height: 20em;
 }
 /*
