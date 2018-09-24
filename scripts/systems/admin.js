@@ -169,15 +169,16 @@ elation.require([
           //this.lastactivething = this.engine.client.player;
           if (this.lastactivething) {
             this.lastactivething.disable();
-            this.admincamera.properties.position.copy(this.lastactivething.properties.position);
           }
         }
         if (this.manipulator) {
           this.engine.systems.world.scene['world-3d'].add(this.manipulator);
         }
         setTimeout(elation.bind(this, function() {
+          let thing = this.lastactivething;
           this.engine.client.setActiveThing(this.admincamera);
           this.admincamera.enable();
+          this.admincamera.properties.position.copy(thing.properties.position).add(new THREE.Vector3(0, 5, -5));
         }), 0);
       }
     }
