@@ -719,7 +719,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.mousedown = function(ev, skiplock) {
       this.cancelclick = false;
-      if (!skiplock && ev.button === 0 && !this.getPointerLockElement()) {
+      if (!skiplock && ev.button === 0 && !this.getPointerLockElement() && this.engine.systems.admin.hidden) {
         if (this.requestPointerLock()) {
           this.cancelclick = true;
           ev.stopPropagation();
