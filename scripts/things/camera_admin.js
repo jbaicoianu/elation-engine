@@ -76,9 +76,11 @@ console.log('toggle controls', this.admincontrols, this.orbitcontrols, this.flyc
     }
     this.enable = function() {
       this.admincontrols.enabled = true;
+      this.camera.layers.enable(1);
     }
     this.disable = function() {
       this.admincontrols.enabled = false;
+      this.camera.layers.disable(1);
     }
     this.engine_frame = function(ev) {
       if (this.cameraactive) {
