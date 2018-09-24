@@ -213,6 +213,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'position': [0,0,0],
         'mass': 1
       });
+
+      this.placeholder_body = new THREE.Mesh(new THREE.CylinderGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc}));
+      this.placeholder_body.position.y = this.height / 2;
+      this.placeholder_body.layers.set(1);
+      this.objects['3d'].add(this.placeholder_body);
     }
     this.getGroundHeight = function() {
       
