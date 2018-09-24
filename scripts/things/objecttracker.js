@@ -56,7 +56,9 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
 
         var player = this.engine.client.player,
             stage = this.vrdisplay.stageParameters;
-        sittingToStanding.fromArray(stage.sittingToStandingTransform);
+        if (stage) {
+          sittingToStanding.fromArray(stage.sittingToStandingTransform);
+        }
         for (var i = 0; i < this.controllers.length; i++) {
           var c = this.controllers[i];
           if (c) {
