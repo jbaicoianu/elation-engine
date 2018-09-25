@@ -335,8 +335,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             this.moveForce.update(_moveforce);
             this.objects.dynamics.setAngularVelocity(this.turnVector);
 
-            this.neck.objects.dynamics.setAngularVelocity(this.lookVector);
-            this.neck.objects.dynamics.updateState();
+            this.head.objects.dynamics.setAngularVelocity(this.lookVector);
+            this.head.objects.dynamics.updateState();
             //this.neck.refresh();
           }
           if (this.headconstraint) this.headconstraint.enabled = (!this.vrdevice || !this.vrdevice.isPresenting);
