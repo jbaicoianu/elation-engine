@@ -132,7 +132,7 @@ elation.require([
       this.useWebVRPolyfill = elation.utils.any(this.args.useWebVRPolyfill, true);
       this.size = [0, 0];
       this.size_old = [0, 0];
-      this.scale = 100 * devicePixelRatio;
+      this.scale = 100;// * devicePixelRatio;
       this.showstats = this.args.showstats || false;
       this.fullscreen = false;
       this.renderpasses = {};
@@ -894,12 +894,12 @@ if (vivehack) {
       this.sizevec.set(scaledwidth, scaledheight);
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
 
-      var pixelratio = (window.devicePixelRatio ? window.devicePixelRatio : 1);
+      var pixelratio = 1; //(window.devicePixelRatio ? window.devicePixelRatio : 1);
       if (this.vreffect && this.vreffect.isPresenting) {
         this.vreffect.setSize(scaledwidth, scaledheight);
       } else {
         if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
-          //this.rendersystem.renderer.setPixelRatio(pixelratio);
+          this.rendersystem.renderer.setPixelRatio(pixelratio);
         }
         this.rendersystem.renderer.setSize(scaledwidth, scaledheight);
       }
