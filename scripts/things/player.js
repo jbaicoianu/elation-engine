@@ -318,9 +318,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
               
               if (moveSpeed == 0 && velsq > 0) {
                 // The player isn't actively moving via control input, so apply opposing force to stop us
-                this.objects.dynamics.worldToLocalDir(this.moveVector.copy(this.velocity).negate());
-                moveSpeed = Math.min(this.moveVector.length(), 1) * this.movestrength;
-                this.moveVector.normalize();
+                //this.objects.dynamics.worldToLocalDir(this.moveVector.copy(this.velocity).negate());
+                //moveSpeed = Math.min(this.moveVector.length(), 1) * this.movestrength;
+                //this.moveVector.normalize();
                 dumbhack = true;
               }
             } else {
