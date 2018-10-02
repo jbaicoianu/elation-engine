@@ -918,14 +918,6 @@ if (!ENV_IS_BROWSER) return;
             n.rebindByName(newguy);
           }
         });
-
-        // FBX (and possibly other formats?) store a skeleton at the top level, even though the object is a THREE.Group
-        // so we try o call the SkinnedMesh class' rebindByName function to mke sure that skeleton is updated as well
-        try {
-          THREE.SkinnedMesh.prototype.rebindByName.call(newguy, newguy);
-        } catch (e) {
-          // Sometimes it fails, but if it fails it's not really important
-        }
       }
       return group;
     },
