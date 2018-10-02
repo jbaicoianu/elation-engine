@@ -910,6 +910,7 @@ if (!ENV_IS_BROWSER) return;
 */
         var newguy = source.clone();
         group.add(newguy);
+        newguy.updateMatrix(true);
         newguy.updateMatrixWorld(true);
 
         newguy.traverse(function(n) {
