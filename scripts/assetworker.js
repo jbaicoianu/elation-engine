@@ -5,8 +5,8 @@ elation.require([
     'engine.assets',
     'engine.external.pako',
     'engine.external.zlib.inflate',
-    'engine.external.three.three', 'engine.external.three.FBXLoader', 'engine.external.three.ColladaLoader2', 'engine.external.xmldom',
-    'engine.external.three.OBJLoader', 'engine.external.three.MTLLoader', 'engine.external.three.VRMLLoader', 'engine.external.three.GLTF2Loader', 'engine.external.three.PLYLoader', 'engine.external.three.BVHLoader'
+    'engine.external.xmldom',
+    'engine.external.three.three', 'engine.external.three.three-loaders',
   ], function() {
 
   elation.define('engine.assetworker', {
@@ -18,6 +18,8 @@ elation.require([
 
       THREE.Cache.enabled = true;
       THREE.ImageLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
+
+        if ( this.path !== undefined ) url = this.path + url;
 
         var scope = this;
 
@@ -270,6 +272,7 @@ elation.require([
 
           var mtlLoader = new THREE.MTLLoader( );
           mtlLoader.setPath( mtlpath );
+          mtlLoader.setResourcePath( mtlpath );
           mtlLoader.setCrossOrigin( 'anonymous' );
           if (job.data.mtldata) {
             var mtldata = this.convertArrayBufferToString(job.data.mtldata);
@@ -322,6 +325,8 @@ elation.require([
           var data = false;
           var baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 ) 
           var loader = new THREE.ColladaLoader();
+          var corsproxy = elation.engine.assets.corsproxy || '';
+          loader.setResourcePath(corsproxy + baseurl);
           loader.options.convertUpAxis = true;
           loader.options.upAxis = 'Y';
           var xml = this.convertArrayBufferToString(bindata);
@@ -398,10 +403,10 @@ elation.require([
       return new Promise(elation.bind(this, function(resolve, reject) { 
         var data = this.convertArrayBufferToString(bindata);
         var json = JSON.parse(data);
-        var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
+        var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
         var proxypath = elation.engine.assets.corsproxy + path;
         //THREE.GLTFLoader.Shaders.removeAll();
-        var loader = new THREE.GLTF2Loader();
+        var loader = new THREE.GLTFLoader();
         loader.parse(bindata, proxypath, elation.bind(this, function(modeldata) {
           if (modeldata.scene) {
             modeldata.scene.updateMatrixWorld(true);
@@ -424,7 +429,7 @@ elation.require([
   elation.define('engine.assets.loaders.model_ply', {
     parse: function(data, job) {
       return new Promise(function(resolve, reject) { 
-        var path = THREE.Loader.prototype.extractUrlBase( job.data.src );
+        var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
         var proxypath = elation.engine.assets.corsproxy + path;
 
         var loader = new THREE.PLYLoader();
