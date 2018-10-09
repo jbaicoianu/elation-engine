@@ -1,7 +1,4 @@
 elation.require([
-  // "engine.external.three.ColladaLoader",
-  //"engine.external.three.JSONLoader"
-  //"engine.external.three.glTFLoader-combined"
   //"engine.things.trigger"
   "utils.proxy"
 ], function() {
@@ -261,7 +258,8 @@ elation.component.add("engine.things.generic", function() {
             x: ['property', 'x'],
             y: ['property', 'y'],
             z: ['property', 'z'],
-            clone: ['function', 'clone']
+            clone: ['function', 'clone'],
+            copy: ['function', 'copy']
         };
         if (prop.type == 'quaternion') {
           proxydef.w = ['property', 'w'];
@@ -361,11 +359,11 @@ elation.component.add("engine.things.generic", function() {
             newobj = this.createObject3D();
 
         this.objects['3d'] = newobj;
-        this.objects['3d'].bindPosition(this.properties.position);
-        this.objects['3d'].bindQuaternion(this.properties.orientation);
-        this.objects['3d'].bindScale(this.properties.scale);
+        this.bindObjectProperties(this.objects['3d']);
+
         this.objects['3d'].userData.thing = this;
 
+        elation.events.fire({type: 'thing_recreate', element: this});
         if (parent) {
           parent.remove(oldobj);
           parent.add(newobj);
@@ -382,7 +380,10 @@ elation.component.add("engine.things.generic", function() {
             this.objects.dynamics.collider.getInertialMoment();
           }
         }
+        this.objects.dynamics.position = this.properties.position;
+        this.objects.dynamics.orientation = this.properties.orientation;
       }
+
       this.refresh();
     }
   }
@@ -442,17 +443,13 @@ elation.component.add("engine.things.generic", function() {
     }
     this.objects['3d'] = this.createObject3D();
     if (this.objects['3d']) {
-      this.objects['3d'].bindPosition(this.properties.position);
-      this.objects['3d'].bindQuaternion(this.properties.orientation);
-      this.objects['3d'].bindScale(this.properties.scale);
+      this.bindObjectProperties(this.objects['3d']);
       //this.objects['3d'].useQuaternion = true;
       this.objects['3d'].userData.thing = this;
     }
     if (!this.colliders) {
       this.colliders = new THREE.Object3D();
-      this.colliders.bindPosition(this.properties.position);
-      this.colliders.bindQuaternion(this.properties.orientation);
-      this.colliders.bindScale(this.properties.scale);
+      this.bindObjectProperties(this.colliders);
       //this.colliders.scale.set(1/this.properties.scale.x, 1/this.properties.scale.y, 1/this.properties.scale.z);
       this.colliders.userData.thing = this;
     }
@@ -802,13 +799,16 @@ elation.component.add("engine.things.generic", function() {
         } else {
           var collidermesh = this.collidermesh = new THREE.Mesh(collidergeom, collidermat);
           if (rigidbody.position !== this.properties.position) {
+/*
             collidermesh.bindPosition(rigidbody.position);
             collidermesh.bindQuaternion(rigidbody.orientation);
+*/
             //collidermesh.bindScale(this.properties.scale);
           }
           collidermesh.userData.thing = this;
           this.colliders.add(collidermesh);
         }
+        collidermesh.updateMatrix();
         collidermesh.updateMatrixWorld();
         var colliderhelper = this.colliderhelper;
         if (!colliderhelper) {
@@ -937,9 +937,7 @@ elation.component.add("engine.things.generic", function() {
     var parent = this.objects['3d'].parent;
     parent.remove(this.objects['3d']);
     this.objects['3d'] = new THREE.Object3D();
-    this.objects['3d'].bindPosition(this.properties.position);
-    this.objects['3d'].bindQuaternion(this.properties.orientation);
-    this.objects['3d'].bindScale(this.properties.scale);
+    this.bindObjectProperties(this.objects['3d']);
     this.objects['3d'].userData.thing = this;
 
     // Correct coordinate space from various modelling programs
@@ -1133,10 +1131,13 @@ elation.component.add("engine.things.generic", function() {
         });
       }
       meshes[i].parent.remove(meshes[i]);
+/*
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
+*/
       //meshes[i].bindScale(this.properties.scale);
       meshes[i].userData.thing = this;
+      meshes[i].updateMatrix();
       meshes[i].updateMatrixWorld();
       //meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
       this.colliders.add(meshes[i]);
@@ -1145,6 +1146,7 @@ elation.component.add("engine.things.generic", function() {
       this.colliderhelper = new THREE.EdgesHelper(meshes[i], 0x00ff00);
       this.colliders.add(this.colliderhelper);
       this.engine.systems.world.scene['colliders'].add(this.colliderhelper);
+      meshes[i].updateMatrix();
       meshes[i].updateMatrixWorld();
 */
     }
@@ -1330,6 +1332,11 @@ elation.component.add("engine.things.generic", function() {
     var s = this.scale;
     if (s && this.objects['3d']) {
       this.objects['3d'].visible = this.visible && !(s.x == 0 || s.y == 0 || s.z == 0);
+    }
+    if (this.colliders) {
+      this.colliders.position.copy(this.properties.position);
+      this.colliders.quaternion.copy(this.properties.orientation);
+      this.colliders.scale.copy(this.properties.scale);
     }
     elation.events.fire({type: 'thing_change', element: this});
   }
@@ -1647,7 +1654,7 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     var bounds = new THREE.Sphere();
     var worldpos = this.localToWorld(new THREE.Vector3());
     var childworldpos = new THREE.Vector3();
-    this.objects['3d'].traverse(function(n) {
+    this.objects['3d'].traverse((n) => {
       childworldpos.set(0,0,0).applyMatrix4(n.matrixWorld);
       if (n instanceof THREE.Mesh) {
         if (!n.geometry.boundingSphere) {
@@ -1675,6 +1682,24 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
 
     return bounds; 
   }
+  this.bindObjectProperties = function(obj) {
+    Object.defineProperties( obj, {
+      position: {
+        enumerable: true,
+        configurable: true,
+        value: this.properties.position
+      },
+      quaternion: {
+        enumerable: true,
+        configurable: true,
+        value: this.properties.orientation
+      },
+      scale: {
+        enumerable: true,
+        configurable: true,
+        value: this.properties.scale
+      },
+    });
+  }
 });
-
 });
