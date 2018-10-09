@@ -11,7 +11,7 @@
     "url": "https://github.com/jbaicoianu/elation-engine"
   },
   "dependencies": {
-    "elation": ">=2.0.0",
+    "elation": ">=2.2.10",
     "elation-share": "*",
     "cyclone-physics": "*"
   },
