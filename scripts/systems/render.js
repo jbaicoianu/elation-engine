@@ -4,35 +4,14 @@
 
 elation.require([
   "engine.external.three.three",
-  "engine.external.three.stats",
-  "engine.external.threex.renderstats",
-  "engine.external.three.render.CSS3DRenderer",
-  "engine.external.three.render.EffectComposer",
-  "engine.external.three.render.RenderPass",
-  "engine.external.three.render.PortalRenderPass",
-  "engine.external.three.render.VREffect",
-  "engine.external.three.render.ShaderPass",
-  "engine.external.three.render.MaskPass",
-  "engine.external.three.render.CopyShader",
-  "engine.external.three.render.RecordingPass",
-  "engine.external.three.CubemapToEquirectangular",
+  "engine.external.three.three-objects",
+  "engine.external.three.three-controls",
+  "engine.external.three.three-postprocessing",
+  "engine.external.three.three-shaders",
+  "engine.external.three.CSS3DRenderer",
 
-  "engine.external.threecap.threecap",
-  "engine.external.webvr-polyfill",
+  //"engine.external.webvr-polyfill",
 
-  //"engine.external.gifjs.gif",
-  //"engine.external.ffmpeg.ffmpeg",
-  //"engine.external.ffmpeg.ffmpeg_minimal",
-  //"engine.external.three.render.SepiaShader",
-  //"engine.external.three.render.BleachBypassShader",
-  //"engine.external.three.render.FilmShader",
-  //"engine.external.three.render.FilmPass",
-  "engine.external.three.render.ConvolutionShader",
-  "engine.external.three.render.BloomPass",
-  "engine.external.three.render.ClearPass",
-  "engine.external.three.render.SSAOShader",
-  "engine.external.three.render.FXAAShader",
-  "engine.external.three.render.ManualMSAARenderPass",
   "engine.materials",
   "engine.geometries",
   "ui.select",
@@ -57,12 +36,16 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: false, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
+      this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.vr.enabled = false;
+      //this.renderer.vr.manageCameraPosition = true;
+      //this.renderer.setAnimationLoop((ev) => this.render());
+      //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
       this.renderer.gammaInput = false;
       this.renderer.gammaOutput = false;
@@ -91,6 +74,9 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       this.lastframetime += ev.data.delta;
+      this.render();
+    }
+    this.render = function(ev) {
       for (var k in this.views) {
         this.views[k].updatePickingObject();
         if (this.views[k].stats) {
@@ -223,6 +209,7 @@ elation.require([
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
+/*
       this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
       //this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
       this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
@@ -256,6 +243,7 @@ elation.require([
 
       this.vrdisplay = false;
       this.initVRDisplays();
+*/
 
       if (this.showstats) {
         // FIXME - not smart!
@@ -555,6 +543,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
         var player = this.engine.client.player;
 
+        this.rendersystem.renderer.vr.setDevice(this.vrdisplay);
+
         if (newstate && !this.vrdisplay.isPresenting) {
 if (vivehack) {
   //player.head.reparent(player);
@@ -599,6 +589,7 @@ if (vivehack) {
       return function() {
         // Make sure the parent's matrixWorld is up to date
         if (this.camera.parent) {
+          this.camera.parent.updateMatrix(true);
           this.camera.parent.updateMatrixWorld(true);
         }
         if (this.actualcamera) {
@@ -610,6 +601,7 @@ if (vivehack) {
             this.camera.parent.add(this.actualcamera);
           }
           this.actualcamera.position.copy(this.camera.position);
+          this.actualcamera.scale.copy(this.camera.scale);
           this.actualcamera.rotation.copy(this.camera.rotation);
           this.actualcamera.quaternion.copy(this.camera.quaternion);
 
@@ -670,16 +662,23 @@ if (vivehack) {
         */
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
-        if (this.vrdisplay) {
+        if (this.vrdisplay && this.vrdisplay.isPresenting) {
           var player = this.engine.client.player;
           player.updateHMD(this.vrdisplay);
-        } 
+          this.effects.default.camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
+        } else {
+          this.effects.default.camera = this.actualcamera;
+        }
 
+/*
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           this.vreffect.render(this.scene, this.camera);
         } else {
+*/
           this.composer.render(delta);
-        }
+this.rendersystem.renderer.vr.submitFrame();
+          //this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
+//        }
 
         if (this.rendersystem.cssrenderer) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
@@ -1755,7 +1754,9 @@ console.log('dun it', msaafilter);
 
       try {
         var camera = (vrdisplay && vrdisplay.isPresenting ? this.view.camera : this.view.actualcamera);
+        this.scene.updateMatrix();
         this.scene.updateMatrixWorld();
+        camera.updateMatrix();
         camera.updateMatrixWorld();
 
         this.raycaster.setFromCamera(this.mousevec, camera);
