@@ -43,7 +43,14 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       //console.log('FRAME: world', ev);
-      var uniques = {};
+      if (!this.uniques) {
+        this.uniques = {};
+      } else {
+        for (var k in this.uniques) {
+          this.uniques[k] = false;
+        }
+      }
+      var uniques = this.uniques;
       while (this.framechanges.length > 0) {
         var changed = this.framechanges.pop();
         if (!uniques[changed.id]) {
