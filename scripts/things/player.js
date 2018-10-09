@@ -214,10 +214,21 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'mass': 1
       });
 
-      this.placeholder_body = new THREE.Mesh(new THREE.CylinderGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc}));
+      this.placeholder_body = new THREE.Mesh(new THREE.CylinderGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc, transparent: true, opacity: .5}));
       this.placeholder_body.position.y = this.height / 2;
-      this.placeholder_body.layers.set(1);
+      this.placeholder_body.layers.set(10);
       this.objects['3d'].add(this.placeholder_body);
+
+      this.vrcalibrate = new THREE.Object3D();
+      this.vrposetarget = new THREE.Object3D();
+      let vrposedebug = new THREE.Mesh(new THREE.CylinderGeometry(0, 1, 2), new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .5}));
+      vrposedebug.position.z = -1;
+      vrposedebug.rotation.x = Math.PI/2;
+      this.vrcalibrate.add(this.vrposetarget);
+      this.vrposetarget.add(vrposedebug);
+      vrposedebug.layers.set(10);
+      this.neck.objects['3d'].add(this.vrcalibrate);
+      this.engine.systems.render.renderer.vr.setPoseTarget(this.vrposetarget);
     }
     this.getGroundHeight = function() {
       
@@ -357,6 +368,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
       return function(vrdevice) {
         var hmd = this.hmdstate.hmd;
+        if (vrdevice && vrdevice.stageParameters) {
+          this.stage.scale.set(vrdevice.stageParameters.sizeX, .1, vrdevice.stageParameters.sizeZ);
+        }
         if (vrdevice && vrdevice.isPresenting) {
           var pose = false;
           if (!this.framedata) {
@@ -374,7 +388,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
           if (this.headconstraint) this.headconstraint.enabled = false;
 
           if (pose.position && !pose.position.includes(NaN)) {
-            var pos = this.head.objects.dynamics.position;
+            var pos = this.neck.objects.dynamics.position;
             pos.fromArray(pose.position);
             //pos.y += this.properties.height * .8 - this.properties.fatness;
           }
@@ -438,6 +452,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             angular.divideScalar(theta);
             tmpquat.setFromAxisAngle(angular, theta);
             this.head.properties.orientation.multiply(tmpquat);
+            this.head.refresh();
             ev.data.mouse_pitch = 0;
             ev.data.mouse_look[1] = 0;
             changed = true;
@@ -630,6 +645,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       } else {
         this.disable();
       }
+    }
+    this.calibrateVR = function() {
+      //this.vrcalibrate.position.copy(this.vrposetarget.position).multiplyScalar(-1);
+      //this.vrcalibrate.quaternion.copy(this.vrposetarget.quaternion).conjugate();
+      this.vrcalibrate.matrix.getInverse(this.vrposetarget.matrix);
+      this.vrcalibrate.matrix.decompose(this.vrcalibrate.position, this.vrcalibrate.rotation, this.vrcalibrate.scale);
     }
   }, elation.engine.things.generic);
 });
