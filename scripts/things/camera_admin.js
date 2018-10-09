@@ -25,21 +25,22 @@ elation.require(['engine.things.camera'], function() {
 
 
         this.orbitcontrols = new THREE.OrbitControls(this.camera, this.view.container);
-        this.orbitcontrols.rotateUp(-Math.PI/4);
-        this.orbitcontrols.rotateLeft(-Math.PI/4);
-        this.orbitcontrols.dollyOut(10);
+        //this.orbitcontrols.rotateUp(-Math.PI/4);
+        //this.orbitcontrols.rotateLeft(-Math.PI/4);
+        //this.orbitcontrols.dollyOut(10);
         this.orbitcontrols.userPanSpeed = 10;
         this.orbitcontrols.keyPanSpeed = 100;
         this.orbitcontrols.noKeys = true;
 
         elation.events.add(this.orbitcontrols, 'change', elation.bind(this, this.controls_change));
 
+/*
         this.flycontrols = new THREE.FlyControls(this.camera, this.view.container);
         this.flycontrols.movementSpeed = 10;
         this.flycontrols.rollSpeed = Math.PI/4;
         this.flycontrols.dragToLook = true;
-
         elation.events.add(this.flycontrols, 'change', elation.bind(this, this.controls_change));
+*/
 
         this.toggleControls();
     
@@ -76,19 +77,20 @@ console.log('toggle controls', this.admincontrols, this.orbitcontrols, this.flyc
     }
     this.enable = function() {
       this.admincontrols.enabled = true;
-      this.camera.layers.enable(1);
+      this.camera.layers.enable(10);
     }
     this.disable = function() {
       this.admincontrols.enabled = false;
-      this.camera.layers.disable(1);
+      this.camera.layers.disable(10);
     }
     this.engine_frame = function(ev) {
       if (this.cameraactive) {
-        this.admincontrols.update(ev.data.delta);
+        //this.admincontrols.update(ev.data.delta);
+        //this.admincontrols.update();
       }
     }
     this.controls_change = function(ev) {
-      this.refresh();
+      this.engine.systems.render.setdirty();
     }
   }, elation.engine.things.camera);
 });
