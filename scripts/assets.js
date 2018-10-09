@@ -915,7 +915,7 @@ if (!ENV_IS_BROWSER) return;
 
         newguy.traverse(function(n) {
           if (n instanceof THREE.SkinnedMesh) {
-            n.rebindByName(newguy);
+            //n.rebindByName(newguy);
           }
         });
       }
