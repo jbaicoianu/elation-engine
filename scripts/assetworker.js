@@ -61,6 +61,7 @@ elation.require([
         'ply': new elation.engine.assets.loaders.model_ply(),
         'wrl': new elation.engine.assets.loaders.model_wrl(),
         'gltf': new elation.engine.assets.loaders.model_gltf(),
+        'glb': new elation.engine.assets.loaders.model_gltf(),
         'bvh': new elation.engine.assets.loaders.model_bvh(),
       }
     },
@@ -107,7 +108,8 @@ elation.require([
         ['ply', 'ply'],
         ['bvh', 'HIERARCHY\n'],
         ['wrl', '#VRML'],
-        ['gltf', '{']
+        ['gltf', '{'],
+        ['glb', 'glTF']
       ];
 
       var type = false;
@@ -401,8 +403,8 @@ elation.require([
 
     parse: function(bindata, job) {
       return new Promise(elation.bind(this, function(resolve, reject) { 
-        var data = this.convertArrayBufferToString(bindata);
-        var json = JSON.parse(data);
+        //var data = this.convertArrayBufferToString(bindata);
+        //var json = JSON.parse(data);
         var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
         var proxypath = elation.engine.assets.corsproxy + path;
         //THREE.GLTFLoader.Shaders.removeAll();
