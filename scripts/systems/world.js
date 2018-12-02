@@ -92,6 +92,14 @@ elation.require([
         }
       }
     }
+    this.removeEvents = function(thing) {
+      elation.events.remove(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
+      if (thing.children) {
+        for (var k in thing.children) {
+          this.removeEvents(thing.children[k]);
+        }
+      }
+    }
       
     this.thing_add = function(ev) {
       //elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
@@ -102,6 +110,7 @@ elation.require([
       }
     }
     this.thing_remove = function(ev) {
+      this.removeEvents(ev.data.thing);
       elation.events.fire({type: 'world_thing_remove', element: this, data: ev.data});
       elation.events.remove(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
     }
