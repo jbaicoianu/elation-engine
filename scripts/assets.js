@@ -369,7 +369,9 @@ if (!ENV_IS_BROWSER) return;
     maxsize: null,
 
     load: function() {
-      if (this.src) {
+      if (this.texture) {
+        this._texture = this.texture;
+      } else if (this.src) {
         var fullurl = this.getFullURL(this.src);
         var texture;
         if (this.sbs3d) {
