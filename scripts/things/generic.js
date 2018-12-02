@@ -1623,16 +1623,19 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
     }
     return collection;
   }
-  this.distanceTo = (function() {
+  this.distanceTo = function(obj) {
+    return Math.sqrt(this.distanceToSquared(obj));
+  }
+  this.distanceToSquared = (function() {
     // closure scratch variables
     var _v1 = new THREE.Vector3(),
         _v2 = new THREE.Vector3();
     return function(obj) {
       var mypos = this.localToWorld(_v1.set(0,0,0));
       if (obj && obj.localToWorld) {
-        return mypos.distanceTo(obj.localToWorld(_v2.set(0,0,0)));
+        return mypos.distanceToSquared(obj.localToWorld(_v2.set(0,0,0)));
       } else if (obj instanceof THREE.Vector3) {
-        return mypos.distanceTo(obj);
+        return mypos.distanceToSquared(obj);
       }
       return Infinity;
     } 
