@@ -14309,6 +14309,13 @@ THREE.MTLLoader.MaterialCreator.prototype = {
 
 					break;
 
+				case 'ke':
+
+					// Emissive color using RGB values
+					params.emissive = new THREE.Color().fromArray( value );
+
+					break;
+
 				case 'map_kd':
 
 					// Diffuse texture map
@@ -14346,6 +14353,14 @@ THREE.MTLLoader.MaterialCreator.prototype = {
 
 					setMapForType( "alphaMap", value );
 					params.transparent = true;
+
+					break;
+
+				case 'map_ke':
+
+					// emissive texture map
+
+					setMapForType( "emissiveMap", value );
 
 					break;
 
