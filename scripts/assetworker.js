@@ -359,6 +359,7 @@ elation.require([
           });
           data = parsed;        
 
+          data.scene.animations = parsed.animations;
           data.scene.rotation.z = 0;
           data.scene.updateMatrix();
           resolve(data.scene.toJSON());
@@ -411,6 +412,7 @@ elation.require([
         loader.parse(bindata, proxypath, elation.bind(this, function(modeldata) {
           if (modeldata.scene) {
             modeldata.scene.updateMatrixWorld(true);
+            modeldata.scene.animations = modeldata.animations;
             var encoded = modeldata.scene.toJSON();
 
             // FIXME - the glTF loader we're using wants our textures unflipped, but doesn't set that flag - so we set it here
