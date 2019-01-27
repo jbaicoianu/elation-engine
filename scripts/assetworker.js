@@ -329,7 +329,6 @@ elation.require([
           var loader = new THREE.ColladaLoader();
           var corsproxy = elation.engine.assets.corsproxy || '';
           loader.setResourcePath(corsproxy + baseurl);
-          loader.options.convertUpAxis = true;
           loader.options.upAxis = 'Y';
           var xml = this.convertArrayBufferToString(bindata);
           var parsed = loader.parse(xml);
