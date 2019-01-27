@@ -1,3 +1,5 @@
+//if (typeof self == 'undefined') var self = (typeof window != 'undefined' ? window : global);
+
 // Don't do anything unless DOMParser doesn't exist, or if we're running in Safari, which is the IE6 of the modern web
 if (typeof DOMParser == 'undefined' || (navigator.userAgent.indexOf('Safari') != -1 && navigator.userAgent.indexOf('Chrome') == -1)) {
   (function(global) {
