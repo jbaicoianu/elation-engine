@@ -1322,6 +1322,7 @@ if (!ENV_IS_BROWSER) return;
       this.load();
     },
     load: function() {
+      elation.events.fire({element: this, type: 'asset_load_queued'});
       if (this.json) {
         this.loadJSON(this.json);
       } else if (this.src) {
@@ -1341,6 +1342,7 @@ if (!ENV_IS_BROWSER) return;
     },
     loadJSON: function(json) {
       //this.json = json;
+      elation.events.fire({element: this, type: 'asset_load_processing'});
       var baseurl = (this.baseurl && this.baseurl.length > 0 ? this.baseurl : this.getBaseURL());
       if (!this.assets) this.assets = [];
       for (var i = 0; i < json.length; i++) {
@@ -1355,6 +1357,8 @@ if (!ENV_IS_BROWSER) return;
         }
         //asset.load();
       }
+      this.loaded = true;
+      elation.events.fire({element: this, type: 'asset_load'});
     },
     get: function(type, name, create) {
       if (this.assetmap[type] && this.assetmap[type][name]) {
