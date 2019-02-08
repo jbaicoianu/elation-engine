@@ -336,6 +336,19 @@ if (!ENV_IS_BROWSER) return;
     },
     getInstance: function(args) {
       return undefined;
+    },
+    executeWhenLoaded: function(callback) {
+      if (this.loaded) {
+        // We've already loaded the asset, so execute the callback asynchronously
+        setTimeout(callback, 0);
+      } else {
+        // Asset isn't loaded yet, set up a local callback that can self-remove, so our callback only executes once
+        let cb = (ev) => {
+          elation.events.remove(this, 'asset_load', cb);
+          callback();
+        };
+        elation.events.add(this, 'asset_load', cb);
+      }
     }
   }, elation.class);
 
