@@ -51,7 +51,6 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     },
     loadAssetPack: function(url, baseurl) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
-      this.assetroot.load()
       return this.assetroot;
     },
     loadJSON: function(json, baseurl) {
