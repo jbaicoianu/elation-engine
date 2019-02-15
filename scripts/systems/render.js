@@ -47,9 +47,14 @@ elation.require([
       //this.renderer.setAnimationLoop((ev) => this.render());
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
-      this.renderer.gammaInput = false;
+
+      this.renderer.gammaInput = true;
       this.renderer.gammaOutput = false;
-      //this.renderer.gammaFactor = 2.2;
+      this.renderer.gammaFactor = 1;
+
+      this.renderer.toneMapping = THREE.CineonToneMapping;
+      this.renderer.toneMappingExposure = 1;
+      this.renderer.toneMappingWhitePoint = 1;
 
       this.lastframetime = 0;
 
