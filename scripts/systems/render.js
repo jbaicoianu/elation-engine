@@ -9,6 +9,7 @@ elation.require([
   "engine.external.three.three-postprocessing",
   "engine.external.three.three-shaders",
   "engine.external.three.CSS3DRenderer",
+  "engine.external.three.CubemapToEquirectangular",
 
   //"engine.external.webvr-polyfill",
 
@@ -1251,7 +1252,7 @@ this.rendersystem.renderer.vr.submitFrame();
         this.scene.add(cubecam);
 
         if (raw) {
-          cubecam.updateCubeMap(renderer, this.scene);
+          cubecam.update(renderer, this.scene);
           return cubecam;
         } else {
           var pos = [
