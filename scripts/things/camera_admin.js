@@ -31,6 +31,7 @@ elation.require(['engine.things.camera'], function() {
         this.orbitcontrols.userPanSpeed = 10;
         this.orbitcontrols.keyPanSpeed = 100;
         this.orbitcontrols.noKeys = true;
+        this.orbitcontrols.screenSpacePanning = true;
 
         elation.events.add(this.orbitcontrols, 'change', elation.bind(this, this.controls_change));
 
