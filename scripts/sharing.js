@@ -186,9 +186,10 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         append: panel,
         label: 'Capture',
         events: {
-          click: elation.bind(this, this.share)
+          //click: elation.bind(this, this.share)
         }
       });
+      elation.events.add(this.button, 'click', elation.bind(this, this.share));
 
       this.addclass('engine_sharing_screenshot');
     }
@@ -285,16 +286,23 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
         append: panel,
         label: 'Capture',
         events: {
-          click: elation.bind(this, this.share)
+          //click: elation.bind(this, this.share)
         }
       });
 
+      elation.events.add(this.button, 'click', elation.bind(this, this.share));
       this.addclass('engine_sharing_screenshot360');
     }
     this.share = function() {
       var client = this.client;
       var width = this.resolution.value,
           height = this.resolution.value / 2;
+
+      var player = client.player,
+          playervisible = player.visible;
+      player.hide();
+      client.view.render(0);
+
       client.screenshot({type: 'equirectangular', format: 'jpg'}).then(elation.bind(this, function(data) {
         var imgdata = data.split(',')[1]; //data.image.data;
 
@@ -328,7 +336,8 @@ elation.require([ "ui.panel", "share.picker", "share.targets.imgur", "share.targ
           img = newimg;
         }
 
-        client.player.disable();
+        player.visible = playervisible;
+        player.disable();
         this.picker.share({
           name: this.getScreenshotFilename('jpg'), 
           type: 'image/jpg',
