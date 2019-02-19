@@ -371,7 +371,7 @@ if (!ENV_IS_BROWSER) return;
     reverse3d: false,
     texture: false,
     frames: false,
-    flipY: true,
+    flipy: true,
     invert: false,
     imagetype: '',
     tex_linear: true,
@@ -396,7 +396,7 @@ if (!ENV_IS_BROWSER) return;
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
-        texture.flipY = this.flipY;
+        texture.flipY = this.flipy;
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
         } else {
@@ -427,7 +427,7 @@ if (!ENV_IS_BROWSER) return;
         texture.image.originalSrc = '';
         texture.sourceFile = '';
         texture.needsUpdate = true;
-        texture.flipY = this.flipY;
+        texture.flipY = this.flipy;
 
         elation.events.add(this.canvas, 'update', () => texture.needsUpdate = true);
         this.sendLoadEvents();
@@ -1183,7 +1183,7 @@ if (!ENV_IS_BROWSER) return;
                       name: src, 
                       src: src,
                       baseurl: this.baseurl,
-                      flipY: tex.flipY,
+                      flipy: tex.flipY,
                       invert: (texname == 'specularMap')
                     });
                   }
