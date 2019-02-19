@@ -1075,10 +1075,10 @@ if (!ENV_IS_BROWSER) return;
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
       if (!elation.engine.assets.loaderpool) {
-        var numworkers = elation.config.get('engine.assets.workers', 4);
-        if (numworkers == 'auto') {
-          // 'auto' means use all cores, minus one for the main thread
-          numworkers = Math.max(1, navigator.hardwareConcurrency - 1);
+        var numworkers = elation.config.get('engine.assets.workers', 'auto'); // default to 'auto' unless otherwise specified
+        if (numworkers == 'auto') { // 'auto' means use all cores, minus one for the main thread
+          let numcores = navigator.hardwareConcurrency || 2; // Safari returns NaN for navigator.hardwareConcurrency unless you enable a dev flag. Fall back 2 cores, which is what iOS would cap this value at anyway
+          numworkers = Math.max(1, numcores - 1); // We need at least one worker, even on single-core systems
         }
         elation.engine.assets.loaderpool = new elation.utils.workerpool({component: 'engine.assetworker', scriptsuffix: 'assetworker', num: numworkers});
       }
