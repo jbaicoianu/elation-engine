@@ -369,7 +369,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       return function(vrdevice) {
         var hmd = this.hmdstate.hmd;
         if (vrdevice && vrdevice.stageParameters) {
-          this.stage.scale.set(vrdevice.stageParameters.sizeX, .1, vrdevice.stageParameters.sizeZ);
+          //this.stage.scale.set(vrdevice.stageParameters.sizeX, .1, vrdevice.stageParameters.sizeZ);
         }
         if (vrdevice && vrdevice.isPresenting) {
           var pose = false;
