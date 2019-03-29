@@ -552,5 +552,15 @@ elation.require([
     this.localToWorldOrientation = function(orient) {
       return orient;
     }
+    this.enableDebug = function() {
+      for (let k in this.children) {
+        this.children[k].enableDebug();
+      }
+    }
+    this.disableDebug = function() {
+      for (let k in this.children) {
+        this.children[k].disableDebug();
+      }
+    }
   });
 });
