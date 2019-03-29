@@ -138,7 +138,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         y: []
       };
       this.idx = 0;
-      this.frames = 3;
+      this.frames = 1;
 
       this.add = function(x, y) {
         this.history.x[this.idx] = x;
