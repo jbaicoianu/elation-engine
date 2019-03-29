@@ -58,6 +58,7 @@ elation.component.add("engine.things.generic", function() {
       'visible':        { type: 'bool', default: true, comment: 'Is visible' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
+      'restitution':    { type: 'float', default: 1.0, comment: 'Amount of energy preserved after each bounce' },
       //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
       'shadow':         { type: 'bool', default: true, refreshMaterial: true, comment: 'Casts and receives shadows' },
       'wireframe':      { type: 'bool', default: false, refreshMaterial: true, comment: 'Render this object as a wireframe' },
@@ -664,10 +665,12 @@ elation.component.add("engine.things.generic", function() {
         position: this.properties.position,
         orientation: this.properties.orientation,
         mass: this.properties.mass,
+        scale: this.properties.scale,
         velocity: this.properties.velocity,
         acceleration: this.properties.acceleration,
         angular: this.properties.angular,
         angularacceleration: this.properties.angularacceleration,
+        restitution: this.properties.restitution,
         object: this
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
