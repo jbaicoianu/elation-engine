@@ -992,7 +992,7 @@ this.rendersystem.renderer.vr.submitFrame();
       //this.mousepos[1] = ev.clientY;
       this.mousepos[2] = document.body.scrollTop;
 
-      var newev = {type: 'wheel', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, deltaX: ev.deltaX, deltaY: ev.deltaY, deltaZ: ev.deltaZ, deltaMode: ev.deltaMode};
+      var newev = {type: 'wheel', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, deltaX: ev.deltaX, deltaY: ev.deltaY, deltaZ: ev.deltaZ, deltaMode: ev.deltaMode, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, preventDefault: () => ev.preventDefault(), stopPropagation: () => ev.stopPropagation()};
       this.proxyEvent(newev);
     }
     this.mousemove = function(ev, ignorePointerLock) {
