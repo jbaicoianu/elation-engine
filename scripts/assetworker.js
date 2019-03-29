@@ -36,6 +36,89 @@ elation.require([
 
         return img;
       }
+
+      THREE.BufferGeometry.prototype.toJSON = function() {
+
+        var data = {
+          metadata: {
+            version: 4.5,
+            type: 'BufferGeometry',
+            generator: 'BufferGeometry.toJSON'
+          }
+        };
+
+        // standard BufferGeometry serialization
+
+        data.uuid = this.uuid;
+        data.type = this.type;
+        if ( this.name !== '' ) data.name = this.name;
+        if ( Object.keys( this.userData ).length > 0 ) data.userData = this.userData;
+
+        if ( this.parameters !== undefined ) {
+
+          var parameters = this.parameters;
+
+          for ( var key in parameters ) {
+
+            if ( parameters[ key ] !== undefined ) data[ key ] = parameters[ key ];
+
+          }
+
+          return data;
+
+        }
+
+        data.data = { attributes: {} };
+
+        var index = this.index;
+
+        if ( index !== null ) {
+
+          data.data.index = {
+            type: index.array.constructor.name,
+            array: index.array
+          };
+
+        }
+
+        var attributes = this.attributes;
+
+        for ( var key in attributes ) {
+
+          var attribute = attributes[ key ];
+
+          data.data.attributes[ key ] = {
+            itemSize: attribute.itemSize,
+            type: attribute.array.constructor.name,
+            array: attribute.array,
+            normalized: attribute.normalized
+          };
+
+        }
+
+        var groups = this.groups;
+
+        if ( groups.length > 0 ) {
+
+          data.data.groups = JSON.parse( JSON.stringify( groups ) );
+
+        }
+
+        var boundingSphere = this.boundingSphere;
+
+        if ( boundingSphere !== null ) {
+
+          data.data.boundingSphere = {
+            center: boundingSphere.center.toArray(),
+            radius: boundingSphere.radius
+          };
+
+        }
+
+        return data;
+
+      };
+
       this.loader = new elation.engine.assets.loaders.model();
       elation.engine.assets.init(true);
     },
@@ -176,20 +259,16 @@ elation.require([
       if (modeldata) {
         this.parse(modeldata, job).then(function(data) {
           var transferrables = [];
-          // Convert BufferGeometry arrays back to Float32Arrays so they can be transferred efficiently
+          // Buld a list of ArrayBuffers that can be transferred to the main thread, to avoid memory copies
           try {
             if (data.geometries) {
               for (var i = 0; i < data.geometries.length; i++) {
                 var geo = data.geometries[i];
                 for (var k in geo.data.attributes) {
-                  //var arr = Float32Array.from(geo.data.attributes[k].array);
-                  var src = geo.data.attributes[k].array;
-                  var arr = new Float32Array(src.length);
-                  for (var j = 0; j < src.length; j++) {
-                    arr[j] = src[j];
+                  let buffer = geo.data.attributes[k].array.buffer;
+                  if (transferrables.indexOf(buffer) == -1) {
+                    transferrables.push(buffer);
                   }
-                  transferrables.push(arr.buffer);
-                  geo.data.attributes[k].array = arr;
                 }
               }
             }
