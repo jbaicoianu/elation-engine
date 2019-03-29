@@ -634,7 +634,6 @@ console.log('my offset', collider.offset, collider);
 
   elation.component.add("engine.things.physics_forces_static", function(args) {
     this.postinit = function() {
-console.log('I am a new static force');
       this.defineProperties({
         body:        {type: 'object'},
         force:       {type: 'object'},
@@ -648,14 +647,20 @@ console.log('I am a new static force');
       var len = force.length();
       force.divideScalar(len);
       this.arrow = new THREE.ArrowHelper(force, new THREE.Vector3(0,0,0), len, 0xff00ff);
-      //this.arrow.children[0].material.transparent = true;
-      //this.arrow.children[0].material.opacity = 0.5;
-      //this.arrow.children[0].material.depthWrite = this.arrow.children[0].material.depthTest = false;
-      //this.arrow.children[1].material.depthWrite = this.arrow.children[0].material.depthTest = false;
+      let newmat = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        depthTest: false
+      });
+      this.arrow.traverse(n => {
+        if (n.material) {
+          n.material = newmat;
+        }
+      });
       var obj = new THREE.Object3D();
       obj.add(this.arrow);
 
-console.log('here is my arrow', this.arrow, len);
       return obj;
     }
     this.physics_force_apply = function() {
