@@ -38,7 +38,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'look_up': ['keyboard_up', elation.bind(this, this.updateControls)],
         'look_down': ['keyboard_down,gamepad_any_axis_3', elation.bind(this, this.updateControls)],
         'run': ['keyboard_shift,gamepad_any_button_10', elation.bind(this, this.updateControls)],
-        'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
+        //'crouch': ['keyboard_c', elation.bind(this, this.updateControls)],
         //'jump': ['keyboard_space,gamepad_any_button_1', elation.bind(this, this.handleJump)],
         //'toss': ['keyboard_space,gamepad_any_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_any_button_1', elation.bind(this, this.toss_cube)],
