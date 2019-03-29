@@ -72,6 +72,7 @@ elation.require(["physics.cyclone"], function() {
       }
     }
     this.debug = function(thing) {
+/*
       if (!this.debugwindows[thing.name]) {
         this.debugwindows[thing.name] = elation.ui.window(null, elation.html.create({tag: 'div', append: document.body}), {title: "Physics Debug - " + thing.name, center: true, right: 10});
         this.debugwindows[thing.name].setcontent(elation.html.create('ul'));
@@ -85,8 +86,11 @@ elation.require(["physics.cyclone"], function() {
         }));
 
       }
+*/
       if (!this.debugvis[thing.name]) {
         this.debugvis[thing.name]= thing.spawn('physics_vis', thing.name + '_physvis', {target: thing, pickable: false, persist: false, physical: false, window: this.debugwindows[thing.name]});
+      } else if (!this.debugvis[thing.name].parent) {
+        thing.add(this.debugvis[thing.name]);
       }
       if (!this.debugthings[thing.name]) {
         this.debugthings[thing.name] = thing;
@@ -96,41 +100,48 @@ elation.require(["physics.cyclone"], function() {
         this.debugvis[thing.name].reparent(thing);
       }
   */
-      this.debugwindows[thing.name].focus();
+      //this.debugwindows[thing.name].focus();
       this.debugthing = thing;
       this.debugupdate(thing);
+    }
+    this.disableDebug = function(thing) {
+      if (this.debugvis[thing.name] && this.debugvis[thing.name].parent) {
+        this.debugvis[thing.name].parent.remove(this.debugvis[thing.name]);
+      }
     }
     this.debugupdate = function(thing) {
       for (var name in this.debugthings) {
         var thing = this.debugthings[name];
         var win = this.debugwindows[name];
-        var ul = win.content;
-        if (thing.objects.dynamics) {
-          if (ul.innerHTML == '' || !thing.objects.dynamics.state.sleeping) {
-            ul.innerHTML = '';
-            var values = ['state', 'mass', 'position', 'velocity', 'acceleration', 'angular', 'angularacceleration', 'force_accumulator', 'damping'];
-            for (var i = 0; i < values.length; i++) {
-              var li = elation.html.create('li');
-              var content = "<strong>" + values[i] + ":</strong> ";
-              var value = thing.objects.dynamics[values[i]];
-              if (value instanceof THREE.Vector3) {
-                content += "[ " + value.x.toFixed(4) + ", " + value.y.toFixed(4) + ", " + value.z.toFixed(4) + " ]";
-              } else if (values[i] == 'state') {
-                for (var k in value) {
-                  var tag = (value[k] ? "add" : "del");
-                  content += "<" + tag + ">" + k + "</" + tag + "> ";
+        if (win) {
+          if (thing.objects.dynamics) {
+            var ul = win.content;
+            if (ul.innerHTML == '' || !thing.objects.dynamics.state.sleeping) {
+              ul.innerHTML = '';
+              var values = ['state', 'mass', 'position', 'velocity', 'acceleration', 'angular', 'angularacceleration', 'force_accumulator', 'damping'];
+              for (var i = 0; i < values.length; i++) {
+                var li = elation.html.create('li');
+                var content = "<strong>" + values[i] + ":</strong> ";
+                var value = thing.objects.dynamics[values[i]];
+                if (value instanceof THREE.Vector3) {
+                  content += "[ " + (+value.x).toFixed(4) + ", " + (+value.y).toFixed(4) + ", " + (+value.z).toFixed(4) + " ]";
+                } else if (values[i] == 'state') {
+                  for (var k in value) {
+                    var tag = (value[k] ? "add" : "del");
+                    content += "<" + tag + ">" + k + "</" + tag + "> ";
+                  }
+                } else if (values[i] == 'damping') {
+                  content += "[" + thing.objects.dynamics.linearDamping + ', ' + thing.objects.dynamics.angularDamping + "]";
+                } else {
+                  content += value;
                 }
-              } else if (values[i] == 'damping') {
-                content += "[" + thing.objects.dynamics.linearDamping + ', ' + thing.objects.dynamics.angularDamping + "]";
-              } else {
-                content += value;
+                li.innerHTML = content;
+                ul.appendChild(li);
               }
-              li.innerHTML = content;
-              ul.appendChild(li);
             }
+          } else {
+            this.debugwindows[thing.name].close();
           }
-        } else {
-          this.debugwindows[thing.name].close();
         }
       }
     }
@@ -148,14 +159,20 @@ elation.require(["physics.cyclone"], function() {
       this.objects['3d'] = new THREE.Object3D();
 
       var obj = this.properties.target;
-      if (obj.objects['3d'] && obj.objects['3d'].geometry) {
+      elation.events.add(obj, 'mouseover', (ev) => this.handleMouseOver(ev));
+      elation.events.add(obj, 'mouseout', (ev) => this.handleMouseOut(ev));
+      if (obj.objects['3d']) {
+/*
         if (!obj.objects['3d'].geometry.boundingBox) {
           obj.objects['3d'].geometry.computeBoundingBox();
         }
-        var bbox = obj.objects['3d'].geometry.boundingBox;
-        this.spawn('physics_collider', this.name + '_collider', {body: obj.objects['dynamics'], pickable: false, mouseevents: false, persist: false, physical: false});
+*/
+        //var bbox = obj.objects['3d'].geometry.boundingBox;
+        var bbox = obj.getBoundingBox();
 
         if (obj.objects['dynamics']) {
+          this.velocityvis = this.spawn('physics_velocity', this.name + '_velocity', {body: obj.objects['dynamics'], pickable: false, mouseevents: false, persist: false, physical: false}, true);
+          this.collidervis = this.spawn('physics_collider', this.name + '_collider', {body: obj.objects['dynamics'], pickable: false, mouseevents: false, persist: false, physical: false});
           var forceargs = {
             body: obj.objects['dynamics'],
             boundingbox: bbox,
@@ -168,6 +185,7 @@ elation.require(["physics.cyclone"], function() {
           for (var k in obj.objects['dynamics'].forces) {
             forceargs.force = obj.objects['dynamics'].forces[k];
             var type = false;
+console.log('A FORCE!', forceargs.force);
             for (var f in elation.physics.forces) {
               if (forceargs.force instanceof elation.physics.forces[f]) {
                 this.spawn('physics_forces_' + f, obj.name + '_force_' + f + '_' + k, forceargs);
@@ -187,7 +205,94 @@ elation.require(["physics.cyclone"], function() {
 
       return this.objects['3d'];
     }
+    this.handleMouseOver = function(ev) {
+      this.showHighlight();
+    }
+    this.handleMouseOut = function(ev) {
+      this.hideHighlight();
+    }
+    this.showHighlight = function() {
+      //this.collidervis.showHighlight();
+    }
+    this.hideHighlight = function() {
+      //this.collidervis.hideHighlight();
+    }
     
+  }, elation.engine.things.generic);
+  elation.component.add("engine.things.physics_velocity", function(args) {
+    this.postinit = function() {
+      this.defineProperties({
+        body:        {type: 'object'},
+        fadetime:    {type: 'float', default: 2.0},
+      });
+      this.segmentOffset = 0;
+      this.numSegments = this.fadetime * 60 / 2;
+      elation.events.add(this.engine, 'engine_frame', this);
+      elation.events.add(this.body.object, 'thing_remove', (ev) => this.handleThingRemove(ev));
+    }
+    this.createObject3D = function() {
+      let geo = new THREE.BufferGeometry();
+      let positions = new Float32Array(this.numSegments * 3 * 2);
+      let opacity = new Float32Array(this.numSegments * 2);
+      geo.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.addAttribute('opacity', new THREE.BufferAttribute(opacity, 1));
+      let material1 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: false, opacity: .05, blending: THREE.AdditiveBlending, linewidth: 4});
+      let material2 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: true, opacity: .2, blending: THREE.AdditiveBlending, linewidth: 4});
+      this.geometry = geo;
+      let obj = new THREE.Object3D();
+      obj.add(new THREE.LineSegments(geo, material1));
+      obj.add(new THREE.LineSegments(geo, material2));
+      return obj;
+    },
+    this.engine_frame = (function() {
+      let v0 = new THREE.Vector3(),
+          v1 = new THREE.Vector3(),
+          vel = new THREE.Vector3();
+      return function(ev) {
+        if (!this.body.parent) return;
+
+        let position = this.geometry.attributes.position.array;
+        if (!this.lastpos) {
+          this.lastpos = new THREE.Vector3();
+          this.body.localToWorldPos(this.lastpos.set(0,0,0));
+          for (let i = 0; i < this.numSegments; i++) {
+            let idx = i * 3;
+            position[idx] = this.lastpos.x;
+            position[idx+1] = this.lastpos.y;
+            position[idx+2] = this.lastpos.z;
+          }
+          return;
+        }
+
+        //this.body.localToWorldPos(v0.set(0,0,0));
+        //v1.copy(v0).add(vel.copy(this.body.velocity).multiplyScalar(ev.data.delta));
+        v0.copy(this.lastpos);
+        this.body.localToWorldPos(v1.set(0,0,0));
+        this.lastpos.copy(v1);
+
+        let idx = this.segmentOffset * 3 * 2;
+        this.segmentOffset = (this.segmentOffset + 1) % this.numSegments;
+
+        position[idx] = v0.x;
+        position[idx+1] = v0.y;
+        position[idx+2] = v0.z;
+
+        position[idx+3] = v1.x;
+        position[idx+4] = v1.y;
+        position[idx+5] = v1.z;
+
+        this.geometry.attributes.position.needsUpdate = true;
+        let l = v1.length();
+        if (l > this.geometry.boundingSphere.radius) {
+          this.geometry.boundingSphere.radius = l;
+        }
+      }
+    })();
+    this.handleThingRemove = function(ev) {
+      setTimeout(() => {
+        this.die();
+      }, this.fadetime * 1000);
+    }
   }, elation.engine.things.generic);
   elation.component.add("engine.things.physics_collider", function(args) {
     this.postinit = function() {
@@ -203,20 +308,27 @@ elation.require(["physics.cyclone"], function() {
       if (this.objects['3d']) return this.objects['3d'];
       var collider = this.properties.body.collider;
       var obj = false;
-      switch (collider.type) {
-        case 'sphere':
-          obj = this.createBoundingSphere(collider);
-          break;
-        case 'plane':
-          obj = this.createBoundingPlane(collider);
-          break;
-        case 'cylinder':
-          obj = this.createBoundingCylinder(collider);
-          break;
-        case 'box':
-        default:
-          obj = this.createBoundingBox(collider);
-          break;
+      if (collider) {
+        switch (collider.type) {
+          case 'sphere':
+            obj = this.createBoundingSphere(collider);
+            break;
+          case 'plane':
+            obj = this.createBoundingPlane(collider);
+            break;
+          case 'cylinder':
+            obj = this.createBoundingCylinder(collider);
+            break;
+          case 'mesh':
+            obj = this.createBoundingMesh(collider);
+            break;
+          case 'box':
+          default:
+            obj = this.createBoundingBox(collider);
+            break;
+        }
+      } else {
+        obj = new THREE.Object3D();
       }
       if (this.properties.body.mass > 0) {
         var cg = this.createCG();
@@ -261,10 +373,10 @@ elation.require(["physics.cyclone"], function() {
         linegeo.vertices.push(new THREE.Vector3(edge[1][0], edge[1][1], edge[1][2]));
       }
       //var boxgeo = new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z);
-      var boxmat = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: false, opacity: .5, blending: THREE.AdditiveBlending});
-      var outline = new THREE.Line(linegeo, boxmat, THREE.LinePieces);
+      var boxmat = new THREE.LineBasicMaterial({color: 0x0000ff, transparent: true, depthWrite: false, depthTest: false, opacity: .2, blending: THREE.AdditiveBlending});
+      var outline = new THREE.LineSegments(linegeo, boxmat, THREE.LinePieces);
 
-      var volume = new THREE.Mesh(new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10), new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
+      var volume = new THREE.Mesh(new THREE.BoxBufferGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10), new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
       volume.position.addVectors(bbox.max, bbox.min).multiplyScalar(.5);
   console.log(this.properties.body);
       //outline.add(volume);
@@ -286,8 +398,8 @@ elation.require(["physics.cyclone"], function() {
       return outline;
     }
     this.createBoundingSphere = function(collider) {
-      //var spheregeo = new THREE.SphereGeometry(collider.radius, 18, 9);
-      var spheregeo = new THREE.IcosahedronGeometry(collider.radius, 2);
+      var spheregeo = new THREE.SphereBufferGeometry(collider.radius, 18, 9);
+      //var spheregeo = new THREE.IcosahedronGeometry(collider.radius, 2);
       var spheremat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending});
       var spherewiremat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
       var outline = new THREE.Mesh(spheregeo, spherewiremat);
@@ -296,7 +408,7 @@ elation.require(["physics.cyclone"], function() {
       return outline;
     }
     this.createBoundingPlane = function(collider) {
-      var plane = new THREE.PlaneGeometry(1000, 1000);
+      var plane = new THREE.PlaneBufferGeometry(1000, 1000);
       var planemat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .04, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending });
   // FIXME - this only really works for horizontal planes
   var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
@@ -305,10 +417,31 @@ elation.require(["physics.cyclone"], function() {
       return mesh;
     }
     this.createBoundingCylinder = function(collider) {
-      var cyl = new THREE.CylinderGeometry(collider.radius, collider.radius, collider.height, 16, 1);
+      var cyl = new THREE.CylinderBufferGeometry(collider.radius, collider.radius, collider.height, 32, 1);
+      //var cylmat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
       var cylmat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
       var mesh = new THREE.Mesh(cyl, cylmat);
+console.log('my offset', collider.offset, collider);
+      let offset = collider.offset.clone();//.multiply(collider.body.scale);
+      cyl.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
       return mesh;
+    }
+    this.createBoundingMesh = function(collider) {
+      if (collider.mesh) {
+        let userData = collider.mesh.userData;
+        collider.mesh.traverse(n => n.userData = {});
+        let mesh = collider.mesh.clone();
+        collider.mesh.traverse(n => {
+          n.userData = userData;
+        });
+        mesh.traverse(n => {
+          if (n.material) {
+            n.material = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
+          }
+        });
+        return mesh;
+      }
+      return new THREE.Object3D();
     }
     this.createCG = function() {
       // Create yellow checkerboard texture
@@ -326,7 +459,7 @@ elation.require(["physics.cyclone"], function() {
       tex.minFilter = tex.maxFilter = THREE.LinearFilter;
       tex.needsUpdate = true; 
 
-      var cg = new THREE.Mesh(new THREE.SphereGeometry(.05), new THREE.MeshPhongMaterial({emissive: 0x666600, map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 1}));
+      var cg = new THREE.Mesh(new THREE.SphereBufferGeometry(.05), new THREE.MeshPhongMaterial({emissive: 0x666600, map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 1}));
       return cg;
     }
     /*
@@ -356,25 +489,30 @@ elation.require(["physics.cyclone"], function() {
       this.defineProperties({
         collision:  {type: 'object'},
         forcescale: { type: 'float', default: .1 },
-        fadetime: { type: 'float', default: 1.0 }
+        fadetime: { type: 'float', default: 5.0 }
       });
       this.spawntime = new Date().getTime();
       this.elapsed = 0;
       elation.events.add(this.properties.collision.bodies[0], 'physics_collision_resolved', this);
       elation.events.add(this.engine, 'engine_frame', this);
+
+      if (!elation.engine.things.physics_collision.texture) {
+        elation.engine.things.physics_collision.texture = this.generateGrid(0xff0000);
+      }
+      this.texture = elation.engine.things.physics_collision.texture;
     }
     this.createObject3D = function() {
       this.materials = [];
       var collision = this.properties.collision;
-      var planegeo = new THREE.PlaneGeometry(1, 1);
+      var planegeo = new THREE.PlaneBufferGeometry(1, 1);
       var planemat = new THREE.MeshBasicMaterial({
-        map: this.generateGrid(0xff0000), 
+        map: this.texture, 
         wireframe: false, 
         transparent: true, 
         depthWrite: false, 
-        polygonOffset: true,
-        polygonOffsetUnits: 1,
-        polygonOffsetFactor: -1,
+        depthTest: false, 
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
       });
       var plane = new THREE.Mesh(planegeo, planemat);
@@ -388,14 +526,14 @@ elation.require(["physics.cyclone"], function() {
       var origin = new THREE.Vector3(0,0,0);
 
       var m = collision.contactToWorld.elements;
-      var arrowaxisx = this.generateArrow(new THREE.Vector3(m[0], m[1], m[2]), origin, 1, 0xff0000);
-      obj.add(arrowaxisx);
+      //var arrowaxisx = this.generateArrow(new THREE.Vector3(m[0], m[1], m[2]), origin, 1, 0xff0000);
+      //obj.add(arrowaxisx);
       var arrowaxisy = this.generateArrow(new THREE.Vector3(m[4], m[5], m[6]), origin, 1, 0x00ff00);
       obj.add(arrowaxisy);
-      var arrowaxisz = this.generateArrow(new THREE.Vector3(m[8], m[9], m[10]), origin, 1, 0x0000ff);
-      obj.add(arrowaxisz);
+      //var arrowaxisz = this.generateArrow(new THREE.Vector3(m[8], m[9], m[10]), origin, 1, 0x0000ff);
+      //obj.add(arrowaxisz);
 
-      this.arrows = [arrowaxisx, arrowaxisy, arrowaxisz];
+      this.arrows = [arrowaxisy]; //[arrowaxisx, arrowaxisy, arrowaxisz];
       return obj;
     }
     this.generateArrow = function(dir, origin, len, color) {
@@ -494,6 +632,40 @@ elation.require(["physics.cyclone"], function() {
     }
   }, elation.engine.things.generic);
 
+  elation.component.add("engine.things.physics_forces_static", function(args) {
+    this.postinit = function() {
+console.log('I am a new static force');
+      this.defineProperties({
+        body:        {type: 'object'},
+        force:       {type: 'object'},
+        boundingbox: {type: 'object'},
+        forcescale:  {type: 'float'}
+      });
+      elation.events.add(this.properties.force, 'physics_force_apply', this);
+    }
+    this.createObject3D = function() {
+      var force = (this.force.absolute ? this.properties.body.worldToLocalDir(this.properties.force.force.clone()) : this.properties.force.force.clone());
+      var len = force.length();
+      force.divideScalar(len);
+      this.arrow = new THREE.ArrowHelper(force, new THREE.Vector3(0,0,0), len, 0xff00ff);
+      //this.arrow.children[0].material.transparent = true;
+      //this.arrow.children[0].material.opacity = 0.5;
+      //this.arrow.children[0].material.depthWrite = this.arrow.children[0].material.depthTest = false;
+      //this.arrow.children[1].material.depthWrite = this.arrow.children[0].material.depthTest = false;
+      var obj = new THREE.Object3D();
+      obj.add(this.arrow);
+
+console.log('here is my arrow', this.arrow, len);
+      return obj;
+    }
+    this.physics_force_apply = function() {
+      var force = (this.force.absolute ? this.properties.body.worldToLocalDir(this.properties.force.force.clone()) : this.properties.force.force.clone());
+      var len = force.length();
+      force.divideScalar(len);
+      this.arrow.setDirection(force);
+      this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
+    }
+  }, elation.engine.things.generic);
   elation.component.add("engine.things.physics_forces_gravity", function(args) {
     this.postinit = function() {
       this.defineProperties({
@@ -516,6 +688,7 @@ elation.require(["physics.cyclone"], function() {
       var obj = new THREE.Object3D();
       obj.add(this.arrow);
 
+/*
       var labeltext = elation.engine.materials.getTextureLabel('gravity');
       //var labelgeo = new THREE.PlaneGeometry(labeltext.image.width / 100, labeltext.image.height / 100);
       //var label = new THREE.Mesh(labelgeo, new THREE.MeshBasicMaterial({map: labeltext, side: THREE.DoubleSide, transparent: true, depthWrite: false, depthTest: false}));
@@ -524,6 +697,7 @@ elation.require(["physics.cyclone"], function() {
       label.position.set(1.5, 1.5, 0)
       //label.scale.set(labeltext.image.width/100,labeltext.image.height/100,1);
       obj.add(label);
+*/
       
       return obj;
     }
@@ -550,12 +724,13 @@ elation.require(["physics.cyclone"], function() {
       var obj = new THREE.Object3D();
       var bbox = this.properties.boundingbox;
       var size = [bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z];
-      var insidegeo = new THREE.BoxGeometry(size[0], size[1], size[2]);
-      insidegeo.applyMatrix(new THREE.Matrix4().makeTranslation(0, size[1]/2, 0));
-      var insidemat_side = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.2, transparent: true, depthWrite: false, depthTest: false});
+      var offset = [(bbox.max.x + bbox.min.x) / 2, (bbox.max.y - bbox.min.y) / 2, (bbox.max.z + bbox.min.z) / 2];
+      var insidegeo = new THREE.BoxBufferGeometry(size[0], size[1], size[2]);
+      insidegeo.applyMatrix(new THREE.Matrix4().makeTranslation(offset[0], size[1]/2 + offset[1], offset[2]));
+      var insidemat_side = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.8, transparent: true, depthWrite: false, depthTest: false});
       var insidemat_top = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.5, transparent: true, depthWrite: false, depthTest: false});
 
-      this.inside = new THREE.Mesh(insidegeo, new THREE.MeshFaceMaterial([insidemat_side, insidemat_side, insidemat_side, insidemat_top, insidemat_side, insidemat_side]));
+      this.inside = new THREE.Mesh(insidegeo, insidemat_side);
       this.inside.scale.y = this.properties.force.submerged;
       this.inside.position.y = -size[1] / 2;
       obj.add(this.inside);
