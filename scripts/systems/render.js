@@ -297,6 +297,11 @@ elation.require([
             if (ev.value == 1) { 
               this.pickingdebug = !this.pickingdebug; 
               this.rendersystem.dirty = true; 
+              if (this.pickingdebug) {
+                this.engine.systems.world.enableDebug();
+              } else {
+                this.engine.systems.world.disableDebug();
+              }
             } 
           }),
           'picking_select': elation.bind(this, function(ev) {
@@ -655,11 +660,6 @@ if (vivehack) {
             this.updatePickingTarget();
           //}
         }
-        if (this.pickingdebug && this.scene != this.engine.systems.world.scene['colliders']) {
-          this.setscene(this.engine.systems.world.scene['colliders']);
-        } else if (!this.pickingdebug && this.scene != this.engine.systems.world.scene['world-3d']) {
-          this.setscene(this.engine.systems.world.scene['world-3d']);
-        }
         /*
         this.scene.overrideMaterial = this.depthMaterial;
         //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
@@ -681,7 +681,16 @@ if (vivehack) {
           this.vreffect.render(this.scene, this.camera);
         } else {
 */
-          this.composer.render(delta);
+        let colliderscene = this.engine.systems.world.scene['colliders'],
+            worldscene = this.engine.systems.world.scene['world-3d'];
+        if (this.pickingdebug) {
+          if (colliderscene.parent !== worldscene) {
+            worldscene.add(colliderscene);
+          }
+        } else if (colliderscene.parent === worldscene) {
+          worldscene.remove(colliderscene);
+        }
+        this.composer.render(delta);
 this.rendersystem.renderer.vr.submitFrame();
           //this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
 //        }
