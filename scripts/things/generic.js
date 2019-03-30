@@ -1759,5 +1759,21 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
       },
     });
   }
+  this.enableDebug = function() {
+    if (this.objects.dynamics) {
+      this.engine.systems.physics.debug(this);
+    }
+    for (let k in this.children) {
+      this.children[k].enableDebug();
+    }
+  }
+  this.disableDebug = function() {
+    for (let k in this.children) {
+      this.children[k].disableDebug();
+    }
+    if (this.objects.dynamics) {
+      this.engine.systems.physics.disableDebug(this);
+    }
+  }
 });
 });
