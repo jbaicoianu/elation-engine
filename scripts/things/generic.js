@@ -838,7 +838,11 @@ elation.component.add("engine.things.generic", function() {
       }
 */
       if (collidergeom) {
-        var collidermat = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false, side: THREE.DoubleSide});
+        let collidercolor = 0x009900;
+        if (rigidbody.mass === 0) {
+          collidercolor = 0x990000;
+        }
+        var collidermat = new THREE.MeshPhongMaterial({color: collidercolor, opacity: .2, transparent: true, emissive: 0x333300, alphaTest: .1, depthTest: false, depthWrite: false, side: THREE.DoubleSide});
 
         if (reuseMesh && this.collidermesh) {
           var collidermesh = this.collidermesh;
@@ -1188,7 +1192,11 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].updateMatrixWorld();
       //meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
       this.colliders.add(meshes[i]);
-      meshes[i].material = new THREE.MeshLambertMaterial({color: 0x999900, opacity: .2, transparent: true, emissive: 0x444400, alphaTest: .1, depthTest: false, depthWrite: false});
+      let collidercolor = 0x999999;
+      if (rigid.mass === 0) {
+        collidercolor = 0x990000;
+      }
+      meshes[i].material = new THREE.MeshPhongMaterial({color: 0x0000ff, opacity: .2, transparent: true, emissive: 0x552200, alphaTest: .1, depthTest: false, depthWrite: false});
 /*
       this.colliderhelper = new THREE.EdgesHelper(meshes[i], 0x00ff00);
       this.colliders.add(this.colliderhelper);
