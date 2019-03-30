@@ -8821,7 +8821,8 @@
 					textures: {},
 					images: {},
 					shapes: {},
-					skeletons: {}
+					skeletons: {},
+					animations: []
 				};
 
 				output.metadata = {
@@ -8856,6 +8857,12 @@
 
 			if ( this.bindMode !== undefined ) object.bindMode = this.bindMode;
 			if ( this.bindMatrix !== undefined ) object.bindMatrix = this.bindMatrix.toArray();
+
+			if (this.animations) {
+				this.animations.forEach(anim => {
+					meta.animations.push(THREE.AnimationClip.toJSON(anim));
+				});
+			}
 
 			//
 
@@ -8966,6 +8973,7 @@
 				if ( images.length > 0 ) output.images = images;
 				if ( shapes.length > 0 ) output.shapes = shapes;
 				if ( skeletons.length > 0 ) output.skeletons = skeletons;
+				if ( meta.animations && meta.animations.length > 0 ) output.animations = meta.animations;
 
 			}
 
@@ -9024,6 +9032,9 @@
 
 			this.frustumCulled = source.frustumCulled;
 			this.renderOrder = source.renderOrder;
+
+			if (source.animations) this.animations = source.animations;
+			if (source.skeleton) this.skeleton = source.skeleton.clone();
 
 			this.userData = JSON.parse( JSON.stringify( source.userData ) );
 
