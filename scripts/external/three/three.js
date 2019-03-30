@@ -19891,7 +19891,7 @@
 
 		function isPowerOfTwo( image ) {
 
-			return _Math.isPowerOfTwo( image.width ) && _Math.isPowerOfTwo( image.height );
+			return _Math.isPowerOfTwo( image.width || image.videoWidth ) && _Math.isPowerOfTwo( image.height || image.videoHeight );
 
 		}
 
