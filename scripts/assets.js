@@ -497,7 +497,7 @@ if (!ENV_IS_BROWSER) return;
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
-        texture.flipY = this.flipy;
+        texture.flipY = (this.flipy === true || this.flipy === 'true');
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
         } else {
