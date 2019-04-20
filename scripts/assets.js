@@ -35,6 +35,34 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
   THREE.SBSVideoTexture.prototype = Object.create( THREE.SBSTexture.prototype );
   THREE.SBSVideoTexture.prototype.constructor = THREE.SBSVideoTexture;
 
+  THREE.SBSVideoTexture.prototype = Object.assign( Object.create( THREE.Texture.prototype ), {
+
+    constructor: THREE.SBSVideoTexture,
+
+    isVideoTexture: true,
+
+    update: function () {
+
+      var video = this.image;
+
+      if ( video.readyState >= video.HAVE_CURRENT_DATA ) {
+
+        this.needsUpdate = true;
+
+      }
+
+    },
+    setEye: function(eye) {
+      if (eye == 'left') {
+        this.offset.x = (this.reverse ? 0.5 : 0);
+      } else {
+        this.offset.x = (this.reverse ? 0 : 0.5);
+      }
+      this.eye = eye;
+    }
+
+  } );
+
   elation.extend('engine.assets', {
     assets: {},
     types: {},
