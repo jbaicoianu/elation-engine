@@ -1283,6 +1283,7 @@ if (!ENV_IS_BROWSER) return;
                       assettype: 'image', 
                       name: src, 
                       src: src,
+                      hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
                       baseurl: this.baseurl,
                       flipy: tex.flipY,
                       invert: (texname == 'specularMap')
