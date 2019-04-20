@@ -117,50 +117,123 @@ if (!ENV_IS_BROWSER) return;
     this.fetchURLs = function(urls, progress) {
       var promises = [],
           queue = this.queue;
-      var corsproxy = this.corsproxy;
       for (var i = 0; i < urls.length; i++) {
-        var subpromise = new Promise(function(resolve, reject) {
-          var fullurl = urls[i];
-          if (corsproxy &&
-              fullurl.indexOf(corsproxy) != 0 &&
-              fullurl.indexOf('blob:') != 0 &&
-              fullurl.indexOf('data:') != 0 &&
-              fullurl.indexOf(self.location.origin) != 0)
-          {
-                fullurl = corsproxy + fullurl;
-          }
-          if (!queue[fullurl]) {
-            var xhr = queue[fullurl] = elation.net.get(fullurl, null, {
-              responseType: 'arraybuffer',
-              onload: function(ev) { 
-                delete queue[fullurl];
-                var status = ev.target.status;
-                if (status == 200) {
-                  resolve(ev);
-                } else {
-                  reject();
-                }
-              },
-              onerror: function() { delete queue[fullurl]; reject(); },
-              onprogress: progress,
-              headers: {
-                'X-Requested-With': 'Elation Engine asset loader'
-              }
-            });
-          } else {
-            var xhr = queue[fullurl];
-            if (xhr.readyState == 4) {
-              setTimeout(function() { resolve({target: xhr}); }, 0);
-            } else {
-              elation.events.add(xhr, 'load', resolve);
-              elation.events.add(xhr, 'error', reject);
-              elation.events.add(xhr, 'progress', progress);
-            }
-          }
-        });
+        let subpromise = this.fetchURL(urls[i], progress);
         promises.push(subpromise);
       }
       return Promise.all(promises);
+    }
+    this.fetchURL = function(url, progress) {
+      var corsproxy = this.corsproxy;
+      let agent = this.getAgentForURL(url);
+      return agent.fetch(url, progress);
+    }
+    this.getAgentForURL = function(url) {
+      let urlparts = elation.utils.parseURL(url);
+      let agentname = urlparts.scheme;
+      // Check if we have a handler for this URL protocol, if we don't then fall back to the default 'xhr' agent
+      if (!elation.engine.assetloader.agent[agentname]) {
+        agentname = 'xhr';
+      }
+      return elation.engine.assetloader.agent[agentname];
+    }
+  });
+  elation.extend('engine.assetloader.agent.xhr', new function() {
+    this.getFullURL = function(url) {
+    }
+    this.fetch = function(url, progress) {
+      return new Promise(function(resolve, reject) {
+        if (!this.queue) this.queue = {};
+        var fullurl = url;
+        let corsproxy = elation.engine.assetdownloader.corsproxy;
+        if (corsproxy &&
+            fullurl.indexOf(corsproxy) != 0 &&
+            fullurl.indexOf('blob:') != 0 &&
+            fullurl.indexOf('data:') != 0 &&
+            fullurl.indexOf(self.location.origin) != 0)
+        {
+              fullurl = corsproxy + fullurl;
+        }
+        if (!this.queue[fullurl]) {
+          var xhr = this.queue[fullurl] = elation.net.get(fullurl, null, {
+            responseType: 'arraybuffer',
+            onload: (ev) => {
+              delete this.queue[fullurl];
+              var status = ev.target.status;
+              if (status == 200) {
+                resolve(ev);
+              } else {
+                reject();
+              }
+            },
+            onerror: () => { delete this.queue[fullurl]; reject(); },
+            onprogress: progress,
+            headers: {
+              'X-Requested-With': 'Elation Engine asset loader'
+            }
+          });
+        } else {
+          var xhr = this.queue[fullurl];
+          if (xhr.readyState == 4) {
+            setTimeout(function() { resolve({target: xhr}); }, 0);
+          } else {
+            elation.events.add(xhr, 'load', resolve);
+            elation.events.add(xhr, 'error', reject);
+            elation.events.add(xhr, 'progress', progress);
+          }
+        }
+      });
+    }
+  });
+  elation.extend('engine.assetloader.agent.dat', new function() {
+    this.fetch = function(url) {
+      return new Promise((resolve, reject) => {
+        if (typeof DatArchive == 'undefined') {
+          console.warn('DatArchive not supported in this browser');
+          reject();
+          return;
+        }
+        
+        let urlparts = elation.utils.parseURL(url);
+
+        if (urlparts.host) {
+          this.getArchive(urlparts.host).then(archive => {
+            let path = urlparts.path;
+            if (path[path.length-1] == '/') {
+              path += 'index.html';
+            }
+            archive.readFile(path, 'binary').then(file => {
+              // FIXME - we're emulating an XHR object here, because the asset loader was initially written for XHR and uses some of the convenience functions
+              resolve({
+                target: {
+                  responseURL: url,
+                  data: file,
+                  response: file,
+                  getResponseHeader(header) {
+                    if (header.toLowerCase() == 'content-type') {
+                      // FIXME -  We should implement mime type detection at a lower level, and avoid the need to access the XHR object in calling code
+                      return 'application/octet-stream';
+                    }
+                  }
+                },
+              });
+            });
+          });
+        }
+      });
+    }
+    this.getArchive = function(daturl) {
+      return new Promise((resolve, reject) => {
+        if (!this.archives) this.archives = {};
+        if (this.archives[daturl]) {
+          resolve(this.archives[daturl]);
+        } else {
+          DatArchive.load(daturl).then(archive => {
+            this.archives[daturl] = archive;
+            resolve(this.archives[daturl]);
+          });
+        }
+      });
     }
   });
   elation.extend('engine.assetcache', new function() {
