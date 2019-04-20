@@ -1604,9 +1604,9 @@ if (!ENV_IS_BROWSER) return;
       } else if (this.src) {
         var url = this.getProxiedURL(this.src);
 
-        elation.net.get(url, null, { 
-          nocache: true,
-          callback: elation.bind(this, this.parse)
+        elation.engine.assetdownloader.fetchURL(url).then(ev => {
+          let decoder = new TextDecoder('utf-8');
+          this.parse(decoder.decode(ev.target.response));
         });
       }
     },
