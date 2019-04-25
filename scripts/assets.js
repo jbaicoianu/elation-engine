@@ -630,13 +630,15 @@ if (!ENV_IS_BROWSER) return;
         canvas.originalSrc = this.src;
 
         var imagemax = elation.utils.any(this.maxsize, elation.config.get('engine.assets.image.maxsize', Infinity));
-        canvas.width = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.width));
-        canvas.height = Math.min(imagemax, elation.engine.materials.nextHighestPowerOfTwo(image.height));
+        canvas.width = Math.min(imagemax, this.nextHighestPowerOfTwo(image.width));
+        canvas.height = Math.min(imagemax, this.nextHighestPowerOfTwo(image.height));
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
         if (this.hasalpha === null) {
           if (!this.src.match(/\.jpg$/i)) {
             this.hasalpha = this.canvasHasAlpha(canvas);
+          } else {
+            this.hasalpha = false;
           }
         }
         this._texture.generateMipmaps = elation.config.get('engine.assets.image.mipmaps', true);
@@ -662,10 +664,10 @@ if (!ENV_IS_BROWSER) return;
       // It could also be made more efficient by moving the gif decoding into a worker, and just passing
       // back messages with decoded frame data.
 
-      var getCanvas = function() {
+      var getCanvas = () => {
         var newcanvas = document.createElement('canvas');
-        newcanvas.width = elation.engine.materials.nextHighestPowerOfTwo(image.width);
-        newcanvas.height = elation.engine.materials.nextHighestPowerOfTwo(image.height);
+        newcanvas.width = this.nextHighestPowerOfTwo(image.width);
+        newcanvas.height = this.nextHighestPowerOfTwo(image.height);
         return newcanvas;
       }
       var newcanvas = getCanvas();
@@ -789,6 +791,13 @@ if (!ENV_IS_BROWSER) return;
         pixeldata.data[i+2] = 255 - pixeldata.data[i+2];
       }
       ctx.putImageData(pixeldata, 0, 0);
+    },
+    nextHighestPowerOfTwo: function(num) {
+      num--;
+      for (var i = 1; i < 32; i <<= 1) {
+        num = num | num >> i;
+      }
+      return num + 1;
     }
   }, elation.engine.assets.base);
 
