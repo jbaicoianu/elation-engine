@@ -1288,6 +1288,7 @@ if (vivehack) {
 
         if (raw) {
           cubecam.update(renderer, this.scene);
+          this.scene.remove(cubecam);
           return cubecam;
         } else {
           var pos = [
