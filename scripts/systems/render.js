@@ -721,7 +721,7 @@ if (vivehack) {
           this.rendersystem.renderer.vr.submitFrame();
         }
 
-        if (this.rendersystem.cssrenderer) {
+        if (this.rendersystem.cssrenderer && !(this.vrdisplay && this.vrdisplay.isPresenting)) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
         }
       }
