@@ -652,5 +652,16 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.vrcalibrate.matrix.getInverse(this.vrposetarget.matrix);
       this.vrcalibrate.matrix.decompose(this.vrcalibrate.position, this.vrcalibrate.rotation, this.vrcalibrate.scale);
     }
+    this.getViewFrustum = (function() {
+      let frustum = new THREE.Frustum(),
+          mat4 = new THREE.Matrix4();
+      return function() {
+        //let camera = this.camera.camera;
+        //let camera = this.engine.systems.render.views.main.actualcamera;
+        let camera = this.engine.systems.render.views.main.effects.default.camera; // FIXME - come on, really?
+        frustum.setFromMatrix( mat4.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
+        return frustum;
+      }
+    })();
   }, elation.engine.things.generic);
 });
