@@ -717,10 +717,14 @@ if (vivehack) {
         } else if (colliderscene.parent === worldscene) {
           worldscene.remove(colliderscene);
         }
-        this.composer.render(delta);
-this.rendersystem.renderer.vr.submitFrame();
-          //this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
-//        }
+        if (this.args.enablePostprocessing) {
+          this.composer.render(delta);
+        } else {
+          this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
+        }
+        if (this.vrdisplay && this.vrdisplay.isPresenting) {
+          this.rendersystem.renderer.vr.submitFrame();
+        }
 
         if (this.rendersystem.cssrenderer) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
