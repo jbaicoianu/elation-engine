@@ -180,7 +180,7 @@ elation.require([
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
       elation.events.add(window, 'vrdisplaypresentchange', elation.bind(this, this.handleVRDisplayPresentChange));
       elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
-
+      this.initVRDisplays();
     }
     this.create = function() {
       this.rendersystem = this.engine.systems.render;
