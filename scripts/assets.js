@@ -401,10 +401,11 @@ if (!ENV_IS_BROWSER) return;
     },
     getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
+      if (!url) url = '';
       if (!baseurl) baseurl = this.baseurl;
       var fullurl = url;
       if (!this.isURLBlob(fullurl) && !this.isURLData(fullurl)) {
-        if (this.isURLRelative(fullurl)) {
+        if (this.isURLRelative(fullurl) && fullurl.substr(0, baseurl.length) != baseurl) {
           fullurl = baseurl + fullurl;
         } else if (this.isURLProxied(fullurl)) {
           fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
