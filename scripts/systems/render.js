@@ -8,6 +8,7 @@ elation.require([
   "engine.external.three.three-controls",
   "engine.external.three.three-postprocessing",
   "engine.external.three.three-shaders",
+  "engine.external.three.three-extras",
   "engine.external.three.CSS3DRenderer",
   "engine.external.three.CubemapToEquirectangular",
 
