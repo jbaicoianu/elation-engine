@@ -38,7 +38,21 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
+
+      let webglmode = 'webgl';
+      let rendererargs = {
+        antialias: true,
+        logarithmicDepthBuffer: false,
+        alpha: false,
+        preserveDrawingBuffer: false,
+        enableWebXR: false,
+        stencil: false
+      };
+      if (webglmode == 'webgl2') {
+        rendererargs.canvas = document.createElement( 'canvas' );
+        rendererargs.context = rendererargs.canvas.getContext( 'webgl2', { antialias: false } );
+      }
+      this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
