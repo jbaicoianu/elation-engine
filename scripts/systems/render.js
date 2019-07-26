@@ -703,11 +703,6 @@ if (vivehack) {
           this.effects.default.camera = this.actualcamera;
         }
 
-/*
-        if (this.vrdisplay && this.vrdisplay.isPresenting) {
-          this.vreffect.render(this.scene, this.camera);
-        } else {
-*/
         let colliderscene = this.engine.systems.world.scene['colliders'],
             worldscene = this.engine.systems.world.scene['world-3d'];
         if (this.pickingdebug) {
