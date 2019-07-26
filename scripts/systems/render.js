@@ -178,6 +178,7 @@ elation.require([
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
+      elation.events.add(window, 'vrdisplaypresentchange', elation.bind(this, this.handleVRDisplayPresentChange));
       elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
 
     }
@@ -362,6 +363,15 @@ elation.require([
             }
           }
         }.bind(this));
+      }
+    }
+    this.handleVRDisplayPresentChange = function(ev) {
+      let presenting = this.vrdisplay.isPresenting,
+          hasclass = this.hasclass('vr_presenting');
+      if (presenting && !hasclass) {
+        this.addclass('vr_presenting');
+      } else if (!presenting && hasclass) {
+        this.removeclass('vr_presenting');
       }
     }
     this.destroy = function() {
