@@ -601,6 +601,7 @@ if (vivehack) {
               this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
             }
             this.addclass("vr_presenting");
+            this.rendersystem.renderer.vr.enabled = true;
             elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
@@ -610,6 +611,7 @@ if (vivehack) {
             this.getsize();
 //if (vivehack) player.head.reparent(player.neck);
             this.removeclass("vr_presenting");
+            this.rendersystem.renderer.vr.enabled = false;
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
         }
