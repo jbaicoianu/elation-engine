@@ -9,7 +9,7 @@ elation.require(['engine.things.light'], function() {
     }
     this.createObject3D = function() {
       this.lightobj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
-      var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
+      //var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
       //this.lightobj.add(helper);
 
       var obj = this.lightobj || new THREE.Object3D();

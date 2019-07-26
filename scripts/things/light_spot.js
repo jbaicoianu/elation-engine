@@ -18,7 +18,7 @@ elation.require(['engine.things.light'], function() {
       }
       this.lightobj.exponent = this.properties.exponent;
 
-      var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
+      //var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
 
       var obj = this.lightobj || new THREE.Object3D();
       if (this.properties.render.mesh) {

@@ -17,7 +17,7 @@ elation.require(['engine.things.generic'], function() {
       switch (this.properties.type) {
         case 'point':
           this.lightobj = new THREE.PointLight(this.properties.color, this.properties.intensity, this.properties.radius);
-          var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
+          //var helper = new THREE.PointLightHelper(this.lightobj, this.properties.intensity);
           //this.lightobj.add(helper);
           //this.lightobj.castShadow = false;
           break;
@@ -29,7 +29,7 @@ elation.require(['engine.things.generic'], function() {
           }
           this.lightobj.exponent = this.properties.exponent;
 
-          var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
+          //var helper = new THREE.SpotLightHelper(this.lightobj, this.properties.intensity);
           //this.lightobj.add(helper);
           break;
         case 'directional':
@@ -37,7 +37,7 @@ elation.require(['engine.things.generic'], function() {
           this.lightobj.shadow.camera.visible = false;
           //this.initShadowmap(this.lightobj);
 
-          var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
+          //var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
           //this.lightobj.add(helper);
           break;
         case 'ambient':
