@@ -697,8 +697,8 @@ if (vivehack) {
 
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           var player = this.engine.client.player;
-          player.updateHMD(this.vrdisplay);
           this.effects.default.camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
+          player.updateHMD(this.vrdisplay, this.effects.default.camera);
         } else {
           this.effects.default.camera = this.actualcamera;
         }
