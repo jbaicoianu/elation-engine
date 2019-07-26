@@ -532,7 +532,8 @@ if (!ENV_IS_BROWSER) return;
         texture.flipY = this.flipy;
 
         elation.events.add(this.canvas, 'update', () => texture.needsUpdate = true);
-        this.sendLoadEvents();
+        this.loaded = true;
+        setTimeout(() => this.sendLoadEvents(), 0);
       }
     },
     loadImageByURL: function() {
