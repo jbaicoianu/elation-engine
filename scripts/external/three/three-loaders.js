@@ -10586,6 +10586,8 @@ THREE.GLTFLoader = ( function () {
 			var primitives = meshDef.primitives;
 			var originalMaterials = [];
 
+			if (!primitives) return new THREE.Object3D();
+
 			for ( var i = 0, il = primitives.length; i < il; i ++ ) {
 
 				originalMaterials[ i ] = primitives[ i ].material === undefined
