@@ -192,7 +192,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.createBodyParts();
       // FIXME - the object tracker needs some work.  Some systems report tracked objects relative to the world, and some relative to the head
       //          The hardcoded offset is also specific to my own personal set-up, and helps to keep leap motion and tracked controllers in sync
-      this.tracker = this.neck.spawn('objecttracker', null, {player: this, position: [0, -.05, -.185]});
+      this.tracker = this.head.spawn('objecttracker', null, {player: this, position: [0, -.05, -.185]});
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
       this.camera.objects['3d'].add(this.ears);
 
@@ -227,8 +227,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.vrcalibrate.add(this.vrposetarget);
       this.vrposetarget.add(vrposedebug);
       vrposedebug.layers.set(10);
-      this.neck.objects['3d'].add(this.vrcalibrate);
-      this.engine.systems.render.renderer.vr.setPoseTarget(this.vrposetarget);
+      this.objects['3d'].add(this.vrcalibrate);
+      let renderer = this.engine.systems.render.renderer;
+      if (renderer.vr && renderer.vr.setPoseTarget) {
+        renderer.vr.setPoseTarget(this.vrposetarget);
+      }
     }
     this.getGroundHeight = function() {
       
@@ -245,7 +248,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.controlstate._reset();
       this.lookVector.set(0,0,0);
       this.turnVector.set(0,0,0);
-      this.enableuse = true;
+      this.enableuse = false;
       this.enabled = true;
       controls.requestPointerLock();
 
@@ -341,6 +344,9 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             }
             _moveforce.copy(this.moveVector).normalize().multiplyScalar(moveSpeed);
             if (this.flying && !dumbhack) {
+              if (this.vrdevice && this.vrdevice.isPresenting) {
+                this.head.properties.orientation.copy(this.engine.systems.render.views.main.effects.default.camera.quaternion);
+              }
               _moveforce.applyQuaternion(this.head.properties.orientation);
             }
             this.moveForce.update(_moveforce);
@@ -366,7 +372,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       // closure scratch vars
       var standingMatrix = new THREE.Matrix4();
 
-      return function(vrdevice) {
+      return function(vrdevice, camera) {
         var hmd = this.hmdstate.hmd;
         if (vrdevice && vrdevice.stageParameters) {
           //this.stage.scale.set(vrdevice.stageParameters.sizeX, .1, vrdevice.stageParameters.sizeZ);
