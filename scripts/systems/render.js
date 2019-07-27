@@ -8,6 +8,7 @@ elation.require([
   "engine.external.three.three-controls",
   "engine.external.three.three-postprocessing",
   "engine.external.three.three-shaders",
+  "engine.external.three.three-extras",
   "engine.external.three.CSS3DRenderer",
   "engine.external.three.CubemapToEquirectangular",
 
@@ -37,7 +38,21 @@ elation.require([
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
-      this.renderer = new THREE.WebGLRenderer({antialias: true, logarithmicDepthBuffer: false, alpha: true, preserveDrawingBuffer: true});
+
+      let webglmode = 'webgl';
+      let rendererargs = {
+        antialias: true,
+        logarithmicDepthBuffer: false,
+        alpha: false,
+        preserveDrawingBuffer: false,
+        enableWebXR: false,
+        stencil: false
+      };
+      if (webglmode == 'webgl2') {
+        rendererargs.canvas = document.createElement( 'canvas' );
+        rendererargs.context = rendererargs.canvas.getContext( 'webgl2', { antialias: false } );
+      }
+      this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
       this.renderer.autoClear = false;
       this.renderer.setClearColor(0x000000, 1);
@@ -163,8 +178,9 @@ elation.require([
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
+      elation.events.add(window, 'vrdisplaypresentchange', elation.bind(this, this.handleVRDisplayPresentChange));
       elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
-
+      this.initVRDisplays();
     }
     this.create = function() {
       this.rendersystem = this.engine.systems.render;
@@ -347,6 +363,15 @@ elation.require([
             }
           }
         }.bind(this));
+      }
+    }
+    this.handleVRDisplayPresentChange = function(ev) {
+      let presenting = this.vrdisplay.isPresenting,
+          hasclass = this.hasclass('vr_presenting');
+      if (presenting && !hasclass) {
+        this.addclass('vr_presenting');
+      } else if (!presenting && hasclass) {
+        this.removeclass('vr_presenting');
       }
     }
     this.destroy = function() {
@@ -576,6 +601,7 @@ if (vivehack) {
               this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
             }
             this.addclass("vr_presenting");
+            this.rendersystem.renderer.vr.enabled = true;
             elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
@@ -585,6 +611,7 @@ if (vivehack) {
             this.getsize();
 //if (vivehack) player.head.reparent(player.neck);
             this.removeclass("vr_presenting");
+            this.rendersystem.renderer.vr.enabled = false;
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
         }
@@ -670,17 +697,12 @@ if (vivehack) {
 
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           var player = this.engine.client.player;
-          player.updateHMD(this.vrdisplay);
           this.effects.default.camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
+          player.updateHMD(this.vrdisplay, this.effects.default.camera);
         } else {
           this.effects.default.camera = this.actualcamera;
         }
 
-/*
-        if (this.vrdisplay && this.vrdisplay.isPresenting) {
-          this.vreffect.render(this.scene, this.camera);
-        } else {
-*/
         let colliderscene = this.engine.systems.world.scene['colliders'],
             worldscene = this.engine.systems.world.scene['world-3d'];
         if (this.pickingdebug) {
@@ -690,12 +712,16 @@ if (vivehack) {
         } else if (colliderscene.parent === worldscene) {
           worldscene.remove(colliderscene);
         }
-        this.composer.render(delta);
-this.rendersystem.renderer.vr.submitFrame();
-          //this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
-//        }
+        if (this.args.enablePostprocessing) {
+          this.composer.render(delta);
+        } else {
+          this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
+        }
+        if (this.vrdisplay && this.vrdisplay.isPresenting) {
+          this.rendersystem.renderer.vr.submitFrame();
+        }
 
-        if (this.rendersystem.cssrenderer) {
+        if (this.rendersystem.cssrenderer && !(this.vrdisplay && this.vrdisplay.isPresenting)) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
         }
       }
@@ -1262,6 +1288,7 @@ this.rendersystem.renderer.vr.submitFrame();
 
         if (raw) {
           cubecam.update(renderer, this.scene);
+          this.scene.remove(cubecam);
           return cubecam;
         } else {
           var pos = [

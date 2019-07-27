@@ -439,7 +439,7 @@ elation.require([
           data = parsed;        
 
           data.scene.animations = parsed.animations;
-          data.scene.rotation.z = 0;
+          data.scene.rotation.x = -Math.PI/2;
           data.scene.updateMatrix();
           resolve(data.scene.toJSON());
         } catch (e) {
@@ -485,7 +485,10 @@ elation.require([
         //var data = this.convertArrayBufferToString(bindata);
         //var json = JSON.parse(data);
         var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
-        var proxypath = elation.engine.assets.corsproxy + path;
+        var proxypath = path;
+        if (path.match(/^https?:\/\//)) {
+          proxypath = elation.engine.assets.corsproxy + path;
+        }
         //THREE.GLTFLoader.Shaders.removeAll();
         var loader = new THREE.GLTFLoader();
         loader.parse(bindata, proxypath, elation.bind(this, function(modeldata) {

@@ -156,7 +156,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
           if (assetid) {
             var asset = elation.engine.assets.find('model', assetid);
             var obj = new THREE.Object3D();
-            obj.add(asset);
+            //obj.add(asset);
             //asset.position.set(0,0,-0.1);
             return obj;
           }

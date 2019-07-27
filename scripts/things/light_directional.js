@@ -14,7 +14,7 @@ elation.require(['engine.things.light'], function() {
       }
       //this.initShadowmap(this.lightobj);
 
-      var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
+      //var helper = new THREE.DirectionalLightHelper(this.lightobj, this.properties.intensity);
 
       var obj = this.lightobj || new THREE.Object3D();
       if (this.properties.render.mesh) {

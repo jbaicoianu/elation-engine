@@ -15,8 +15,9 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 			stencilBuffer: false
 		};
 
-		var size = renderer.getDrawingBufferSize();
-		renderTarget = new THREE.WebGLRenderTarget( size.width, size.height, parameters );
+		var size = new THREE.Vector2();
+		renderer.getDrawingBufferSize(size);
+		renderTarget = new THREE.WebGLRenderTarget( size.x, size.y, parameters );
 		renderTarget.texture.name = 'EffectComposer.rt1';
 
 	}
@@ -62,8 +63,9 @@ Object.assign( THREE.EffectComposer.prototype, {
 
 		this.passes.push( pass );
 
-		var size = this.renderer.getDrawingBufferSize();
-		pass.setSize( size.width, size.height );
+		var size = new THREE.Vector2();
+		this.renderer.getDrawingBufferSize(size);
+		pass.setSize( size.x, size.y );
 
 	},
 
@@ -127,10 +129,11 @@ Object.assign( THREE.EffectComposer.prototype, {
 
 		if ( renderTarget === undefined ) {
 
-			var size = this.renderer.getDrawingBufferSize();
+			var size = new THREE.Vector2();
+			this.renderer.getDrawingBufferSize(size);
 
 			renderTarget = this.renderTarget1.clone();
-			renderTarget.setSize( size.width, size.height );
+			renderTarget.setSize( size.x, size.y );
 
 		}
 
@@ -237,7 +240,9 @@ THREE.RenderPass.prototype = Object.assign( Object.create( THREE.Pass.prototype 
 
 		}
 
-		renderer.render( this.scene, this.camera, this.renderToScreen ? null : readBuffer, this.clear );
+		renderer.setRenderTarget(this.renderToScreen ? null : readBuffer);
+		if (this.clear) renderer.clear();
+		renderer.render( this.scene, this.camera);
 
 		if ( this.clearColor ) {
 
@@ -304,15 +309,10 @@ THREE.ShaderPass.prototype = Object.assign( Object.create( THREE.Pass.prototype 
 
 		this.quad.material = this.material;
 
-		if ( this.renderToScreen ) {
 
-			renderer.render( this.scene, this.camera );
-
-		} else {
-
-			renderer.render( this.scene, this.camera, writeBuffer, this.clear );
-
-		}
+		renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+		if (this.clear) renderer.clear();
+		renderer.render( this.scene, this.camera);
 
 	}
 
@@ -377,8 +377,13 @@ THREE.MaskPass.prototype = Object.assign( Object.create( THREE.Pass.prototype ),
 
 		// draw into the stencil buffer
 
-		renderer.render( this.scene, this.camera, readBuffer, this.clear );
-		renderer.render( this.scene, this.camera, writeBuffer, this.clear );
+		renderer.setRenderTarget(readBuffer);
+		if (this.clear) renderer.clear();
+		renderer.render( this.scene, this.camera);
+
+		renderer.setRenderTarget(writeBuffer);
+		if (this.clear) renderer.clear();
+		renderer.render( this.scene, this.camera );
 
 		// unlock color and depth buffer for subsequent rendering
 
@@ -507,15 +512,18 @@ THREE.BloomPass.prototype = Object.assign( Object.create( THREE.Pass.prototype )
 		this.convolutionUniforms[ "tDiffuse" ].value = readBuffer.texture;
 		this.convolutionUniforms[ "uImageIncrement" ].value = THREE.BloomPass.blurX;
 
-		renderer.render( this.scene, this.camera, this.renderTargetX, true );
-
+		renderer.setRenderTarget(this.renderTargetX);
+		renderer.clear();
+		renderer.render( this.scene, this.camera );
 
 		// Render quad with blured scene into texture (convolution pass 2)
 
 		this.convolutionUniforms[ "tDiffuse" ].value = this.renderTargetX.texture;
 		this.convolutionUniforms[ "uImageIncrement" ].value = THREE.BloomPass.blurY;
 
-		renderer.render( this.scene, this.camera, this.renderTargetY, true );
+		renderer.setRenderTarget(this.renderTargetY);
+		renderer.clear();
+		renderer.render( this.scene, this.camera );
 
 		// Render original scene with superimposed blur to texture
 
@@ -525,7 +533,9 @@ THREE.BloomPass.prototype = Object.assign( Object.create( THREE.Pass.prototype )
 
 		if ( maskActive ) renderer.context.enable( renderer.context.STENCIL_TEST );
 
-		renderer.render( this.scene, this.camera, readBuffer, this.clear );
+		renderer.setRenderTarget(readBuffer);
+		if (this.clear) renderer.clear();
+		renderer.render( this.scene, this.camera );
 
 	}
 

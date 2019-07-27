@@ -1267,7 +1267,7 @@ elation.component.add("engine.things.generic", function() {
       if (n.animations) {
         //animations[n.name] = n;
         animations.push.apply(animations, n.animations);
-        num++;
+        num += n.animations.length;
       }
       if (n.skeleton) {
         skeleton = n.skeleton;
@@ -1277,6 +1277,8 @@ elation.component.add("engine.things.generic", function() {
       }
     });
 
+    var mixer = this.animationmixer = new THREE.AnimationMixer(scene);
+//console.log('animation mixer', mixer, meshes[0]);
     if (skeleton) {
       this.skeleton = skeleton;
 
@@ -1286,8 +1288,7 @@ elation.component.add("engine.things.generic", function() {
       });
 */
       if (true) { //meshes.length > 0) {
-        var mixer = this.animationmixer = new THREE.AnimationMixer(meshes[0]);
-        var skeletons = [skeleton];
+        var skeletons = [];
         for (var i = 0; i < meshes.length; i++) {
           //meshes[i].bind(this.skeleton);
           skeletons.push(meshes[i].skeleton);
@@ -1302,6 +1303,7 @@ elation.component.add("engine.things.generic", function() {
           for (var i = 0; i < skeletons.length; i++) {
             skeletons[i].update();
           }
+          this.refresh();
         }), 16);
       }
     }
@@ -1758,6 +1760,20 @@ console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray()
         value: this.properties.scale
       },
     });
+  }
+  this.playAnimation = function(name) {
+    let anim = false;
+    if (this.animations) {
+      this.animations.forEach(n => {
+        if (n.name == name) {
+          anim = n;
+        }
+      });
+    }
+    console.log('play anim', anim);
+    if (anim) {
+      this.animationmixer.clipAction(anim).play();
+    }
   }
   this.enableDebug = function() {
     if (this.objects.dynamics) {

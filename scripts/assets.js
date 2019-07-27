@@ -401,10 +401,11 @@ if (!ENV_IS_BROWSER) return;
     },
     getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
+      if (!url) url = '';
       if (!baseurl) baseurl = this.baseurl;
       var fullurl = url;
       if (!this.isURLBlob(fullurl) && !this.isURLData(fullurl)) {
-        if (this.isURLRelative(fullurl)) {
+        if (this.isURLRelative(fullurl) && fullurl.substr(0, baseurl.length) != baseurl) {
           fullurl = baseurl + fullurl;
         } else if (this.isURLProxied(fullurl)) {
           fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
@@ -531,7 +532,8 @@ if (!ENV_IS_BROWSER) return;
         texture.flipY = this.flipy;
 
         elation.events.add(this.canvas, 'update', () => texture.needsUpdate = true);
-        this.sendLoadEvents();
+        this.loaded = true;
+        setTimeout(() => this.sendLoadEvents(), 0);
       }
     },
     loadImageByURL: function() {
@@ -1710,6 +1712,64 @@ if (!ENV_IS_BROWSER) return;
         str += String.fromCharCode(bytes[i]);
       }
       return str;
+    }
+  }, elation.engine.assets.base);
+
+  elation.define('engine.assets.shader', {
+    assettype: 'shader',
+    fragment_src: false,
+    vertex_src: false,
+    uniforms: {},
+
+    _construct: function(args) {
+      elation.class.call(this, args);
+      //this.load();
+    },
+    load: function() {
+      this._material = new THREE.ShaderMaterial();
+      if (this.fragment_src || this.vertex_src) {
+        if (this.fragment_src) {
+          elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.fragment_src)).then(ev => {
+            let decoder = new TextDecoder('utf-8');
+            this._material.fragmentShader = decoder.decode(ev.target.response);
+            this._material.needsUpdate = true;
+          });
+        }
+        if (this.vertex_src) {
+          elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.vertex_src)).then(ev => {
+            let decoder = new TextDecoder('utf-8');
+            this._material.vertexShader = decoder.decode(ev.target.response);
+            this._material.needsUpdate = true;
+          });
+        }
+      }
+      if (this.uniforms) {
+        this._material.uniforms = this.parseUniforms(this.uniforms);
+      }
+      this.complete();
+    },
+    complete: function(data) {
+      elation.events.fire({type: 'asset_load', element: this._material});
+      elation.events.fire({type: 'asset_load', element: this});
+      elation.events.fire({element: this, type: 'asset_load_complete'});
+    },
+    parseUniforms(uniforms) {
+      let matuniforms = {};
+      uniforms.forEach(u => {
+        matuniforms[u.name] = { value: u.value };
+      });
+      return matuniforms;
+    },
+    handleProgress: function(ev) {
+    },
+    handleError: function(ev) {
+      this._material = false;
+    },
+    getInstance: function(args) {
+      if (!this._material) {
+        this.load();
+      }
+      return this._material;
     }
   }, elation.engine.assets.base);
 });
