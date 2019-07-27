@@ -439,7 +439,7 @@ elation.require([
           data = parsed;        
 
           data.scene.animations = parsed.animations;
-          data.scene.rotation.z = 0;
+          data.scene.rotation.x = -Math.PI/2;
           data.scene.updateMatrix();
           resolve(data.scene.toJSON());
         } catch (e) {
