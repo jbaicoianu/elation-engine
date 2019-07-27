@@ -5718,9 +5718,9 @@ THREE.FBXLoader = ( function () {
 			var displayedWeightsWarning = false;
 
 			// these will hold data for a single face
-			var facePositionIndexes = [];
-			var faceNormals = [];
-			var faceColors = [];
+			var facePositionIndexes = new Array(12);
+			var faceNormals = new Array(12);
+			var faceColors = new Array(12);
 			var faceUVs = [];
 			var faceWeights = [];
 			var faceWeightIndices = [];
@@ -5747,13 +5747,19 @@ THREE.FBXLoader = ( function () {
 				var weightIndices = [];
 				var weights = [];
 
-				facePositionIndexes.push( vertexIndex * 3, vertexIndex * 3 + 1, vertexIndex * 3 + 2 );
+				//facePositionIndexes.push( vertexIndex * 3, vertexIndex * 3 + 1, vertexIndex * 3 + 2 );
+				facePositionIndexes[ faceLength * 3] = vertexIndex * 3;
+				facePositionIndexes[ faceLength * 3 + 1] = vertexIndex * 3 + 1;
+				facePositionIndexes[ faceLength * 3 + 2] = vertexIndex * 3 + 2;
 
 				if ( geoInfo.color ) {
 
 					var data = getData( polygonVertexIndex, polygonIndex, vertexIndex, geoInfo.color );
 
-					faceColors.push( data[ 0 ], data[ 1 ], data[ 2 ] );
+					//faceColors.push( data[ 0 ], data[ 1 ], data[ 2 ] );
+					faceColors[ faceLength * 3 ] = data[ 0 ];
+					faceColors[ faceLength * 3 + 1] = data[ 1 ];
+					faceColors[ faceLength * 3 + 2] = data[ 2 ];
 
 				}
 
@@ -5831,7 +5837,10 @@ THREE.FBXLoader = ( function () {
 
 					var data = getData( polygonVertexIndex, polygonIndex, vertexIndex, geoInfo.normal );
 
-					faceNormals.push( data[ 0 ], data[ 1 ], data[ 2 ] );
+					//faceNormals.push( data[ 0 ], data[ 1 ], data[ 2 ] );
+					faceNormals[ faceLength * 3 ] = data[ 0 ];
+					faceNormals[ faceLength * 3 + 1] = data[ 1 ];
+					faceNormals[ faceLength * 3 + 2] = data[ 2 ];
 
 				}
 
@@ -5870,9 +5879,9 @@ THREE.FBXLoader = ( function () {
 					faceLength = 0;
 
 					// reset arrays for the next face
-					facePositionIndexes = [];
-					faceNormals = [];
-					faceColors = [];
+					//facePositionIndexes = [];
+					//faceNormals = [];
+					//faceColors = [];
 					faceUVs = [];
 					faceWeights = [];
 					faceWeightIndices = [];
@@ -5890,89 +5899,87 @@ THREE.FBXLoader = ( function () {
 
 			for ( var i = 2; i < faceLength; i ++ ) {
 
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ 0 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ 1 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ 2 ] ] );
+				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ 0 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ 1 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ 2 ] ],
 
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 + 1 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 + 2 ] ] );
+				                     geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 + 1 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ ( i - 1 ) * 3 + 2 ] ],
 
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ i * 3 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ i * 3 + 1 ] ] );
-				buffers.vertex.push( geoInfo.vertexPositions[ facePositionIndexes[ i * 3 + 2 ] ] );
+				                     geoInfo.vertexPositions[ facePositionIndexes[ i * 3 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ i * 3 + 1 ] ],
+				                     geoInfo.vertexPositions[ facePositionIndexes[ i * 3 + 2 ] ] );
 
 				if ( geoInfo.skeleton ) {
 
-					buffers.vertexWeights.push( faceWeights[ 0 ] );
-					buffers.vertexWeights.push( faceWeights[ 1 ] );
-					buffers.vertexWeights.push( faceWeights[ 2 ] );
-					buffers.vertexWeights.push( faceWeights[ 3 ] );
+					buffers.vertexWeights.push( faceWeights[ 0 ],
+					                            faceWeights[ 1 ],
+					                            faceWeights[ 2 ],
+					                            faceWeights[ 3 ],
 
-					buffers.vertexWeights.push( faceWeights[ ( i - 1 ) * 4 ] );
-					buffers.vertexWeights.push( faceWeights[ ( i - 1 ) * 4 + 1 ] );
-					buffers.vertexWeights.push( faceWeights[ ( i - 1 ) * 4 + 2 ] );
-					buffers.vertexWeights.push( faceWeights[ ( i - 1 ) * 4 + 3 ] );
+					                            faceWeights[ ( i - 1 ) * 4 ],
+					                            faceWeights[ ( i - 1 ) * 4 + 1 ],
+					                            faceWeights[ ( i - 1 ) * 4 + 2 ],
+					                            faceWeights[ ( i - 1 ) * 4 + 3 ],
 
-					buffers.vertexWeights.push( faceWeights[ i * 4 ] );
-					buffers.vertexWeights.push( faceWeights[ i * 4 + 1 ] );
-					buffers.vertexWeights.push( faceWeights[ i * 4 + 2 ] );
-					buffers.vertexWeights.push( faceWeights[ i * 4 + 3 ] );
+					                            faceWeights[ i * 4 ],
+					                            faceWeights[ i * 4 + 1 ],
+					                            faceWeights[ i * 4 + 2 ],
+					                            faceWeights[ i * 4 + 3 ] );
 
-					buffers.weightsIndices.push( faceWeightIndices[ 0 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ 1 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ 2 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ 3 ] );
+					buffers.weightsIndices.push( faceWeightIndices[ 0 ],
+					                             faceWeightIndices[ 1 ],
+					                             faceWeightIndices[ 2 ],
+					                             faceWeightIndices[ 3 ],
 
-					buffers.weightsIndices.push( faceWeightIndices[ ( i - 1 ) * 4 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ ( i - 1 ) * 4 + 1 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ ( i - 1 ) * 4 + 2 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ ( i - 1 ) * 4 + 3 ] );
+					                             faceWeightIndices[ ( i - 1 ) * 4 ],
+					                             faceWeightIndices[ ( i - 1 ) * 4 + 1 ],
+					                             faceWeightIndices[ ( i - 1 ) * 4 + 2 ],
+					                             faceWeightIndices[ ( i - 1 ) * 4 + 3 ],
 
-					buffers.weightsIndices.push( faceWeightIndices[ i * 4 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ i * 4 + 1 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ i * 4 + 2 ] );
-					buffers.weightsIndices.push( faceWeightIndices[ i * 4 + 3 ] );
+					                             faceWeightIndices[ i * 4 ],
+					                             faceWeightIndices[ i * 4 + 1 ],
+					                             faceWeightIndices[ i * 4 + 2 ],
+					                             faceWeightIndices[ i * 4 + 3 ] );
 
 				}
 
 				if ( geoInfo.color ) {
 
-					buffers.colors.push( faceColors[ 0 ] );
-					buffers.colors.push( faceColors[ 1 ] );
-					buffers.colors.push( faceColors[ 2 ] );
+					buffers.colors.push( faceColors[ 0 ],
+					                     faceColors[ 1 ],
+					                     faceColors[ 2 ],
 
-					buffers.colors.push( faceColors[ ( i - 1 ) * 3 ] );
-					buffers.colors.push( faceColors[ ( i - 1 ) * 3 + 1 ] );
-					buffers.colors.push( faceColors[ ( i - 1 ) * 3 + 2 ] );
+					                     faceColors[ ( i - 1 ) * 3 ],
+					                     faceColors[ ( i - 1 ) * 3 + 1 ],
+					                     faceColors[ ( i - 1 ) * 3 + 2 ],
 
-					buffers.colors.push( faceColors[ i * 3 ] );
-					buffers.colors.push( faceColors[ i * 3 + 1 ] );
-					buffers.colors.push( faceColors[ i * 3 + 2 ] );
+					                     faceColors[ i * 3 ],
+					                     faceColors[ i * 3 + 1 ],
+					                     faceColors[ i * 3 + 2 ] );
 
 				}
 
 				if ( geoInfo.material && geoInfo.material.mappingType !== 'AllSame' ) {
 
-					buffers.materialIndex.push( materialIndex );
-					buffers.materialIndex.push( materialIndex );
-					buffers.materialIndex.push( materialIndex );
+					buffers.materialIndex.push( materialIndex, materialIndex, materialIndex );
 
 				}
 
 				if ( geoInfo.normal ) {
 
-					buffers.normal.push( faceNormals[ 0 ] );
-					buffers.normal.push( faceNormals[ 1 ] );
-					buffers.normal.push( faceNormals[ 2 ] );
+					buffers.normal.push( faceNormals[ 0 ],
+					                     faceNormals[ 1 ],
+					                     faceNormals[ 2 ],
 
-					buffers.normal.push( faceNormals[ ( i - 1 ) * 3 ] );
-					buffers.normal.push( faceNormals[ ( i - 1 ) * 3 + 1 ] );
-					buffers.normal.push( faceNormals[ ( i - 1 ) * 3 + 2 ] );
+					                     faceNormals[ ( i - 1 ) * 3 ],
+					                     faceNormals[ ( i - 1 ) * 3 + 1 ],
+					                     faceNormals[ ( i - 1 ) * 3 + 2 ],
 
-					buffers.normal.push( faceNormals[ i * 3 ] );
-					buffers.normal.push( faceNormals[ i * 3 + 1 ] );
-					buffers.normal.push( faceNormals[ i * 3 + 2 ] );
+					                     faceNormals[ i * 3 ],
+					                     faceNormals[ i * 3 + 1 ],
+					                     faceNormals[ i * 3 + 2 ] );
 
 				}
 
@@ -5982,14 +5989,14 @@ THREE.FBXLoader = ( function () {
 
 						if ( buffers.uvs[ j ] === undefined ) buffers.uvs[ j ] = [];
 
-						buffers.uvs[ j ].push( faceUVs[ j ][ 0 ] );
-						buffers.uvs[ j ].push( faceUVs[ j ][ 1 ] );
+						buffers.uvs[ j ].push( faceUVs[ j ][ 0 ],
+						                       faceUVs[ j ][ 1 ],
 
-						buffers.uvs[ j ].push( faceUVs[ j ][ ( i - 1 ) * 2 ] );
-						buffers.uvs[ j ].push( faceUVs[ j ][ ( i - 1 ) * 2 + 1 ] );
+						                       faceUVs[ j ][ ( i - 1 ) * 2 ],
+						                       faceUVs[ j ][ ( i - 1 ) * 2 + 1 ],
 
-						buffers.uvs[ j ].push( faceUVs[ j ][ i * 2 ] );
-						buffers.uvs[ j ].push( faceUVs[ j ][ i * 2 + 1 ] );
+						                       faceUVs[ j ][ i * 2 ],
+						                       faceUVs[ j ][ i * 2 + 1 ] );
 
 					} );
 
