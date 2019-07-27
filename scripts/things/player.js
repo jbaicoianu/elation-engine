@@ -214,14 +214,14 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'mass': 1
       });
 
-      this.placeholder_body = new THREE.Mesh(new THREE.CylinderGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc, transparent: true, opacity: .5}));
+      this.placeholder_body = new THREE.Mesh(new THREE.CylinderBufferGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc, transparent: true, opacity: .5}));
       this.placeholder_body.position.y = this.height / 2;
       this.placeholder_body.layers.set(10);
       this.objects['3d'].add(this.placeholder_body);
 
       this.vrcalibrate = new THREE.Object3D();
       this.vrposetarget = new THREE.Object3D();
-      let vrposedebug = new THREE.Mesh(new THREE.CylinderGeometry(0, 1, 2), new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .5}));
+      let vrposedebug = new THREE.Mesh(new THREE.CylinderBufferGeometry(0, 1, 2), new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .5}));
       vrposedebug.position.z = -1;
       vrposedebug.rotation.x = Math.PI/2;
       this.vrcalibrate.add(this.vrposetarget);
