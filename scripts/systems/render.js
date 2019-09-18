@@ -221,11 +221,14 @@ elation.require([
 
       //this.composer = this.createRenderPath([this.rendermode]);
       this.rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-          minFilter: THREE.LinearFilter,
-          magFilter: THREE.LinearFilter,
-          format: THREE.RGBAFormat,
-          stencilBuffer: true
-        });
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        stencilBuffer: true,
+        depthBuffer: true,
+      });
+      this.rendertarget.depthTexture = new THREE.DepthTexture();
+      this.rendertarget.depthTexture.type = THREE.UnsignedShortType;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
       this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', 'bloom'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
@@ -410,6 +413,14 @@ elation.require([
       switch (name) {
         case 'default':
           pass = new THREE.RenderPass(this.scene, this.actualcamera, null, null, 1);
+          pass.clear = false;
+          break;
+        case 'normalmap':
+          pass = new THREE.RenderPass(this.scene, this.actualcamera, new THREE.MeshNormalMaterial(), null, 1);
+          pass.clear = false;
+          break;
+        case 'depth':
+          pass = new THREE.RenderPass(this.scene, this.actualcamera, new THREE.MeshDepthMaterial(), null, 1);
           pass.clear = false;
           break;
         case 'portals':
@@ -697,10 +708,10 @@ if (vivehack) {
 
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           var player = this.engine.client.player;
-          this.effects.default.camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
-          player.updateHMD(this.vrdisplay, this.effects.default.camera);
+          this.effects[this.rendermode].camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
+          player.updateHMD(this.vrdisplay, this.effects[this.rendermode].camera);
         } else {
-          this.effects.default.camera = this.actualcamera;
+          this.effects[this.rendermode].camera = this.actualcamera;
         }
 
         let colliderscene = this.engine.systems.world.scene['colliders'],
