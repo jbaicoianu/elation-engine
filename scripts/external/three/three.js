@@ -22746,8 +22746,9 @@
 
 			if ( isPresenting() ) {
 
-				var eyeParameters = device.getEyeParameters( 'left' );
-				renderWidth = 2 * eyeParameters.renderWidth * framebufferScaleFactor;
+				var eyeParameters = device.getEyeParameters( 'left' ),
+				    eyeParametersR = device.getEyeParameters( 'right' );
+				renderWidth = (eyeParameters.renderWidth + eyeParametersR.renderWidth) * framebufferScaleFactor;
 				renderHeight = eyeParameters.renderHeight * framebufferScaleFactor;
 
 				currentPixelRatio = renderer.getPixelRatio();
