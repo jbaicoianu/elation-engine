@@ -918,7 +918,7 @@ if (vivehack) {
         var rightEye = this.vrdisplay.getEyeParameters("right");
 
         s = {
-          w: Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2,
+          w: leftEye.renderWidth + rightEye.renderWidth,
           h: Math.max(leftEye.renderHeight, rightEye.renderHeight)
         };
       }
