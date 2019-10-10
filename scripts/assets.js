@@ -120,7 +120,7 @@ if (!ENV_IS_BROWSER) return;
       elation.engine.assets.corsproxy = proxy;
       var loader = new elation.engine.assets.corsproxyloader(proxy, undefined, dummy);
       elation.engine.assetdownloader.setCORSProxy(proxy);
-      THREE.Loader.Handlers.add(/.*/i, loader);
+      THREE.DefaultLoadingManager.addHandler(/.*/i, loader);
 
       if (!elation.env.isWorker && elation.engine.assets.loaderpool) {
         elation.engine.assets.loaderpool.sendMessage('setcorsproxy', proxy);
