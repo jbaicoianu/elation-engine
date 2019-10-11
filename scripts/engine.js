@@ -70,7 +70,7 @@ elation.require(deps, function() {
       }
     }
 
-    this.run = function(ts) {
+    this.run = function(ts, xrpose) {
       // recursively request another frame until we're no longer running
       //if (!ts) ts = new Date().getTime();
       var ts = performance.now();
@@ -80,7 +80,8 @@ elation.require(deps, function() {
       }
       var evdata = {
         ts: ts,
-        delta: (ts - this.lastupdate) / 1000
+        delta: (ts - this.lastupdate) / 1000,
+        pose: xrpose
       };
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
@@ -110,7 +111,9 @@ elation.require(deps, function() {
       }))();
     this.frame = function(fn) {
       if (elation.env.isNode) var window;
-      if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
+      if (this.client && this.client.view && this.client.view.xrsession && this.client.view.xrsession.requestAnimationFrame) {
+        this.client.view.xrsession.requestAnimationFrame(fn);
+      } else if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
         this.client.view.vrdisplay.requestAnimationFrame(fn);
       } else {
         this.requestAnimationFrame.call(window, fn);

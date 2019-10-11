@@ -339,7 +339,11 @@ elation.require([
         this.initializedPolyfill = true;
         //InitializeWebVRPolyfill();
       }
-      if (navigator.getVRDisplays) {
+      if (navigator.xr) {
+        // WebXR Working Draft
+        // Initialize the XR session on load, to handle the case where this is in-XR navigation (eg, exokit)
+        this.startXR();
+      } else if (navigator.getVRDisplays) {
         // WebVR 1.0 spec
         navigator.getVRDisplays().then(function(n) {
           for (var i = 0; i < n.length; i++) {  
@@ -358,7 +362,6 @@ elation.require([
           for (var i = 0; i < n.length; i++) {  
             if (n[i] instanceof HMDVRDevice) {
               this.vrdisplay = n[i];
-              console.log('COOL FOUND A VR DEVICE', this.vrdisplay);
               setTimeout(elation.bind(this, function() {
                 //this.engine.client.toggleVR({value: 1});
               }), 1000);
@@ -628,6 +631,21 @@ if (vivehack) {
         }
       }
       this.getsize();
+    }
+    this.startXR = function(mode='immersive-vr') {
+      let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
+      navigator.xr.requestSession(mode, xroptions).then((session) => {
+        this.rendersystem.renderer.vr.setSession(session, { frameOfReferenceType: 'stage' });
+        this.rendersystem.renderer.vr.enabled = true;
+        this.xrsession = session;
+      });
+    }
+    this.stopXR = function() {
+      if (this.xrsession) {
+        this.rendersystem.renderer.vr.setSession(null);
+        this.rendersystem.renderer.vr.enabled = false;
+        this.xrsession.end();
+      }
     }
     this.updateCameras = (function() {
       // Closure scratch variables
