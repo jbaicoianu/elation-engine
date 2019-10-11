@@ -366,6 +366,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         // Store the player's current view frustum so we can do visibility testing in scripts
         this.camera.camera.updateProjectionMatrix(); // FIXME - this should only be needed if camera parameters change
         this.viewfrustum.setFromMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
+
+        if (ev.data.pose) {
+          this.updateXR(ev.data.pose);
+        }
       }
     })();
     this.updateHMD = (function() {
@@ -431,6 +435,24 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
       }
     })();
+    this.updateXR = function(framedata) {
+      if (framedata && framedata.getViewerPose) {
+        let pose = framedata.getViewerPose();
+        let p = pose.transform.position;
+        if (p && !p.includes(NaN)) {
+          var pos = this.neck.objects.dynamics.position;
+          pos.fromArray(p);
+          //pos.y += this.properties.height * .8 - this.properties.fatness;
+        }
+        var o = pose.transform.orientation;
+        if (o && !o.includes(NaN) && !o.includes(Infinity) && !o.includes(-Infinity)) {
+          this.head.objects.dynamics.orientation.fromArray(o);
+        }
+        this.waspresentingvr = true;
+        this.head.objects.dynamics.updateState();
+        this.refresh();
+      }
+    }
     this.updateControls = function() {
     }
     this.updateMouseControls = (function() {

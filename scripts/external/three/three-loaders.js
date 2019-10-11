@@ -13483,7 +13483,7 @@ THREE.OBJLoader = ( function () {
 
 			addLineGeometry: function ( vertices, uvs ) {
 
-				this.object.geometry.type = 'Line';
+				//this.object.geometry.type = 'Line';
 
 				var vLen = this.vertices.length;
 				var uvLen = this.uvs.length;
