@@ -466,7 +466,7 @@ elation.require(deps, function() {
         player.camera.remove(this.menu);
         if (this.configmenu) this.configmenu.hide();
         //if (this.loaded) {
-          player.enable();
+          //player.enable();
         //}
         this.menuShowing = false;
         this.menu.disable();
