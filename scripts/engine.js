@@ -296,7 +296,7 @@ elation.require(deps, function() {
         fullsize: true,
         resolution: null,
         useWebVRPolyfill: true,
-        enablePostprocessing: true
+        enablePostprocessing: false
       };
       this.setEngineConfig(this.args);
       this.initEngine();
