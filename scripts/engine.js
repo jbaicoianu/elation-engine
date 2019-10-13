@@ -78,10 +78,12 @@ elation.require(deps, function() {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
         this.frame(this.boundfunc);
       }
+      let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
       var evdata = {
         ts: ts,
         delta: (ts - this.lastupdate) / 1000,
-        pose: xrpose
+        pose: xrpose,
+        xrspace: xrspace
       };
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
