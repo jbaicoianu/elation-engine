@@ -368,7 +368,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         this.viewfrustum.setFromMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
 
         if (ev.data.pose) {
-          this.updateXR(ev.data.pose);
+          this.updateXR(ev.data.pose, ev.data.xrspace);
         }
       }
     })();
@@ -435,18 +435,19 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
       }
     })();
-    this.updateXR = function(framedata) {
-      if (framedata && framedata.getViewerPose) {
-        let pose = framedata.getViewerPose();
+    this.updateXR = function(framedata, xrspace) {
+      if (framedata && framedata.getViewerPose && xrspace) {
+        let pose = framedata.getViewerPose(xrspace);
+        if (!pose) return;
         let p = pose.transform.position;
-        if (p && !p.includes(NaN)) {
+        var o = pose.transform.orientation;
+        if (p) {
           var pos = this.neck.objects.dynamics.position;
-          pos.fromArray(p);
+          //pos.copy(p);
           //pos.y += this.properties.height * .8 - this.properties.fatness;
         }
-        var o = pose.transform.orientation;
-        if (o && !o.includes(NaN) && !o.includes(Infinity) && !o.includes(-Infinity)) {
-          this.head.objects.dynamics.orientation.fromArray(o);
+        if (o) {
+          //this.head.objects.dynamics.orientation.copy(o);
         }
         this.waspresentingvr = true;
         this.head.objects.dynamics.updateState();
