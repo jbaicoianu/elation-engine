@@ -633,12 +633,15 @@ if (vivehack) {
       this.getsize();
     }
     this.startXR = function(mode='immersive-vr') {
-      let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
-      navigator.xr.requestSession(mode, xroptions).then((session) => {
-        this.rendersystem.renderer.vr.setSession(session, { frameOfReferenceType: 'stage' });
-        this.rendersystem.renderer.vr.enabled = true;
-        this.xrsession = session;
-      });
+      if (!this.xrsession) {
+        let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
+        navigator.xr.requestSession(mode, xroptions).then((session) => {
+          session.requestReferenceSpace('local-floor').then(refspace => { console.log('refspace', refspace); this.xrspace = refspace; });
+          this.rendersystem.renderer.vr.setSession(session, { frameOfReferenceType: 'stage' });
+          this.rendersystem.renderer.vr.enabled = true;
+          this.xrsession = session;
+        });
+      }
     }
     this.stopXR = function() {
       if (this.xrsession) {
@@ -744,6 +747,10 @@ if (vivehack) {
         if (this.args.enablePostprocessing) {
           this.composer.render(delta);
         } else {
+          if (this.xrsession) {
+            let layer = this.xrsession.renderState.baseLayer;
+            this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+          }
           this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
         }
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
