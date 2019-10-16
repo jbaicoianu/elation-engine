@@ -7,21 +7,19 @@ if (typeof THREE == 'undefined') var THREE = {};
 
 THREE.ColladaLoader = function ( manager ) {
 
-	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+	THREE.Loader.call( this, manager );
 
 };
 
-THREE.ColladaLoader.prototype = {
+THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype ), {
 
 	constructor: THREE.ColladaLoader,
-
-	crossOrigin: 'anonymous',
 
 	load: function ( url, onLoad, onProgress, onError ) {
 
 		var scope = this;
 
-		var path = ( scope.path === undefined ) ? THREE.LoaderUtils.extractUrlBase( url ) : scope.path;
+		var path = ( scope.path === '' ) ? THREE.LoaderUtils.extractUrlBase( url ) : scope.path;
 
 		var loader = new THREE.FileLoader( scope.manager );
 		loader.setPath( scope.path );
@@ -33,20 +31,6 @@ THREE.ColladaLoader.prototype = {
 
 	},
 
-	setPath: function ( value ) {
-
-		this.path = value;
-		return this;
-
-	},
-
-	setResourcePath: function ( value ) {
-
-		this.resourcePath = value;
-		return this;
-
-	},
-
 	options: {
 
 		set convertUpAxis( value ) {
@@ -54,13 +38,6 @@ THREE.ColladaLoader.prototype = {
 			console.warn( 'THREE.ColladaLoader: options.convertUpAxis() has been removed. Up axis is converted automatically.' );
 
 		}
-
-	},
-
-	setCrossOrigin: function ( value ) {
-
-		this.crossOrigin = value;
-		return this;
 
 	},
 
@@ -1207,6 +1184,10 @@ THREE.ColladaLoader.prototype = {
 						data.parameters = parseEffectParameters( child );
 						break;
 
+					case 'extra':
+						data.extra = parseEffectExtra( child );
+						break;
+
 				}
 
 			}
@@ -1367,6 +1348,10 @@ THREE.ColladaLoader.prototype = {
 
 						break;
 
+					case 'bump':
+						data[ child.nodeName ] = parseEffectExtraTechniqueBump( child );
+						break;
+
 				}
 
 			}
@@ -1412,6 +1397,9 @@ THREE.ColladaLoader.prototype = {
 					case 'double_sided':
 						data[ child.nodeName ] = parseInt( child.textContent );
 						break;
+					case 'bump':
+						data[ child.nodeName ] = parseEffectExtraTechniqueBump( child );
+						break;
 
 				}
 
@@ -1420,6 +1408,25 @@ THREE.ColladaLoader.prototype = {
 			return data;
 
 		}
+		function parseEffectExtraTechniqueBump( xml ) {
+			var data = {};
+
+			for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
+
+				var child = xml.childNodes[ i ];
+
+				if ( child.nodeType !== 1 ) continue;
+
+				switch ( child.nodeName ) {
+					case 'texture':
+						data[ child.nodeName ] = { id: child.getAttribute( 'texture' ), texcoord: child.getAttribute( 'texcoord' ), extra: parseEffectParameterTexture( child ) };
+						break;
+				}
+			}
+
+			return data;
+		}
+
 
 		function buildEffect( data ) {
 
@@ -1487,7 +1494,7 @@ THREE.ColladaLoader.prototype = {
 
 			var effect = getEffect( data.url );
 			var technique = effect.profile.technique;
-			var extra = effect.profile.extra;
+			var extra = effect.profile.technique.extra;
 
 			var material;
 
@@ -1508,7 +1515,7 @@ THREE.ColladaLoader.prototype = {
 
 			}
 
-			material.name = data.name;
+			material.name = data.name || '';
 
 			function getTexture( textureObject ) {
 
@@ -1680,9 +1687,20 @@ THREE.ColladaLoader.prototype = {
 
 			//
 
-			if ( extra !== undefined && extra.technique !== undefined && extra.technique.double_sided === 1 ) {
-
-				material.side = THREE.DoubleSide;
+			if ( extra !== undefined && extra.technique !== undefined ) {
+				let techniques = extra.technique;
+				for (let k in techniques) {
+					let v = techniques[k];
+					switch (k) {
+						case 'double_sided':
+							material.side = (v === 1 ? THREE.DoubleSide : THREE.FrontSide);
+							break;
+						case 'bump':
+							material.normalMap = getTexture( v.texture );
+							material.normalScale = new THREE.Vector2(1,1);
+							break;
+					}
+				}
 
 			}
 
@@ -1836,7 +1854,7 @@ THREE.ColladaLoader.prototype = {
 
 			}
 
-			camera.name = data.name;
+			camera.name = data.name || '';
 
 			return camera;
 
@@ -2133,7 +2151,7 @@ THREE.ColladaLoader.prototype = {
 						var semantic = child.getAttribute( 'semantic' );
 						var offset = parseInt( child.getAttribute( 'offset' ) );
 						var set = parseInt( child.getAttribute( 'set' ) );
-						var inputname = (set > 0 ? semantic + set : semantic);
+						var inputname = ( set > 0 ? semantic + set : semantic );
 						primitive.inputs[ inputname ] = { id: id, offset: offset };
 						primitive.stride = Math.max( primitive.stride, offset + 1 );
 						if ( semantic === 'TEXCOORD' ) primitive.hasUV = true;
@@ -2827,7 +2845,7 @@ THREE.ColladaLoader.prototype = {
 						break;
 
 					case 'mass':
-						data.mass = parseFloats( child.textContent )[0];
+						data.mass = parseFloats( child.textContent )[ 0 ];
 						break;
 
 				}
@@ -3816,6 +3834,35 @@ THREE.ColladaLoader.prototype = {
 
 		}
 
+		// convert the parser error element into text with each child elements text
+		// separated by new lines.
+
+		function parserErrorToText( parserError ) {
+
+			var result = '';
+			var stack = [ parserError ];
+
+			while ( stack.length ) {
+
+				var node = stack.shift();
+
+				if ( node.nodeType === Node.TEXT_NODE ) {
+
+					result += node.textContent;
+
+				} else {
+
+					result += '\n';
+					stack.push.apply( stack, node.childNodes );
+
+				}
+
+			}
+
+			return result.trim();
+
+		}
+
 		if ( text.length === 0 ) {
 
 			return { scene: new THREE.Scene() };
@@ -3825,6 +3872,30 @@ THREE.ColladaLoader.prototype = {
 		var xml = new DOMParser().parseFromString( text, 'application/xml' );
 
 		var collada = getElementsByTagName( xml, 'COLLADA' )[ 0 ];
+
+		var parserError = xml.getElementsByTagName( 'parsererror' )[ 0 ];
+		if ( parserError !== undefined ) {
+
+			// Chrome will return parser error with a div in it
+
+			var errorElement = getElementsByTagName( parserError, 'div' )[ 0 ];
+			var errorText;
+
+			if ( errorElement ) {
+
+				errorText = errorElement.textContent;
+
+			} else {
+
+				errorText = parserErrorToText( parserError );
+
+			}
+
+			console.error( 'THREE.ColladaLoader: Failed to parse collada file.\n', errorText );
+
+			return null;
+
+		}
 
 		// metadata
 
@@ -3917,7 +3988,7 @@ THREE.ColladaLoader.prototype = {
 
 	}
 
-};
+} );
 /**
  * @author Kyle-Larson https://github.com/Kyle-Larson
  * @author Takahiro https://github.com/takahirox
