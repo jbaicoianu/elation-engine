@@ -750,8 +750,10 @@ if (vivehack) {
           if (this.xrsession) {
             let layer = this.xrsession.renderState.baseLayer;
             this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+            this.rendersystem.renderer.render(this.scene, this.camera);
+            this.rendersystem.renderer.setFramebuffer(null);
           }
-          this.rendersystem.renderer.render(this.scene, this.camera); //, this.depthTarget, true);
+          this.rendersystem.renderer.render(this.scene, this.camera);
         }
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           this.rendersystem.renderer.vr.submitFrame();
