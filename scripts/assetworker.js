@@ -484,13 +484,15 @@ elation.require([
       return new Promise(elation.bind(this, function(resolve, reject) { 
         //var data = this.convertArrayBufferToString(bindata);
         //var json = JSON.parse(data);
-        var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
-        var proxypath = this.getFullURL(path);
+        var path = THREE.LoaderUtils.extractUrlBase( this.getProxiedURL(job.data.src) );
+        var proxypath = this.getProxiedURL(path);
+
 /*
         if (path.match(/^https?:\/\//)) {
           proxypath = elation.engine.assets.corsproxy + path;
         }
 */
+
         //THREE.GLTFLoader.Shaders.removeAll();
         var loader = new THREE.GLTFLoader();
         loader.parse(bindata, proxypath, elation.bind(this, function(modeldata) {
