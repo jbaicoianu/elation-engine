@@ -250,7 +250,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.turnVector.set(0,0,0);
       this.enableuse = false;
       this.enabled = true;
-      controls.requestPointerLock();
+      //controls.requestPointerLock();
 
       // FIXME - quick hack to ensure we don't refresh before everything is initialized
       if (this.objects.dynamics) {
