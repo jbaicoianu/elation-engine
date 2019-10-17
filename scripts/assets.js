@@ -808,6 +808,7 @@ if (!ENV_IS_BROWSER) return;
     src: false,
     sbs3d: false,
     ou3d: false,
+    hasalpha: false,
     reverse3d: false,
     auto_play: false,
     texture: false,
@@ -818,11 +819,12 @@ if (!ENV_IS_BROWSER) return;
       video.src = url;
       video.crossOrigin = 'anonymous';
       this._video = video;
+      let textureFormat = (this.hasalpha ? THREE.RGBAFormat : THREE.RGBFormat);
       if (this.sbs3d) {
-        this._texture = new THREE.SBSVideoTexture(video);
+        this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
         this._texture.reverse = this.reverse3d;
       } else {
-        this._texture = new THREE.VideoTexture(video);
+        this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
       }
       this._texture.minFilter = THREE.LinearFilter;
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
