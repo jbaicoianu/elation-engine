@@ -574,7 +574,7 @@ if (!ENV_IS_BROWSER) return;
       var texture = this._texture;
       texture.image = this.processImage(image);
       texture.needsUpdate = true;
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.wrapS = texture.wrapT = (this.tex_linear ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping);
       texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       this.loaded = true;
       this.uploaded = false;
