@@ -43,7 +43,7 @@ elation.require([
       let rendererargs = {
         antialias: true,
         logarithmicDepthBuffer: false,
-        alpha: false,
+        alpha: true,
         preserveDrawingBuffer: false,
         enableWebXR: false,
         stencil: false
