@@ -142,6 +142,7 @@ elation.require([
         'obj': new elation.engine.assets.loaders.model_obj(),
         'fbx': new elation.engine.assets.loaders.model_fbx(),
         'ply': new elation.engine.assets.loaders.model_ply(),
+        'stl': new elation.engine.assets.loaders.model_stl(),
         'wrl': new elation.engine.assets.loaders.model_wrl(),
         'gltf': new elation.engine.assets.loaders.model_gltf(),
         'glb': new elation.engine.assets.loaders.model_gltf(),
@@ -189,6 +190,7 @@ elation.require([
         ['obj', '\nvn '],
         ['obj', '\nusemtl '],
         ['ply', 'ply'],
+        ['stl', 'STL'],
         ['bvh', 'HIERARCHY\n'],
         ['wrl', '#VRML'],
         ['gltf', '{'],
@@ -549,6 +551,30 @@ elation.require([
           var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial());
           encoded = mesh.toJSON();
         }
+        resolve(encoded);
+
+        //reject();
+      });
+    },
+
+  }, elation.engine.assets.base);
+  elation.define('engine.assets.loaders.model_stl', {
+    parse: function(data, job) {
+      return new Promise(function(resolve, reject) {
+        var path = THREE.LoaderUtils.extractUrlBase( job.data.src );
+        var proxypath = elation.engine.assets.corsproxy + path;
+
+        var loader = new THREE.STLLoader();
+
+        var geometry = loader.parse(data);
+        var encoded = false;
+
+        if (!geometry.attributes.normal) {
+          geometry.computeVertexNormals();
+        }
+        geometry.applyMatrix(new THREE.Matrix4().makeScale(.01, .01, .01));
+        var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial());
+        encoded = mesh.toJSON();
         resolve(encoded);
 
         //reject();
