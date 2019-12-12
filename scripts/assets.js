@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif'], function() {
+elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.textdecoder-polyfill'], function() {
 
   THREE.Cache.enabled = true;
 
@@ -76,6 +76,13 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
       if (corsproxy != '') {
         this.setCORSProxy(corsproxy, dummy);
       }
+    },
+    initTextureLoaders: function(rendersystem, libpath) {
+      let renderer = rendersystem.renderer;
+      let loader = new THREE.BasisTextureLoader();
+      loader.setTranscoderPath(libpath);
+      loader.detectSupport(renderer);
+      this.basisloader = loader;
     },
     loadAssetPack: function(url, baseurl) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
@@ -505,12 +512,21 @@ if (!ENV_IS_BROWSER) return;
           elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
             elation.bind(this, function(events) {
               var xhr = events[0].target;
+              // FIXME - we're looking at both mime type and file extension here, we should really just use one or the other
               var type = this.contenttype = xhr.getResponseHeader('content-type')
-              if (typeof createImageBitmap == 'function' && type != 'image/gif') {
-                var blob = new Blob([xhr.response], {type: type});
-                createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleBitmapError));
+              let imagetype = this.detectImageType();
+
+              if (imagetype == 'basis') {
+                let loader = elation.engine.assets.basisloader;
+                loader._createTexture( events[0].target.response )
+                  .then( texture => this.handleLoadBasis(texture) )
               } else {
-                this.loadImageByURL();
+                if (typeof createImageBitmap == 'function' && type != 'image/gif') {
+                  var blob = new Blob([xhr.response], {type: type});
+                  createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleBitmapError));
+                } else {
+                  this.loadImageByURL();
+                }
               }
 
               this.state = 'processing';
@@ -573,6 +589,18 @@ if (!ENV_IS_BROWSER) return;
       this.rawimage = image;
       var texture = this._texture;
       texture.image = this.processImage(image);
+      texture.needsUpdate = true;
+      texture.wrapS = texture.wrapT = (this.tex_linear ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping);
+      texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
+      this.loaded = true;
+      this.uploaded = false;
+
+      this.sendLoadEvents();
+    },
+    handleLoadBasis: function(texture) {
+      //console.log('loaded Basis texture', this, texture);
+      this._texture = texture;
+      this._texture.generateMipmaps = false;
       texture.needsUpdate = true;
       texture.wrapS = texture.wrapT = (this.tex_linear ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping);
       texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
@@ -735,12 +763,12 @@ if (!ENV_IS_BROWSER) return;
       // We might also be able to get hints from the XHR loader about the image's MIME type
 
       var type = 'jpg';
-      if (this.contenttype) {
-        var map = {
-          'image/jpeg': 'jpg',
-          'image/png': 'png',
-          'image/gif': 'gif',
-        };
+      var map = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+      };
+      if (this.contenttype && map[this.contenttype]) {
         type = map[this.contenttype];
       } else if (this.src.match(/\.(.*?)$/)) {
         var parts = this.src.split('.');
