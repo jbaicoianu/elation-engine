@@ -5,7 +5,7 @@ elation.require([ ], function() {
     this.enabled = true;
     this.volume = 100;
 
-    Object.defineProperty(this, 'volume', {get: function() { return this.reallistener.getMasterVolume(); }, set: function(v) { console.log('im a guy', v);this.reallistener.setMasterVolume(v); }});
+    Object.defineProperty(this, 'volume', {get: function() { return this.reallistener.getMasterVolume(); }, set: function(v) { this.reallistener.setMasterVolume(v); }});
 
     this.system_attach = function(ev) {
       console.log('INIT: sound');
