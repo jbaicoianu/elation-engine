@@ -72,6 +72,8 @@ elation.require([
       this.renderer.toneMappingExposure = 1;
       this.renderer.toneMappingWhitePoint = 1;
 
+      this.renderer.debug.checkShaderErrors = false;
+
       this.lastframetime = 0;
 
       elation.events.add(this.engine.systems.world, 'world_change,world_thing_add,world_thing_remove,world_thing_change', this);
