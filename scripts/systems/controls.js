@@ -891,7 +891,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       //ev.preventDefault();
     }
     this.touchmove = function(ev) {
-      if (ev.touches.length == 1) {
+      //if (ev.touches.length == 1) {
         var newev = {
           type: 'mousemove',
           screenX: ev.touches[0].screenX,
@@ -907,9 +907,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         newev.movementY = (this.lasttouchpos[1] - newev.clientY) / devicePixelRatio;
         this.lasttouchpos = [newev.clientX, newev.clientY];
         this.mousemove(newev);
-      } else {
-        ev.preventDefault();
-      }
+      //} else {
+      //  ev.preventDefault();
+      //}
     }
     this.touchend = function(ev) {
       if (ev.touches.length == 0) {
