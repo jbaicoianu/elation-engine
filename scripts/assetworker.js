@@ -7,6 +7,7 @@ elation.require([
     'engine.external.zlib.inflate',
     'engine.external.xmldom',
     'engine.external.three.three', 'engine.external.three.three-loaders',
+    'engine.external.textdecoder-polyfill'
   ], function() {
 
   elation.define('engine.assetworker', {
