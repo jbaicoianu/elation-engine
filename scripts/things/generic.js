@@ -1459,8 +1459,8 @@ elation.component.add("engine.things.generic", function() {
       var dir = thispos.clone().sub(otherpos).normalize();
       var axis = new THREE.Vector3().crossVectors(up, dir);
       var angle = dir.dot(up);
-      //this.properties.orientation.setFromAxisAngle(axis, -angle);
-console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray(), angle, this.properties.orientation.toArray());
+      this.properties.orientation.setFromAxisAngle(axis, -angle);
+//console.log(thispos.toArray(), otherpos.toArray(), dir.toArray(), axis.toArray(), angle, this.properties.orientation.toArray());
     }
   }
   this.serialize = function(serializeAll) {
