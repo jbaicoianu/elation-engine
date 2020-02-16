@@ -72,6 +72,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.viewfrustum = new THREE.Frustum();
       this.viewmatrix = new THREE.Matrix4();
 
+      this.gravityVector = new THREE.Vector3();
+
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
       elation.events.add(this, 'thing_create', elation.bind(this, this.handleCreate));
@@ -149,7 +151,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         this.properties.flying = value;
         this.usegravity = !this.flying;
         if (this.gravityForce) {
-          this.gravityForce.update(new THREE.Vector3(0,(this.usegravity ? -9.8 : 0), 0));
+          this.gravityForce.update(this.gravityVector.set(0,(this.usegravity ? -9.8 : 0), 0));
         }
       //}
     }
@@ -182,7 +184,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.createForces = function() {
       this.frictionForce = this.objects.dynamics.addForce("friction", this.properties.movefriction);
-      this.gravityForce = this.objects.dynamics.addForce("gravity", new THREE.Vector3(0,0,0));
+      this.gravityForce = this.objects.dynamics.addForce("gravity", this.gravityVector);
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.jumpForce = this.objects.dynamics.addForce("static", {});
       this.objects.dynamics.restitution = 0.1;
@@ -238,7 +240,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.enable = function() {
       var controls = this.engine.systems.controls;
-      this.gravityForce.update(new THREE.Vector3(0,this.usegravity * -9.8 , 0));
+      this.gravityForce.update(this.gravityVector.set(0,this.usegravity * -9.8 , 0));
       controls.activateContext('player');
       
       if (this.engine.systems.render.views.main) {
@@ -267,7 +269,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.enableuse = false;
       if (this.objects.dynamics) {
         this.moveForce.update(this.moveVector.set(0,0,0));
-        this.gravityForce.update(new THREE.Vector3(0,0,0));
+        this.gravityForce.update(this.gravityVector.set(0,0,0));
         this.objects.dynamics.angular.set(0,0,0);
         this.objects.dynamics.velocity.set(0,0,0);
         this.objects.dynamics.updateState();
