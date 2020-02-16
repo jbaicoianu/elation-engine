@@ -15,7 +15,7 @@ elation.require(["physics.cyclone"], function() {
 
       // Only show second framerate gauge if physics system is decoupled from framerate
       if (this.async && ENV_IS_BROWSER) {
-        this.initstats();
+        //this.initstats();
       }
     }
     this.engine_start = function(ev) {
@@ -185,7 +185,6 @@ elation.require(["physics.cyclone"], function() {
           for (var k in obj.objects['dynamics'].forces) {
             forceargs.force = obj.objects['dynamics'].forces[k];
             var type = false;
-console.log('A FORCE!', forceargs.force);
             for (var f in elation.physics.forces) {
               if (forceargs.force instanceof elation.physics.forces[f]) {
                 this.spawn('physics_forces_' + f, obj.name + '_force_' + f + '_' + k, forceargs);
@@ -223,7 +222,7 @@ console.log('A FORCE!', forceargs.force);
     this.postinit = function() {
       this.defineProperties({
         body:        {type: 'object'},
-        fadetime:    {type: 'float', default: 2.0},
+        fadetime:    {type: 'float', default: 5.0},
       });
       this.segmentOffset = 0;
       this.numSegments = this.fadetime * 60 / 2;
@@ -234,8 +233,8 @@ console.log('A FORCE!', forceargs.force);
       let geo = new THREE.BufferGeometry();
       let positions = new Float32Array(this.numSegments * 3 * 2);
       let opacity = new Float32Array(this.numSegments * 2);
-      geo.addAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geo.addAttribute('opacity', new THREE.BufferAttribute(opacity, 1));
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('opacity', new THREE.BufferAttribute(opacity, 1));
       let material1 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: false, opacity: .05, blending: THREE.AdditiveBlending, linewidth: 4});
       let material2 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: true, opacity: .2, blending: THREE.AdditiveBlending, linewidth: 4});
       this.geometry = geo;
@@ -303,6 +302,19 @@ console.log('A FORCE!', forceargs.force);
       });
       elation.events.add(this.properties.body, 'physics_collide', this);
       this.collisioncount = 0;
+      this.nummarkers = 100;
+      this.currentmarker = 0;
+      this.markerpool = [];
+/*
+      for (let i = 0; i < this.nummarkers; i++) {
+        this.markerpool[i] = this.spawn('physics_collision', this.name + '_collision_' + i, {
+          pickable: false, 
+          mouseevents: false, 
+          persist: false, 
+          physical: false,
+        }, true);
+      }
+*/
     }
     this.createObject3D = function() {
       if (this.objects['3d']) return this.objects['3d'];
@@ -472,15 +484,29 @@ console.log('my offset', collider.offset, collider);
     */
     this.physics_collide = function(ev) {
       var collision = ev.data;
-      // FIXME - this is inefficient as all hell.  We should use a particle system, or at LEAST re-use and limit the max collisions visualized at once
-      this.spawn('physics_collision', this.name + '_collision_' + ev.timeStamp, {
-        collision: collision,
-        position: collision.point,
-        pickable: false, 
-        mouseevents: false, 
-        persist: false, 
-        physical: false
-      }, true);
+      this.getCollisionMarker(collision);
+    }
+    this.getCollisionMarker = function(collision) {
+      let markerpool = this.getMarkerPool();
+      let marker = markerpool[markerpool.currentmarker];
+      marker.ping(collision);
+      markerpool.currentmarker = (markerpool.currentmarker + 1) % markerpool.length;
+    }
+    this.getMarkerPool = function() {
+      if (!elation.engine.things.physics_collision.markerpool) {
+        elation.engine.things.physics_collision.markerpool = [];
+        for (let i = 0; i < this.nummarkers; i++) {
+          elation.engine.things.physics_collision.markerpool[i] = this.spawn('physics_collision', this.name + '_collision_' + i, {
+            pickable: false,
+            mouseevents: false,
+            persist: false,
+            physical: false,
+            visible: false,
+          }, true);
+        }
+        elation.engine.things.physics_collision.markerpool.currentmarker = 0;
+      }
+     return elation.engine.things.physics_collision.markerpool;
     }
   }, elation.engine.things.generic);
 
@@ -489,17 +515,24 @@ console.log('my offset', collider.offset, collider);
       this.defineProperties({
         collision:  {type: 'object'},
         forcescale: { type: 'float', default: .1 },
-        fadetime: { type: 'float', default: 5.0 }
+        fadetime: { type: 'float', default: 10.0 }
       });
-      this.spawntime = new Date().getTime();
-      this.elapsed = 0;
-      elation.events.add(this.properties.collision.bodies[0], 'physics_collision_resolved', this);
-      elation.events.add(this.engine, 'engine_frame', this);
-
       if (!elation.engine.things.physics_collision.texture) {
         elation.engine.things.physics_collision.texture = this.generateGrid(0xff0000);
       }
       this.texture = elation.engine.things.physics_collision.texture;
+      elation.events.add(this.engine, 'engine_frame', this);
+    }
+    this.ping = function(collision) {
+      this.position.copy(collision.point);
+      this.spawntime = new Date().getTime();
+      this.elapsed = 0;
+      this.plane.lookAt(collision.normal.clone().add(collision.point));
+
+      this.visible = true;
+
+      //this.updateArrow(this.arrows[3], collision.impulses[1]);
+      //elation.events.add(collision.bodies[0], 'physics_collision_resolved', this);
     }
     this.createObject3D = function() {
       this.materials = [];
@@ -512,19 +545,20 @@ console.log('my offset', collider.offset, collider);
         depthWrite: false, 
         depthTest: false, 
         opacity: 1,
-        blending: THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
       });
       var plane = new THREE.Mesh(planegeo, planemat);
       var obj = new THREE.Object3D();
       obj.add(plane);
-      plane.lookAt(collision.normal);
+      this.plane = plane;
       this.materials.push(planemat);
       this.objects['3d'] = obj;
 
       //console.log('IMPULSES', collision, collision.impulses, collision.contactToWorld);
       var origin = new THREE.Vector3(0,0,0);
 
+/*
       var m = collision.contactToWorld.elements;
       //var arrowaxisx = this.generateArrow(new THREE.Vector3(m[0], m[1], m[2]), origin, 1, 0xff0000);
       //obj.add(arrowaxisx);
@@ -533,7 +567,18 @@ console.log('my offset', collider.offset, collider);
       //var arrowaxisz = this.generateArrow(new THREE.Vector3(m[8], m[9], m[10]), origin, 1, 0x0000ff);
       //obj.add(arrowaxisz);
 
-      this.arrows = [arrowaxisy]; //[arrowaxisx, arrowaxisy, arrowaxisz];
+*/
+      let arrowaxisy = this.generateArrow(new THREE.Vector3(0, 0, 1), origin, 1, 0x00ff00);
+      plane.add(arrowaxisy);
+/*
+      let velocity_orig = this.generateArrow(new THREE.Vector3(0, 0, 1), origin, 1, 0x0000ff);
+      plane.add(velocity_orig);
+      let velocity_reflect = this.generateArrow(new THREE.Vector3(0, 0, 1), origin, 1, 0x0000ff);
+      plane.add(velocity_reflect);
+      let impulse = this.generateArrow(new THREE.Vector3(0, 0, 1), origin, 1, 0xffff00);
+      plane.add(impulse);
+*/
+      this.arrows = [arrowaxisy]; //, velocity_orig, velocity_reflect, impulse]; //[arrowaxisx, arrowaxisy, arrowaxisz];
       return obj;
     }
     this.generateArrow = function(dir, origin, len, color) {
@@ -545,6 +590,15 @@ console.log('my offset', collider.offset, collider);
         this.materials.push(mat);
       }
       return arrow;
+    }
+    this.updateArrow = function(arrow, dir, len=null, origin=null) {
+      arrow.setDirection(dir);
+      if (len !== null) {
+        arrow.setLength(len);
+      }
+      if (origin !== null) {
+        arrow.position.copy(origin);
+      }
     }
     this.generateGrid = function(color, lines) {
       if (!color) color = 0xff0000;
@@ -560,7 +614,7 @@ console.log('my offset', collider.offset, collider);
 
       ctx.fillStyle = 'rgba(255,0,0,.25)';
       ctx.fillRect(0, 0, cw, ch);
-      ctx.strokeStyle = 'rgba(255,0,0,.5)';
+      ctx.strokeStyle = 'rgba(255,0,0,.75)';
 
       for (var y = 0; y <= lines; y++) {
         for (var x = 0; x <= lines; x++) {
@@ -603,13 +657,14 @@ console.log('my offset', collider.offset, collider);
       for (var i = 0; i < collision.impulses.length; i++) {
         if (collision.impulses[i]) {
           var len = collision.impulses[i].length();
+console.log('ffff', collision.impulses[i], len);
           if (len > 0) {
             var dir = collision.impulses[i].clone().divideScalar(len);
             var impulsearrow = this.generateArrow(dir, origin, len * this.properties.forcescale, 0x990099);
-            this.arrows.push(impulsearrow);
-            //obj.add(impulsearrow);
+            //this.arrows.push(impulsearrow);
+            //this.plane.add(impulsearrow);
             // FIXME - need to remove object from proper parent when done fading
-            collision.bodies[i].object.objects['3d'].add(impulsearrow);
+            //collision.bodies[i].object.objects['3d'].add(impulsearrow);
           }
         }
       }
@@ -623,11 +678,13 @@ console.log('my offset', collider.offset, collider);
           this.materials[i].opacity = opacity;
         }
       } else {
+/*
         for (var i = 0; i < this.arrows.length; i++) {
           this.arrows[i].parent.remove(this.arrows[i]);
         }
         elation.events.remove(this.engine, 'engine_frame', this);
         this.die();
+*/
       }
     }
   }, elation.engine.things.generic);
@@ -663,13 +720,16 @@ console.log('my offset', collider.offset, collider);
 
       return obj;
     }
-    this.physics_force_apply = function() {
-      var force = (this.force.absolute ? this.properties.body.worldToLocalDir(this.properties.force.force.clone()) : this.properties.force.force.clone());
-      var len = force.length();
-      force.divideScalar(len);
-      this.arrow.setDirection(force);
-      this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
-    }
+    this.physics_force_apply = (function() {
+      let forcevec = new THREE.Vector3();
+      return function() {
+        var force = (this.force.absolute ? this.properties.body.worldToLocalDir(forcevec.copy(this.properties.force.force)) : forcevec.copy(this.properties.force.force));
+        var len = force.length();
+        force.divideScalar(len);
+        this.arrow.setDirection(force);
+        this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
+      }
+    })();
   }, elation.engine.things.generic);
   elation.component.add("engine.things.physics_forces_gravity", function(args) {
     this.postinit = function() {
@@ -706,13 +766,16 @@ console.log('my offset', collider.offset, collider);
       
       return obj;
     }
-    this.physics_force_apply = function() {
-      var grav = this.properties.body.worldToLocalDir(this.properties.force.gravsum.clone());
-      var len = grav.length();
-      grav.divideScalar(len);
-      this.arrow.setDirection(grav);
-      this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
-    }
+    this.physics_force_apply = (function() {
+      let gravforce = new THREE.Vector3();
+      return function() {
+        var grav = this.properties.body.worldToLocalDir(gravforce.copy(this.properties.force.gravsum));
+        var len = grav.length();
+        grav.divideScalar(len);
+        this.arrow.setDirection(grav);
+        this.arrow.setLength(len / this.properties.body.mass * this.properties.forcescale);
+      }
+    })();
   }, elation.engine.things.generic);
 
   elation.component.add("engine.things.physics_forces_buoyancy", function(args) {
