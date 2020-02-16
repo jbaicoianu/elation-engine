@@ -35,6 +35,12 @@ elation.require([
       elation.events.fire({type: 'render_view_add', element: this, data: this.views[viewname]});
       return this.views[viewname];
     }
+    this.view_remove = function(viewname) {
+      if (viewname in this.views) {
+        this.views[viewname].destroy();
+        delete this.views[viewname];
+      }
+    }
 
     this.system_attach = function(ev) {
       console.log('INIT: render');
@@ -58,8 +64,8 @@ elation.require([
       this.renderer.setClearColor(0x000000, 1);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.vr.enabled = false;
-      //this.renderer.vr.manageCameraPosition = true;
+      this.renderer.xr.enabled = false;
+      //this.renderer.xr.manageCameraPosition = true;
       //this.renderer.setAnimationLoop((ev) => this.render());
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
@@ -97,6 +103,7 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       this.lastframetime += ev.data.delta;
+      // If we've got an active XR session, we'll be rendering using its rAF callback instead of our main engine loop's
       this.render();
     }
     this.render = function(ev) {
@@ -109,9 +116,11 @@ elation.require([
       if (this.forcerefresh || this.dirty) {
         //console.log('FRAME: render');
         this.dirty = false;
-        this.renderer.clear();
+        //this.renderer.clear();
         for (var k in this.views) {
-          this.views[k].render(this.lastframetime);
+          if (!this.views[k].xrsession) {
+            this.views[k].render(this.lastframetime);
+          }
         }
         this.lastframetime = 0;
       }
@@ -340,6 +349,10 @@ elation.require([
       if (this.useWebVRPolyfill && ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
         this.initializedPolyfill = true;
         //InitializeWebVRPolyfill();
+      }
+      if (this.args.xrsession) {
+        this.xrsession = this.args.xrsession;
+        this.xrsession.requestAnimationFrame(() => this.handleXRFrame(this.xrsession));
       }
       if (navigator.xr) {
         // WebXR Working Draft
@@ -595,7 +608,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
         var player = this.engine.client.player;
 
-        this.rendersystem.renderer.vr.setDevice(this.vrdisplay);
+        this.rendersystem.renderer.xr.setDevice(this.vrdisplay);
 
         if (newstate && !this.vrdisplay.isPresenting) {
 if (vivehack) {
@@ -617,7 +630,7 @@ if (vivehack) {
               this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
             }
             this.addclass("vr_presenting");
-            this.rendersystem.renderer.vr.enabled = true;
+            this.rendersystem.renderer.r.enabled = true;
             elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
           }));
         } else if (this.vrdisplay.isPresenting && !newstate) {
@@ -627,7 +640,7 @@ if (vivehack) {
             this.getsize();
 //if (vivehack) player.head.reparent(player.neck);
             this.removeclass("vr_presenting");
-            this.rendersystem.renderer.vr.enabled = false;
+            this.rendersystem.renderer.xr.enabled = false;
             elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
           }));
         }
@@ -635,20 +648,21 @@ if (vivehack) {
       this.getsize();
     }
     this.startXR = function(mode='immersive-vr') {
-      if (!this.xrsession) {
-        let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
-        navigator.xr.requestSession(mode, xroptions).then((session) => {
-          session.requestReferenceSpace('local-floor').then(refspace => { console.log('refspace', refspace); this.xrspace = refspace; });
-          this.rendersystem.renderer.vr.setSession(session, { frameOfReferenceType: 'stage' });
-          this.rendersystem.renderer.vr.enabled = true;
-          this.xrsession = session;
-        });
+    }
+    this.handleXRFrame = function(session, frame) {
+      if (session) {
+        this.xrsession = session;
+        if (this.activething && this.activething.updateXR) {
+          this.activething.updateXR(frame);
+        }
+        this.render();
+        session.requestAnimationFrame((ts, frame) => this.handleXRFrame(session, frame));
       }
     }
     this.stopXR = function() {
       if (this.xrsession) {
-        this.rendersystem.renderer.vr.setSession(null);
-        this.rendersystem.renderer.vr.enabled = false;
+        this.rendersystem.renderer.xr.setSession(null);
+        this.rendersystem.renderer.xr.enabled = false;
         this.xrsession.end();
       }
     }
@@ -706,7 +720,7 @@ if (vivehack) {
       }
     })();
     this.render = function(delta) {
-      if (this.scene && this.camera) {
+      if (this.enabled && this.scene && this.camera) {
         if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1] || this.scale != this.scale_old) {
           this.setrendersize(this.size[0], this.size[1]);
         }
@@ -731,7 +745,7 @@ if (vivehack) {
 
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
           var player = this.engine.client.player;
-          this.effects[this.rendermode].camera = this.rendersystem.renderer.vr.getCamera(this.actualcamera);
+          this.effects[this.rendermode].camera = this.rendersystem.renderer.xr.getCamera(this.actualcamera);
           player.updateHMD(this.vrdisplay, this.effects[this.rendermode].camera);
         } else {
           this.effects[this.rendermode].camera = this.actualcamera;
@@ -750,15 +764,24 @@ if (vivehack) {
           this.composer.render(delta);
         } else {
           if (this.xrsession) {
+            this.rendersystem.renderer.xr.enabled = true;
+            //this.rendersystem.renderer.xr.setSession(this.xrsession);
             let layer = this.xrsession.renderState.baseLayer;
-            this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
-            this.rendersystem.renderer.render(this.scene, this.camera);
+            if (layer) {
+              this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+              this.rendersystem.renderer.render(this.scene, this.camera);
+            } else {
+console.log('no layer', this.xrsession.renderState);
+            }
+          } else {
+            this.rendersystem.renderer.xr.enabled = false;
+            //this.rendersystem.renderer.xr.setSession(null);
             this.rendersystem.renderer.setFramebuffer(null);
+            this.rendersystem.renderer.render(this.scene, this.camera);
           }
-          this.rendersystem.renderer.render(this.scene, this.camera);
         }
         if (this.vrdisplay && this.vrdisplay.isPresenting) {
-          this.rendersystem.renderer.vr.submitFrame();
+          this.rendersystem.renderer.xr.submitFrame();
         }
 
         if (this.rendersystem.cssrenderer && !(this.vrdisplay && this.vrdisplay.isPresenting)) {

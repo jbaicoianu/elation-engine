@@ -78,12 +78,12 @@ elation.require(deps, function() {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
         this.frame(this.boundfunc);
       }
-      let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
+      //let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
       var evdata = {
         ts: ts,
         delta: (ts - this.lastupdate) / 1000,
-        pose: xrpose,
-        xrspace: xrspace
+        //pose: xrpose,
+        //xrspace: xrspace
       };
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
@@ -113,9 +113,11 @@ elation.require(deps, function() {
       }))();
     this.frame = function(fn) {
       if (elation.env.isNode) var window;
-      if (this.client && this.client.view && this.client.view.xrsession && this.client.view.xrsession.requestAnimationFrame) {
+      /*if (this.client && this.client.view && this.client.view.xrsession && this.client.view.xrsession.requestAnimationFrame) {
+console.log(this.client.view.xrsession);
         this.client.view.xrsession.requestAnimationFrame(fn);
-      } else if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
+      } else */
+      if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
         this.client.view.vrdisplay.requestAnimationFrame(fn);
       } else {
         this.requestAnimationFrame.call(window, fn);
@@ -296,7 +298,7 @@ elation.require(deps, function() {
         fullsize: true,
         resolution: null,
         useWebVRPolyfill: true,
-        enablePostprocessing: false
+        enablePostprocessing: true
       };
       this.setEngineConfig(this.args);
       this.initEngine();
@@ -631,6 +633,44 @@ elation.require(deps, function() {
     }
     this.screenshot = function(args) {
       return this.view.screenshot(args);
+    }
+    this.startXR = function(mode="immersive-vr") {
+      if (!this.xrsession) {
+        let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
+        navigator.xr.requestSession(mode, xroptions).then((session) => {
+          session.requestReferenceSpace('local-floor').then(refspace => { console.log('got XR refspace', refspace); this.xrspace = refspace; });
+          let vr = this.engine.systems.render.renderer.vr;
+          vr.setSession(session, { frameOfReferenceType: 'stage' });
+          vr.enabled = true;
+          this.xrsession = session;
+console.log('add session event listeners', session);
+          session.addEventListener('visibilitychange', (ev) => { 
+            console.log('visibility changed', ev);
+/*
+            if (session.visibilityState == 'visible') {
+              vr.enabled = true;
+              vr.setSession(session);
+            } else {
+              vr.enabled = false;
+              vr.setSession(null);
+            }
+*/
+          });
+          session.addEventListener('end', (ev) => { console.log('session ended', ev); this.stopXR(); });
+          let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
+              fullsize: false,
+              picking: true,
+              engine: this.engine.name,
+              crosshair: false,
+              useWebVRPolyfill: false,
+              enablePostprocessing: false,
+              xrsession: session
+            } );
+          this.engine.systems.render.view_add('xr', view);
+          this.xrview = view;
+          console.log('new xr guy', view, this.engine.systems.render.views);
+        });
+      }
     }
   }, elation.ui.base);
   
