@@ -1445,6 +1445,14 @@ elation.component.add("engine.things.generic", function() {
     return orient.multiply(tmpquat.copy(this.objects.dynamics.orientationWorld).inverse());
     
   }
+  this.getWorldPosition = function(target) {
+    if (!target) target = new THREE.Vector3();
+    if (this.objects['3d'].matrixWorldNeedsUpdate) {
+      this.objects['3d'].updateMatrixWorld();
+    }
+    target.setFromMatrixPosition(this.objects['3d'].matrixWorld);
+    return target;
+  }
   this.lookAt = function(other, up) {
     if (!up) up = new THREE.Vector3(0,1,0);
     var otherpos = false;
