@@ -2429,14 +2429,14 @@ THREE.ColladaLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			// build geometry
 
-			if ( position.array.length > 0 ) geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( position.array, position.stride ) );
-			if ( normal.array.length > 0 ) geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normal.array, normal.stride ) );
-			if ( color.array.length > 0 ) geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( color.array, color.stride ) );
-			if ( uv.array.length > 0 ) geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( uv.array, uv.stride ) );
-			if ( uv2.array.length > 0 ) geometry.addAttribute( 'uv2', new THREE.Float32BufferAttribute( uv2.array, uv2.stride ) );
+			if ( position.array.length > 0 ) geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( position.array, position.stride ) );
+			if ( normal.array.length > 0 ) geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( normal.array, normal.stride ) );
+			if ( color.array.length > 0 ) geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( color.array, color.stride ) );
+			if ( uv.array.length > 0 ) geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( uv.array, uv.stride ) );
+			if ( uv2.array.length > 0 ) geometry.setAttribute( 'uv2', new THREE.Float32BufferAttribute( uv2.array, uv2.stride ) );
 
-			if ( skinIndex.array.length > 0 ) geometry.addAttribute( 'skinIndex', new THREE.Float32BufferAttribute( skinIndex.array, skinIndex.stride ) );
-			if ( skinWeight.array.length > 0 ) geometry.addAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeight.array, skinWeight.stride ) );
+			if ( skinIndex.array.length > 0 ) geometry.setAttribute( 'skinIndex', new THREE.Float32BufferAttribute( skinIndex.array, skinIndex.stride ) );
+			if ( skinWeight.array.length > 0 ) geometry.setAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeight.array, skinWeight.stride ) );
 
 			build.data = geometry;
 			build.type = primitives[ 0 ].type;
@@ -5608,19 +5608,19 @@ THREE.FBXLoader = ( function () {
 
 			preTransform.applyToBufferAttribute( positionAttribute );
 
-			geo.addAttribute( 'position', positionAttribute );
+			geo.setAttribute( 'position', positionAttribute );
 
 			if ( buffers.colors.length > 0 ) {
 
-				geo.addAttribute( 'color', new THREE.Float32BufferAttribute( buffers.colors, 3 ) );
+				geo.setAttribute( 'color', new THREE.Float32BufferAttribute( buffers.colors, 3 ) );
 
 			}
 
 			if ( skeleton ) {
 
-				geo.addAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( buffers.weightsIndices, 4 ) );
+				geo.setAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( buffers.weightsIndices, 4 ) );
 
-				geo.addAttribute( 'skinWeight', new THREE.Float32BufferAttribute( buffers.vertexWeights, 4 ) );
+				geo.setAttribute( 'skinWeight', new THREE.Float32BufferAttribute( buffers.vertexWeights, 4 ) );
 
 				// used later to bind the skeleton to the model
 				geo.FBX_Deformer = skeleton;
@@ -5634,7 +5634,7 @@ THREE.FBXLoader = ( function () {
 				var normalMatrix = new THREE.Matrix3().getNormalMatrix( preTransform );
 				normalMatrix.applyToBufferAttribute( normalAttribute );
 
-				geo.addAttribute( 'normal', normalAttribute );
+				geo.setAttribute( 'normal', normalAttribute );
 
 			}
 
@@ -5650,7 +5650,7 @@ THREE.FBXLoader = ( function () {
 
 				}
 
-				geo.addAttribute( name, new THREE.Float32BufferAttribute( buffers.uvs[ i ], 2 ) );
+				geo.setAttribute( name, new THREE.Float32BufferAttribute( buffers.uvs[ i ], 2 ) );
 
 			} );
 
@@ -6325,7 +6325,7 @@ THREE.FBXLoader = ( function () {
 			} );
 
 			var geometry = new THREE.BufferGeometry();
-			geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+			geometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
 
 			return geometry;
 
@@ -10320,7 +10320,7 @@ if (typeof URL == 'undefined') var URL = self.URL;
 		if ( material.aoMap && geometry.attributes.uv2 === undefined && geometry.attributes.uv !== undefined ) {
 
 			console.log( 'THREE.GLTFLoader: Duplicating UVs to support aoMap.' );
-			geometry.addAttribute( 'uv2', new THREE.BufferAttribute( geometry.attributes.uv.array, 2 ) );
+			geometry.setAttribute( 'uv2', new THREE.BufferAttribute( geometry.attributes.uv.array, 2 ) );
 
 		}
 
@@ -10514,7 +10514,7 @@ if (typeof URL == 'undefined') var URL = self.URL;
 			return parser.getDependency( 'accessor', accessorIndex )
 				.then( function ( accessor ) {
 
-					geometry.addAttribute( attributeName, accessor );
+					geometry.setAttribute( attributeName, accessor );
 
 				} );
 
@@ -12143,11 +12143,11 @@ THREE.MMDLoader = ( function () {
 
 			var geometry = new THREE.BufferGeometry();
 
-			geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-			geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
-			geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
-			geometry.addAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( skinIndices, 4 ) );
-			geometry.addAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeights, 4 ) );
+			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+			geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
+			geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
+			geometry.setAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( skinIndices, 4 ) );
+			geometry.setAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeights, 4 ) );
 			geometry.setIndex( indices );
 
 			for ( var i = 0, il = groups.length; i < il; i ++ ) {
@@ -13861,11 +13861,11 @@ THREE.OBJLoader = ( function () {
 
 				var buffergeometry = new THREE.BufferGeometry();
 
-				buffergeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( geometry.vertices, 3 ) );
+				buffergeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( geometry.vertices, 3 ) );
 
 				if ( geometry.normals.length > 0 ) {
 
-					buffergeometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( geometry.normals, 3 ) );
+					buffergeometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( geometry.normals, 3 ) );
 
 				} else {
 
@@ -13876,13 +13876,13 @@ THREE.OBJLoader = ( function () {
 				if ( geometry.colors.length > 0 ) {
 
 					hasVertexColors = true;
-					buffergeometry.addAttribute( 'color', new THREE.Float32BufferAttribute( geometry.colors, 3 ) );
+					buffergeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( geometry.colors, 3 ) );
 
 				}
 
 				if ( geometry.uvs.length > 0 ) {
 
-					buffergeometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( geometry.uvs, 2 ) );
+					buffergeometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( geometry.uvs, 2 ) );
 
 				}
 
@@ -14844,32 +14844,32 @@ THREE.PLYLoader.prototype = {
 
 			}
 
-			geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( buffer.vertices, 3 ) );
+			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( buffer.vertices, 3 ) );
 
 			// optional buffer data
 
 			if ( buffer.normals.length > 0 ) {
 
-				geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( buffer.normals, 3 ) );
+				geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( buffer.normals, 3 ) );
 
 			}
 
 			if ( buffer.uvs.length > 0 ) {
 
-				geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( buffer.uvs, 2 ) );
+				geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( buffer.uvs, 2 ) );
 
 			}
 
 			if ( buffer.colors.length > 0 ) {
 
-				geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( buffer.colors, 3 ) );
+				geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( buffer.colors, 3 ) );
 
 			}
 
 			if ( buffer.faceVertexUvs.length > 0 ) {
 
 				geometry = geometry.toNonIndexed();
-				geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( buffer.faceVertexUvs, 2 ) );
+				geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( buffer.faceVertexUvs, 2 ) );
 
 			}
 
@@ -15235,7 +15235,7 @@ THREE.VRMLLoader.prototype = {
 
 				}
 
-				geometry.addAttribute( 'color', colorAttribute );
+				geometry.setAttribute( 'color', colorAttribute );
 
 			}
 
@@ -16135,23 +16135,23 @@ THREE.VRMLLoader.prototype = {
 						// we need to store it on the geometry for use with defines
 						geometry.solid = data.solid;
 
-						geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+						geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 
 						if ( colors.length > 0 ) {
 
-							geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+							geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 
 						}
 
 						if ( uvs.length > 0 ) {
 
-							geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
+							geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
 
 						}
 
 						if ( normals.length > 0 ) {
 
-							geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
+							geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
 
 						} else {
 
@@ -16584,12 +16584,12 @@ THREE.STLLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype
 
 			}
 
-			geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-			geometry.addAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ) );
+			geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ) );
 
 			if ( hasColors ) {
 
-				geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+				geometry.setAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 				geometry.hasColors = true;
 				geometry.alpha = alpha;
 
@@ -16678,8 +16678,8 @@ THREE.STLLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype
 
 			}
 
-			geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
-			geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
+			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
 
 			if ( groupCount > 0 ) {
 
