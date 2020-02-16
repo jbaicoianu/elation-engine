@@ -770,10 +770,13 @@ if (!ENV_IS_BROWSER) return;
       };
       if (this.contenttype && map[this.contenttype]) {
         type = map[this.contenttype];
-      } else if (this.src.match(/\.(.*?)$/)) {
+      } else if (this.src && this.src.match(/\.(.*?)$/)) {
         var parts = this.src.split('.');
         type = parts.pop();
+      } else if (this.canvas) {
+        type = 'png';
       }
+
       return type;
     },
     canvasHasAlpha: function(canvas) {
