@@ -230,10 +230,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.vrposetarget.add(vrposedebug);
       vrposedebug.layers.set(10);
       this.objects['3d'].add(this.vrcalibrate);
+      /*
       let renderer = this.engine.systems.render.renderer;
       if (renderer.vr && renderer.vr.setPoseTarget) {
         renderer.vr.setPoseTarget(this.vrposetarget);
       }
+      */
     }
     this.getGroundHeight = function() {
       
