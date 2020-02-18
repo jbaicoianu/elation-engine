@@ -3,18 +3,13 @@ elation.require([ ], function() {
     elation.implement(this, elation.engine.systems.system);
 
     this.enabled = true;
+    this.canPlaySound = false;
     this.volume = 100;
 
     Object.defineProperty(this, 'volume', {get: function() { return this.reallistener.getMasterVolume(); }, set: function(v) { this.reallistener.setMasterVolume(v); }});
 
     this.system_attach = function(ev) {
       console.log('INIT: sound');
-      this.reallistener = new THREE.AudioListener();
-
-      this.up = new THREE.Vector3(0,1,0);
-      this.front = new THREE.Vector3(0,0,-1);
-
-      this.lastframepos = new THREE.Vector3();
     }
     this.engine_stop = function(ev) {
       console.log('SHUTDOWN: sound');
@@ -23,12 +18,24 @@ elation.require([ ], function() {
     }
     this.setActiveListener = function(listener) {
       this.listener = listener;
-      listener.add(this.reallistener);
+      if (this.reallistener) {
+        listener.add(this.reallistener);
+      }
     }
     this.getActiveListener = function() {
       return this.listener;
     }
     this.getRealListener = function() {
+      // Ideally, we'd show some UI element that indicates that this page will start playing sound when focused, and if we want to get
+      // fancy, volume for the whole sound system should fade in from 0 to 1 over 3-5 seconds to give users a chance to adjust system volume
+      // if needed
+      if (!this.reallistener) {
+        this.reallistener = new THREE.AudioListener();
+        console.log('[sound] Creating audio context', this.reallistener);
+        if (this.listener) {
+          this.listener.add(this.reallistener);
+        }
+      }
       return this.reallistener;
     }
     this.mute = function(mutestate) {
@@ -44,6 +51,12 @@ elation.require([ ], function() {
     }
     this.setVolume = function(v) {
       this.reallistener.setMasterVolume(v / 100);
+    }
+    this.enableSound = function() {
+      if (!this.canPlaySound) {
+        this.canPlaySound = true;
+        elation.events.fire({type: 'sound_enabled', element: this});
+      }
     }
   });
   elation.component.add('engine.systems.sound.config', function() {
