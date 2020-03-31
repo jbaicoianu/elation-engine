@@ -827,7 +827,6 @@ elation.component.add("engine.things.generic", function() {
       }
       */
       // Reset colliders
-/*
       while (this.colliders.children.length > 0) {
         this.colliders.remove(this.colliders.children[0]);
       }
@@ -836,7 +835,6 @@ elation.component.add("engine.things.generic", function() {
           this.colliders.add(this.children[k].colliders);
         }
       }
-*/
       if (collidergeom) {
         let collidercolor = 0x009900;
         if (rigidbody.mass === 0) {
