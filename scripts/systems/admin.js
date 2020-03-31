@@ -47,6 +47,7 @@ elation.require([
 
       //this.inspector = elation.engine.systems.admin.inspector('admin', elation.html.create({append: document.body}), {engine: this.engine});
 
+/*
       this.engine.systems.controls.addCommands('admin', {
         //'add_thing': elation.bind(this, function(ev) { if (ev.value == 1) { this.scenetree.addItem(); }}),
         'toggle_admin': elation.bind(this, function(ev) { if (ev.value == 1) { this.toggleAdmin(); } }),
@@ -58,6 +59,7 @@ elation.require([
         //'keyboard_shift': 'toggle_snap',
       });
       this.engine.systems.controls.activateContext('admin');
+*/
     }
     this.createUI = function() {
       this.scenetree = elation.engine.systems.admin.scenetree(null, elation.html.create({append: document.body}), {world: this.world, admin: this});
