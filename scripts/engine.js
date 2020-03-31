@@ -374,7 +374,6 @@ console.log(this.client.view.xrsession);
           useWebVRPolyfill: cfg.useWebVRPolyfill,
           enablePostprocessing: cfg.enablePostprocessing
         } );
-
         this.initWorld();
         this.initControls();
 
@@ -639,20 +638,20 @@ console.log(this.client.view.xrsession);
         let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
         navigator.xr.requestSession(mode, xroptions).then((session) => {
           session.requestReferenceSpace('local-floor').then(refspace => { console.log('got XR refspace', refspace); this.xrspace = refspace; });
-          let vr = this.engine.systems.render.renderer.vr;
-          vr.setSession(session, { frameOfReferenceType: 'stage' });
-          vr.enabled = true;
+          let xr = this.engine.systems.render.renderer.xr;
+          xr.setSession(session, { frameOfReferenceType: 'stage' });
+          xr.enabled = true;
           this.xrsession = session;
 console.log('add session event listeners', session);
           session.addEventListener('visibilitychange', (ev) => { 
             console.log('visibility changed', ev);
 /*
             if (session.visibilityState == 'visible') {
-              vr.enabled = true;
-              vr.setSession(session);
+              xr.enabled = true;
+              xr.setSession(session);
             } else {
-              vr.enabled = false;
-              vr.setSession(null);
+              xr.enabled = false;
+              xr.setSession(null);
             }
 */
           });
