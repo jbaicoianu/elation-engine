@@ -206,7 +206,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
 
     this.initcontrols = function() {
-      if (!this.container) this.container = this.engine.systems.render.renderer.domElement;
+      if (!this.container) this.container = (this.engine.systems.render ? this.engine.systems.render.renderer.domElement : window);
       elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,click,DOMMouseScroll,gesturestart,gesturechange,gestureend", this);
       //elation.events.add(this.container, "touchstart,touchmove,touchend, this);
       elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
