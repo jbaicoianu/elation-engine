@@ -484,7 +484,11 @@ console.log('my offset', collider.offset, collider);
     */
     this.physics_collide = function(ev) {
       var collision = ev.data;
-      this.getCollisionMarker(collision);
+      let obj1 = ev.data.bodies[0].object,
+          obj2 = ev.data.bodies[1].object;
+      if (obj1.collidable && obj2.collidable) {
+        this.getCollisionMarker(collision);
+      }
     }
     this.getCollisionMarker = function(collision) {
       let markerpool = this.getMarkerPool();
