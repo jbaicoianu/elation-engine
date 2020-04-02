@@ -50,7 +50,7 @@ elation.require([
         antialias: true,
         logarithmicDepthBuffer: false,
         alpha: true,
-        preserveDrawingBuffer: false,
+        preserveDrawingBuffer: true,
         enableWebXR: false,
         stencil: false
       };
@@ -60,7 +60,7 @@ elation.require([
       }
       this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
-      this.renderer.autoClear = false;
+      //this.renderer.autoClear = true;
       this.renderer.setClearColor(0x000000, 1);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -70,13 +70,16 @@ elation.require([
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
 
-      this.renderer.gammaInput = true;
-      this.renderer.gammaOutput = false;
+      //this.renderer.gammaInput = true;
+      //this.renderer.gammaOutput = false;
+      this.renderer.outputEncoding = THREE.LinearEncoding;
       this.renderer.gammaFactor = 1;
 
+/*
       this.renderer.toneMapping = THREE.CineonToneMapping;
       this.renderer.toneMappingExposure = 1;
       this.renderer.toneMappingWhitePoint = 1;
+*/
 
       this.renderer.debug.checkShaderErrors = false;
 
@@ -103,7 +106,6 @@ elation.require([
     }
     this.engine_frame = function(ev) {
       this.lastframetime += ev.data.delta;
-      // If we've got an active XR session, we'll be rendering using its rAF callback instead of our main engine loop's
       this.render();
     }
     this.render = function(ev) {
@@ -118,6 +120,7 @@ elation.require([
         this.dirty = false;
         //this.renderer.clear();
         for (var k in this.views) {
+          // If we've got an active XR session, we'll be rendering using its rAF callback instead of our main engine loop's
           if (!this.views[k].xrsession) {
             this.views[k].render(this.lastframetime);
           }
@@ -241,7 +244,7 @@ elation.require([
       this.rendertarget.depthTexture = new THREE.DepthTexture();
       this.rendertarget.depthTexture.type = THREE.UnsignedShortType;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', 'bloom'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping', 'bloom',*/ 'gamma'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -537,6 +540,13 @@ window.maskobj = maskobj;
           pass.uniforms[ 'cameraNear' ].value = this.actualcamera.near;
           pass.uniforms[ 'cameraFar' ].value = this.actualcamera.far;
           //pass.clear = true;
+          break;
+        case 'gamma':
+          pass = new THREE.ShaderPass( THREE.GammaCorrectionShader );
+          break;
+        case 'tonemapping':
+          pass = new THREE.AdaptiveToneMappingPass(true, 256);
+          break;
       }
       if (pass) this.effects[name] = pass;
       return pass;
@@ -664,6 +674,8 @@ if (vivehack) {
         this.rendersystem.renderer.xr.setSession(null);
         this.rendersystem.renderer.xr.enabled = false;
         this.xrsession.end();
+        this.xrsession = false;
+        console.log('xr session stopped');
       }
     }
     this.updateCameras = (function() {
@@ -769,9 +781,10 @@ if (vivehack) {
             let layer = this.xrsession.renderState.baseLayer;
             if (layer) {
               this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+              this.rendersystem.renderer.clear();
               this.rendersystem.renderer.render(this.scene, this.camera);
             } else {
-console.log('no layer', this.xrsession.renderState);
+              console.log('no XR layer found', this.xrsession.renderState);
             }
           } else {
             this.rendersystem.renderer.xr.enabled = false;
@@ -1083,6 +1096,10 @@ console.log('no layer', this.xrsession.renderState);
 
       var newev = {type: 'wheel', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, deltaX: ev.deltaX, deltaY: ev.deltaY, deltaZ: ev.deltaZ, deltaMode: ev.deltaMode, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, preventDefault: () => ev.preventDefault(), stopPropagation: () => ev.stopPropagation()};
       this.proxyEvent(newev);
+      if (elation.events.wasDefaultPrevented(newev)) {
+        ev.preventDefault();
+        return false;
+      }
     }
     this.mousemove = function(ev, ignorePointerLock) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
@@ -1837,6 +1854,8 @@ console.log('dun it', msaafilter);
     this.lastdir = new THREE.Vector3();
 
     this.init = function() {
+      elation.events.add(window, "keydown", (ev) => this.keydown(ev));
+      elation.events.add(window, "keyup", (ev) => this.keyup(ev));
     }
     this.updatePickingTarget = function(force) {
     }
@@ -1934,6 +1953,16 @@ console.log('dun it', msaafilter);
     }
     this.getPickingData = function(obj) {
       return this.lasthit;
+    }
+    this.keydown = function(ev) {
+      for (var k in this.keystates) {
+        this.keystates[k] = ev[k];
+      }
+    }
+    this.keyup = function(ev) {
+      for (var k in this.keystates) {
+        this.keystates[k] = ev[k];
+      }
     }
 
     this.init();
