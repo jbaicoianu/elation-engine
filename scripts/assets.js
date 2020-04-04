@@ -850,6 +850,9 @@ if (!ENV_IS_BROWSER) return;
       video.src = url;
       video.crossOrigin = 'anonymous';
       this._video = video;
+      if (url.match(/\.webm$/)) {
+        this.hasalpha = true;
+      }
       let textureFormat = (this.hasalpha ? THREE.RGBAFormat : THREE.RGBFormat);
       if (this.sbs3d) {
         this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
