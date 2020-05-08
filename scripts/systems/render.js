@@ -359,8 +359,10 @@ elation.require([
       }
       if (navigator.xr) {
         // WebXR Working Draft
-        // Initialize the XR session on load, to handle the case where this is in-XR navigation (eg, exokit)
-        this.startXR();
+        // Register sessiongranted event handler, to automatically enter XR for in-XR navigation
+        navigator.xr.addEventListener('sessiongranted', (evt) => {
+          this.startXR();
+        });
       } else if (navigator.getVRDisplays) {
         // WebVR 1.0 spec
         navigator.getVRDisplays().then(function(n) {
