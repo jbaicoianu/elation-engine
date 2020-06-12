@@ -354,8 +354,7 @@ elation.require([
         //InitializeWebVRPolyfill();
       }
       if (this.args.xrsession) {
-        this.xrsession = this.args.xrsession;
-        this.xrsession.requestAnimationFrame(() => this.handleXRFrame(this.xrsession));
+        this.setXRSession(this.args.xrsession);
       }
       if (navigator.xr) {
         // WebXR Working Draft
@@ -660,6 +659,12 @@ if (vivehack) {
       this.getsize();
     }
     this.startXR = function(mode='immersive-vr') {
+    }
+    this.setXRSession = function(session) {
+      this.xrsession = session;
+      this.xrsession.requestAnimationFrame(() => this.handleXRFrame(session));
+      this.rendersystem.renderer.xr.setSession(session);
+      this.rendersystem.renderer.xr.enabled = true;
     }
     this.handleXRFrame = function(session, frame) {
       if (session) {
