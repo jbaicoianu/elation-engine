@@ -369,7 +369,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
         // Store the player's current view frustum so we can do visibility testing in scripts
         this.camera.camera.updateProjectionMatrix(); // FIXME - this should only be needed if camera parameters change
-        this.viewfrustum.setFromMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
+        this.viewfrustum.setFromProjectionMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
 
         if (ev.data.pose) {
           this.updateXR(ev.data.pose, ev.data.xrspace);
