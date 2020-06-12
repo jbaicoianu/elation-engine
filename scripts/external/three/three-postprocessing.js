@@ -12,7 +12,8 @@ THREE.EffectComposer = function ( renderer, renderTarget ) {
 			minFilter: THREE.LinearFilter,
 			magFilter: THREE.LinearFilter,
 			format: THREE.RGBAFormat,
-			stencilBuffer: false
+			stencilBuffer: false,
+			type: THREE.FloatType
 		};
 
 		var size = new THREE.Vector2();
