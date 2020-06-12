@@ -227,7 +227,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       vrposedebug.position.z = -1;
       vrposedebug.rotation.x = Math.PI/2;
       this.vrcalibrate.add(this.vrposetarget);
-      this.vrposetarget.add(vrposedebug);
+      //this.vrposetarget.add(vrposedebug);
       vrposedebug.layers.set(10);
       this.objects['3d'].add(this.vrcalibrate);
       /*
