@@ -839,6 +839,7 @@ if (!ENV_IS_BROWSER) return;
   elation.define('engine.assets.video', {
     assettype: 'video',
     src: false,
+    video: false,
     sbs3d: false,
     ou3d: false,
     hasalpha: false,
@@ -848,15 +849,18 @@ if (!ENV_IS_BROWSER) return;
     srgb: true,
 
     load: function() {
-      var url = this.getProxiedURL(this.src);
-      var video = document.createElement('video');
-      video.muted = false;
-      video.src = url;
-      video.crossOrigin = 'anonymous';
-      this._video = video;
-      if (url.match(/\.webm$/)) {
-        this.hasalpha = true;
+      var video = this.video;
+      if (!video && this.src) {
+        var url = this.getProxiedURL(this.src);
+        var video = document.createElement('video');
+        video.muted = false;
+        video.src = url;
+        video.crossOrigin = 'anonymous';
+        if (url.match(/\.webm$/)) {
+          this.hasalpha = true;
+        }
       }
+      this._video = video;
       let textureFormat = (this.hasalpha ? THREE.RGBAFormat : THREE.RGBFormat);
       if (this.sbs3d) {
         this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
