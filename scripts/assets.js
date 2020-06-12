@@ -845,6 +845,8 @@ if (!ENV_IS_BROWSER) return;
     reverse3d: false,
     auto_play: false,
     texture: false,
+    srgb: true,
+
     load: function() {
       var url = this.getProxiedURL(this.src);
       var video = document.createElement('video');
