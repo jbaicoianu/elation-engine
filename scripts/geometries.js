@@ -109,7 +109,7 @@ elation.require([], function() {
         var geo = new THREE.BoxBufferGeometry(size.x, size.y, size.z, 1, 1, 1);
         
         if (offset) {
-          geo.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
+          geo.applyMatrix4(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
         }
         return geo;
       },
@@ -138,7 +138,7 @@ elation.require([], function() {
         capsulegeo.merge(cap, mat4);
 
         if (offset) {
-          capsulegeo.applyMatrix(mat4.makeTranslation(offset.x, offset.y, offset.z));
+          capsulegeo.applyMatrix4(mat4.makeTranslation(offset.x, offset.y, offset.z));
         }
 
         return capsulegeo;
