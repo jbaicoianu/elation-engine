@@ -73,7 +73,7 @@ elation.require([
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
       this.renderer.outputEncoding = THREE.LinearEncoding;
-      this.renderer.gammaFactor = 1;
+      this.renderer.gammaFactor = 1.3;
 
 /*
       this.renderer.toneMapping = THREE.CineonToneMapping;
