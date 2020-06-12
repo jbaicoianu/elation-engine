@@ -484,6 +484,7 @@ if (!ENV_IS_BROWSER) return;
     invert: false,
     imagetype: '',
     tex_linear: true,
+    srgb: false,
     hasalpha: null,
     rawimage: null,
     preload: true,
@@ -506,6 +507,7 @@ if (!ENV_IS_BROWSER) return;
         texture.sourceFile = this.src;
         texture.needsUpdate = true;
         texture.flipY = (this.flipy === true || this.flipy === 'true');
+        texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
         } else {
@@ -861,6 +863,8 @@ if (!ENV_IS_BROWSER) return;
         this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
       }
       this._texture.minFilter = THREE.LinearFilter;
+      this._texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
+
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
       elation.events.add(video, 'error', elation.bind(this, this.handleError));
 
@@ -1333,6 +1337,7 @@ if (!ENV_IS_BROWSER) return;
                       hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
                       baseurl: this.baseurl,
                       flipy: tex.flipY,
+                      srgb: (tex.encoding == THREE.sRGBEncoding),
                       invert: (texname == 'specularMap')
                     });
                   }
