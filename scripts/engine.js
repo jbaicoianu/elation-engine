@@ -656,19 +656,39 @@ console.log('add session event listeners', session);
 */
           });
           session.addEventListener('end', (ev) => { console.log('session ended', ev); this.stopXR(); });
-          let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
-              fullsize: false,
-              picking: true,
-              engine: this.engine.name,
-              crosshair: false,
-              useWebVRPolyfill: false,
-              enablePostprocessing: false,
-              xrsession: session
-            } );
-          this.engine.systems.render.view_add('xr', view);
-          this.xrview = view;
-          console.log('new xr guy', view, this.engine.systems.render.views);
+          if (!this.engine.systems.render.views.xr) {
+            let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
+                fullsize: false,
+                picking: true,
+                engine: this.engine.name,
+                crosshair: false,
+                useWebVRPolyfill: false,
+                enablePostprocessing: false,
+                xrsession: session
+              } );
+            this.engine.systems.render.view_add('xr', view);
+            this.xrview = view;
+            this.engine.systems.render.views.main.enabled = false;
+            console.log('new xr guy', view, this.engine.systems.render.views);
+          } else {
+            this.engine.systems.render.views.main.enabled = false;
+            this.engine.systems.render.views.xr.enabled = true;
+            this.engine.systems.render.views.xr.setXRSession(session);
+            console.log('set new immersive session', session);
+            if (this.xrplayer) {
+              this.xrplayer.setSession(session);
+            }
+          }
         });
+      }
+    }
+    this.stopXR = function() {
+      this.engine.systems.render.views.main.enabled = true;
+      this.engine.systems.render.views.xr.enabled = false;
+      this.engine.systems.render.views.xr.stopXR();
+      this.xrsession = false;
+      if (this.xrplayer) {
+        this.xrplayer.setSession(false);
       }
     }
   }, elation.ui.base);
