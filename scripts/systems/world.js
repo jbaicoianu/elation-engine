@@ -287,7 +287,8 @@ elation.require([
       return hasLight;
     }
     this.refreshLights = function() {
-      this.scene['world-3d'].traverse(function(n) { if (n instanceof THREE.Mesh) { n.material.needsUpdate = true; } });
+      // Not needed anymore since Three.js does this automatically now
+      //this.scene['world-3d'].traverse(function(n) { if (n instanceof THREE.Mesh) { n.material.needsUpdate = true; } });
     }
     this.createDefaultScene = function() {
       var scenedef = {
