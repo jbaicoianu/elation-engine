@@ -73,7 +73,7 @@ elation.require([
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
       this.renderer.outputEncoding = THREE.LinearEncoding;
-      this.renderer.gammaFactor = 1.3;
+      this.renderer.gammaFactor = 2;
 
 /*
       this.renderer.toneMapping = THREE.CineonToneMapping;
@@ -244,7 +244,7 @@ elation.require([
       this.rendertarget.depthTexture = new THREE.DepthTexture();
       this.rendertarget.depthTexture.type = THREE.UnsignedShortType;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping', 'bloom',*/ 'gamma'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping',*/ 'unrealbloom', 'gamma'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -511,6 +511,9 @@ elation.require([
           break;
         case 'bloom':
           pass = new THREE.BloomPass(0.4, 25, 5);
+          break;
+        case 'unrealbloom':
+          pass = new THREE.UnrealBloomPass(this.size, 0, 0, 0);
           break;
         case 'fxaa':
           pass = new THREE.ShaderPass( THREE.FXAAShader );
