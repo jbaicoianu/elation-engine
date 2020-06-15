@@ -17,7 +17,7 @@ elation.require(['engine.things.label'], function() {
       var label = labelgen.getLabel(text);
       var height = 1 / aspect;
       var geometry = new THREE.PlaneBufferGeometry(1, height);
-      geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, height/2, .02));
+      geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, height/2, .02));
       return geometry;
     }
     this.createTextMaterial = function(text) {
