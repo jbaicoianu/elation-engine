@@ -458,6 +458,13 @@ if (!ENV_IS_BROWSER) return;
         };
         elation.events.add(this, 'asset_load', cb);
       }
+    },
+    update: function(args) {
+      if (args) {
+        for (let k in args) {
+          this[k] = args[k];
+        }
+      }
     }
   }, elation.class);
 
@@ -847,6 +854,8 @@ if (!ENV_IS_BROWSER) return;
     auto_play: false,
     texture: false,
     srgb: true,
+    type: THREE.UnsignedByteType,
+    format: THREE.RGBFormat,
 
     load: function() {
       var video = this.video;
@@ -861,12 +870,12 @@ if (!ENV_IS_BROWSER) return;
         }
       }
       this._video = video;
-      let textureFormat = (this.hasalpha ? THREE.RGBAFormat : THREE.RGBFormat);
+      let textureFormat = (this.format == THREE.RGBFormat && this.hasalpha ? THREE.RGBAFormat : this.format);
       if (this.sbs3d) {
-        this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
+        this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
         this._texture.reverse = this.reverse3d;
       } else {
-        this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat);
+        this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
       }
       this._texture.minFilter = THREE.LinearFilter;
       this._texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
@@ -953,6 +962,17 @@ if (!ENV_IS_BROWSER) return;
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play();
         });
+      }
+    },
+    update: function(args) {
+      if (args) {
+        for (let k in args) {
+          this[k] = args[k];
+        }
+
+        if (this._texture && this._texture.image !== this.video) {
+          this._texture.image = this.video;
+        }
       }
     }
   }, elation.engine.assets.base);
@@ -1514,6 +1534,8 @@ if (!ENV_IS_BROWSER) return;
           this.assets.push(asset);
           if (!this.assetmap[asset.assettype]) this.assetmap[asset.assettype] = {};
           this.assetmap[asset.assettype][asset.name] = asset;
+        } else {
+          existing.update(assetdef);
         }
         //asset.load();
       }
