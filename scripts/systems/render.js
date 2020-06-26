@@ -1235,14 +1235,17 @@ if (vivehack) {
         }
       }
     }
-    this.proxyEvent = function(ev) {
+    this.proxyEvent = function(ev, obj) {
       if (!this.pickingactive) {
         this.pickingactive = true;
       }
       //this.mousemove(ev);
-      if (this.picker.pickingobject) {
-        var element = this.getParentThing(this.picker.pickingobject),
-            data = this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]);
+      if (!obj) {
+        obj = this.picker.pickingobject;
+      }
+      if (obj) {
+        var element = this.getParentThing(obj),
+            data = this.getPickingData(obj, [ev.clientX, ev.clientY]);
 
         var event = elation.events.getEvent({
           type: ev.type,
