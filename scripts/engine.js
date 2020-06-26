@@ -73,12 +73,16 @@ elation.require(deps, function() {
     this.run = function(ts, xrpose) {
       // recursively request another frame until we're no longer running
       //if (!ts) ts = new Date().getTime();
-      var ts = performance.now();
       if (this.running) {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
         this.frame(this.boundfunc);
       }
       //let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
+      this.advance();
+    }
+
+    this.advance = function() {
+      let ts = performance.now();
       var evdata = {
         ts: ts,
         delta: (ts - this.lastupdate) / 1000,
