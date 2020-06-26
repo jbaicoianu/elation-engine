@@ -675,6 +675,7 @@ if (vivehack) {
         if (this.activething && this.activething.updateXR) {
           this.activething.updateXR(frame);
         }
+        this.engine.advance();
         this.render();
         session.requestAnimationFrame((ts, frame) => this.handleXRFrame(session, frame));
       }
