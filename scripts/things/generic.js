@@ -826,13 +826,12 @@ elation.component.add("engine.things.generic", function() {
         this.collidermesh = false;
       }
       */
-      // Reset colliders
-      while (this.colliders.children.length > 0) {
-        this.colliders.remove(this.colliders.children[0]);
-      }
-      for (var k in this.children) {
-        if (this.children[k].colliders) {
-          this.colliders.add(this.children[k].colliders);
+      // If we have children, re-add their colliders as children of our own collider, but only if we're working with the root object
+      if (rigidbody === this.objects['dynamics']) {
+        for (var k in this.children) {
+          if (this.children[k].colliders) {
+            this.colliders.add(this.children[k].colliders);
+          }
         }
       }
       if (collidergeom) {
@@ -890,6 +889,11 @@ elation.component.add("engine.things.generic", function() {
         }));
         */
       }
+    }
+  }
+  this.resetColliders = function() {
+    while (this.colliders.children.length > 0) {
+      this.colliders.remove(this.colliders.children[0]);
     }
   }
   this.physics_collide = function(ev) {
