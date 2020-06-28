@@ -248,7 +248,7 @@ elation.require([
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping',*/ 'unrealbloom', 'gamma'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping',*/ 'gamma', 'unrealbloom'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
