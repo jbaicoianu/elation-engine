@@ -231,7 +231,10 @@ elation.require([
 
       this.depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
       this.depthMaterial.blending = THREE.NoBlending;
-      this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+      this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], {
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+      });
 
       //this.composer = this.createRenderPath([this.rendermode]);
       this.rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
@@ -242,7 +245,8 @@ elation.require([
         depthBuffer: true,
       });
       this.rendertarget.depthTexture = new THREE.DepthTexture();
-      this.rendertarget.depthTexture.type = THREE.UnsignedShortType;
+      this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
+      this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
       this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa', /*'tonemapping',*/ 'unrealbloom', 'gamma'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
@@ -538,11 +542,8 @@ window.maskobj = maskobj;
           pass = new THREE.ClearMaskPass();
           break;
         case 'ssao':
-          pass = new THREE.ShaderPass( THREE.SSAOShader );
-          pass.uniforms[ 'size' ].value = this.sizevec;
-          pass.uniforms[ 'tDepth' ].value = this.depthTarget;
-          pass.uniforms[ 'cameraNear' ].value = this.actualcamera.near;
-          pass.uniforms[ 'cameraFar' ].value = this.actualcamera.far;
+          pass = new THREE.SSAOPass( this.scene, this.actualcamera, this.size[0], this.size[1] );
+          pass.kernelRadius = 16;
           //pass.clear = true;
           break;
         case 'gamma':
@@ -1042,8 +1043,6 @@ if (vivehack) {
         this.pickingcomposer.setSize(scaledwidth, scaledheight);
       }
       if (this.effects['SSAO']) {
-        this.depthTarget = new THREE.WebGLRenderTarget( width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat, stencilBuffer: true } );
-
         this.effects['SSAO'].uniforms[ 'size' ].value.set( width, height);
         this.effects['SSAO'].uniforms[ 'tDepth' ].value = this.depthTarget;
       }
