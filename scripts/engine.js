@@ -685,6 +685,9 @@ console.log('add session event listeners', session);
           }
         });
       }
+      if (this.engine.systems.sound) {
+        this.engine.systems.sound.enableSound();
+      }
     }
     this.stopXR = function() {
       this.engine.systems.render.views.main.enabled = true;
