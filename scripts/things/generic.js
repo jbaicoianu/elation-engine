@@ -847,11 +847,24 @@ elation.component.add("engine.things.generic", function() {
         } else {
           var collidermesh = this.collidermesh = new THREE.Mesh(collidergeom, collidermat);
           if (rigidbody.position !== this.properties.position) {
-/*
-            collidermesh.bindPosition(rigidbody.position);
-            collidermesh.bindQuaternion(rigidbody.orientation);
-*/
-            //collidermesh.bindScale(this.properties.scale);
+            // Bind the mesh's position to the rigidbody that represents this part
+            Object.defineProperties( collidermesh, {
+              position: {
+                enumerable: true,
+                configurable: true,
+                value: rigidbody.position
+              },
+              quaternion: {
+                enumerable: true,
+                configurable: true,
+                value: rigidbody.orientation
+              },
+              scale: {
+                enumerable: true,
+                configurable: true,
+                value: rigidbody.scale
+              },
+            });
           }
           collidermesh.userData.thing = this;
           this.colliders.add(collidermesh);
@@ -1118,8 +1131,8 @@ elation.component.add("engine.things.generic", function() {
           shape = m[2];
 
       var rigid = new elation.physics.rigidbody({object: this});
-      var min = meshes[i].geometry.boundingBox.min,
-          max = meshes[i].geometry.boundingBox.max;
+      var min = meshes[i].geometry.boundingBox.min.clone().multiply(meshes[i].scale),
+          max = meshes[i].geometry.boundingBox.max.clone().multiply(meshes[i].scale);
       //console.log('type is', type, shape, min, max);
 
       var position = meshes[i].position,
@@ -1149,9 +1162,11 @@ elation.component.add("engine.things.generic", function() {
         this.setCollider('sphere', {radius: Math.max(max.x, max.y, max.z)}, rigid);
       } else if (shape == 'cylinder') {
         var radius = Math.max(max.x - min.x, max.z - min.z) / 2,
-            height = max.y - min.y;
-        this.setCollider('cylinder', {radius: radius, height: height}, rigid);
+            height = max.y - min.y,
+            pos = max.clone().add(min).multiplyScalar(.5);
+        this.setCollider('cylinder', {radius: radius, height: height, offset: pos}, rigid);
 
+        rigid.position.add(pos);
         // FIXME - rotate everything by 90 degrees on x axis to match default orientation
         var rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI/2, 0));
         rigid.orientation.multiply(rot);
@@ -1187,6 +1202,8 @@ elation.component.add("engine.things.generic", function() {
         });
       }
       meshes[i].parent.remove(meshes[i]);
+      meshes[i].position.copy(rigid.position);
+      meshes[i].quaternion.copy(rigid.orientation);
 /*
       meshes[i].bindPosition(rigid.position);
       meshes[i].bindQuaternion(rigid.orientation);
