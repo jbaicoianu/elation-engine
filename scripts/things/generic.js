@@ -818,6 +818,9 @@ elation.component.add("engine.things.generic", function() {
           p3: args.p3
         });
       } else if (type == 'mesh') {
+        // FIXME - not sure if this is the best way to do it, but this forces mesh colliders into the picking scene
+        collidermesh = args.mesh;
+        this.colliders.add(args.mesh);
       }
       /*
       if (this.collidermesh) {
