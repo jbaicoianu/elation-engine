@@ -307,14 +307,6 @@ console.log(this.client.view.xrsession);
       this.setEngineConfig(this.args);
       this.initEngine();
       this.loadEngine();
-
-      // Preload the default font
-      elation.engine.assets.get({
-        'assettype':'font', 
-        'name':'helvetiker', 
-        'src': elation.config.get('engine.assets.font.path', '/media/engine/fonts/') + 'helvetiker_regular.typeface.js'
-      });
-
     }
     // Set up engine parameters before creating.  To be overridden by extending class
     this.initEngine = function() {
