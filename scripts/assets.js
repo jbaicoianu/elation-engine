@@ -1793,12 +1793,47 @@ if (!ENV_IS_BROWSER) return;
 
   elation.define('engine.assets.shader', {
     assettype: 'shader',
+    shadertype: 'default',
     fragment_src: false,
     vertex_src: false,
     uniforms: {},
 
     _construct: function(args) {
       elation.class.call(this, args);
+      if (this.shadertype == 'shadertoy') {
+        this.uniforms = [
+          { name: 'iResolution', value: new THREE.Vector3(512, 512, 0, 0) },
+          { name: 'iTime', value: 0 },
+          { name: 'iTimeDelta', value: 0 },
+          { name: 'iFrame', value: 0 },
+          { name: 'iDate', value: new THREE.Vector4() },
+          //{ name: 'iMouse', value: THREE.Vector4() },
+          { name: 'iChannel0', value: new THREE.Texture() },
+          { name: 'iChannel1', value: new THREE.Texture() },
+          { name: 'iChannel2', value: new THREE.Texture() },
+          { name: 'iChannel3', value: new THREE.Texture() },
+        ];
+
+        // FIXME - this hack is used to update the Shadertoy uniforms at 60fps, but it should be abstracted out and driven by the object that's using the shader
+        // As a general shader harness, this will give us the means to update uniforms based on custom functions, so we can pass in things like mouse position,
+        // multiple textures, audio data, etc.
+
+        let starttime = new Date().getTime();
+            lasttime = starttime;
+        setInterval(() => {
+          if (this._material && this._material.uniforms.iTime) {
+            let d = new Date();
+            let now = d.getTime();
+
+            this._material.uniforms.iTime.value = (now - starttime) / 1000;
+            this._material.uniforms.iTimeDelta.value = (now - lasttime) / 1000;
+            this._material.uniforms.iFrame.value++;
+
+            this._material.uniforms.iDate.value.set(d.getFullYear(), d.getMonth() + 1, d.getDate(), (d.getHours() * 60 + d.getMinutes()) * 60 + d.getSeconds() + d.getMilliseconds() / 1000);
+            lasttime = now;
+          }
+        }, 16);
+      }
       //this.load();
     },
     load: function() {
@@ -1807,9 +1842,50 @@ if (!ENV_IS_BROWSER) return;
         if (this.fragment_src) {
           elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.fragment_src)).then(ev => {
             let decoder = new TextDecoder('utf-8');
-            this._material.fragmentShader = decoder.decode(ev.target.response);
+            let shadercode = decoder.decode(ev.target.response);
+            if (this.shadertype == 'default') {
+              this._material.fragmentShader = shadercode;
+            } else if (this.shadertype == 'shadertoy') {
+              this._material.vertexShader = `
+                varying vec2 vUv;
+                void main() {
+                  vUv = uv;
+                  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                  gl_Position = projectionMatrix * mvPosition;
+                }
+              `;
+              this._material.fragmentShader = `
+                #include <common>
+                #include <uv_pars_fragment>
+
+                uniform vec3      iResolution;           // viewport resolution (in pixels)
+                uniform float     iTime;                 // shader playback time (in seconds)
+                uniform float     iTimeDelta;            // render time (in seconds)
+                uniform int       iFrame;                // shader playback frame
+                uniform float     iChannelTime[4];       // channel playback time (in seconds)
+                uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
+                uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
+                uniform sampler2D iChannel0;
+                uniform sampler2D iChannel1;
+                uniform sampler2D iChannel2;
+                uniform sampler2D iChannel3;
+                uniform vec4      iDate;                 // (year, month, day, time in seconds)
+                uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
+
+                ${shadercode}
+
+                void main() {
+                  #include <map_fragment>
+
+                  mainImage(gl_FragColor, vUv * iResolution.xy);
+                }
+              `;
+            }
+            this._material.defines['USE_UV'] = 1;
             this._material.needsUpdate = true;
           });
+        } else {
+          this._material.fragmentShader = THREE.ShaderLib.basic.fragmentShader;
         }
         if (this.vertex_src) {
           elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.vertex_src)).then(ev => {
@@ -1817,6 +1893,8 @@ if (!ENV_IS_BROWSER) return;
             this._material.vertexShader = decoder.decode(ev.target.response);
             this._material.needsUpdate = true;
           });
+        } else {
+          this._material.vertexShader = THREE.ShaderLib.standard.vertexShader;
         }
       }
       if (this.uniforms) {
