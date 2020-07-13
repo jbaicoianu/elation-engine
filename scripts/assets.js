@@ -1576,7 +1576,9 @@ if (!ENV_IS_BROWSER) return;
       var loader = new THREE.FontLoader();
 
       if (this.src) {
-        loader.load(this.src, 
+        var url = this.getProxiedURL(this.src);
+        elation.events.fire({element: this, type: 'asset_load_start'});
+        loader.load(url,
                     elation.bind(this, this.handleLoad), 
                     elation.bind(this, this.handleProgress), 
                     elation.bind(this, this.handleError));
@@ -1584,6 +1586,9 @@ if (!ENV_IS_BROWSER) return;
     },
     handleLoad: function(data) {
       this._font = data;
+      this.loaded = true;
+      elation.events.fire({type: 'asset_load', element: this});
+      elation.events.fire({type: 'asset_load_complete', element: this});
     },
     getInstance: function(args) {
       if (!this._font) {
