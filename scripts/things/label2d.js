@@ -5,7 +5,12 @@ elation.require(['engine.things.label'], function() {
       this.defineProperties({
         font: { type: 'string', default: 'sans-serif' },
         fontSize: { type: 'float', default: 64 },
+        fontWeight: { type: 'string', default: 'normal' },
+        background: { type: 'string', default: 'rgba(0,0,0,0)' },
         color: { type: 'color', default: 0xffffff },
+        textShadowBlur: { type: 'int', default: 0 },
+        textShadowColor: { type: 'string', default: 'black' },
+        height: { type: 'float', default: 1 },
       });
       this.properties.size = 1;
       this.properties.thickness = .11;
@@ -15,8 +20,9 @@ elation.require(['engine.things.label'], function() {
       var labelgen = this.getAssetWrapper();
       var aspect = labelgen.getAspectRatio(text);
       var label = labelgen.getLabel(text);
-      var height = 1 / aspect;
-      var geometry = new THREE.PlaneBufferGeometry(1, height);
+      var height = this.height;
+      var width = height * aspect;
+      var geometry = new THREE.PlaneBufferGeometry(width, height);
       geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, height/2, .02));
       return geometry;
     }
@@ -50,7 +56,12 @@ elation.require(['engine.things.label'], function() {
             assettype: 'labelgen',
             assetname: genname,
             color: '#' + color.getHexString(),
-            outline: 4
+            background: this.background,
+            font: this.font,
+            fontWeight: this.fontWeight,
+            outlineSize: 8,
+            textShadowBlur: this.textShadowBlur,
+            textShadowColor: this.textShadowColor,
           });
         }
         this.labelgen = asset;
