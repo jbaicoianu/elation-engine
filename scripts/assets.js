@@ -629,7 +629,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
     handleBitmapError: function(src, ev) {
-      console.log('Error loading image via createImageBitmap, fall back on normal image');
+      console.log('Error loading image via createImageBitmap, fall back on normal image', src);
       this.loadImageByURL();
     },
     handleError: function(ev) {
