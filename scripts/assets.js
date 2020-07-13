@@ -98,11 +98,6 @@ if (!ENV_IS_BROWSER) return;
       var assetclass = elation.engine.assets[type] || elation.engine.assets.unknown;
       var assetobj = new assetclass(asset);
 
-      if (!elation.engine.assets.types[type]) elation.engine.assets.types[type] = {};
-      if (assetobj.name) {
-        elation.engine.assets.assets[assetobj.name] = assetobj;
-        elation.engine.assets.types[type][assetobj.name] = assetobj;
-      }
       return assetobj;
     },
     find: function(type, name, raw) {
