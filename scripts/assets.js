@@ -1603,10 +1603,14 @@ if (!ENV_IS_BROWSER) return;
     text: '',
     canvas: false,
     font: 'sans-serif',
+    fontWeight: 'normal',
     fontSize: 64,
     color: '#ffffff',
+    background: 'rgba(0,0,0,0)',
     outline: 'rgba(0,0,0,0.5)',
     outlineSize: 1,
+    textShadowColor: 'black',
+    textShadowBlur: 0,
     
     aspect: 1,
     _texture: false,
@@ -1630,12 +1634,13 @@ if (!ENV_IS_BROWSER) return;
             ctx = this.ctx;
 
         var fontSize = this.fontSize,
+            fontWeight = this.fontWeight,
             color = this.color,
             outlineSize = this.outlineSize,
             outline = this.outline,
             font = this.font;
 
-        ctx.font = fontSize + 'px ' + font;
+        ctx.font = fontWeight + ' ' + fontSize + 'px ' + font;
         ctx.lineWidth = outlineSize + 'px ';
         ctx.strokeStyle = outline;
 
@@ -1650,13 +1655,15 @@ if (!ENV_IS_BROWSER) return;
         ctx.font = fontSize + 'px ' + font;
         ctx.lineWidth = outlineSize + 'px ';
         ctx.strokeStyle = outline;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillStyle = this.background,
         ctx.fillRect(0, 0, w, h);
 
         ctx.fillStyle = color;
 
         this.aspect = size.width / fontSize;
 
+        ctx.shadowColor = this.textShadowColor;
+        ctx.shadowBlur = this.textShadowBlur;
         ctx.fillText(text, 0, 0);
         ctx.strokeText(text, 0, 0);
 
