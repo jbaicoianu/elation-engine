@@ -128,6 +128,28 @@ elation.require([
         this.lastframetime = 0;
       }
     }
+    this.textureHasAlpha = (function() {
+      let scene = new THREE.Scene();
+      let plane = new THREE.PlaneBufferGeometry(2, 2);
+      let material = new THREE.MeshBasicMaterial({color: 0xff0000});
+      let mesh = new THREE.Mesh(plane, material);
+      mesh.position.set(0,0,-1);
+      scene.add(mesh);
+      let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
+      scene.add(camera);
+      let rendertarget = new THREE.WebGLRenderTarget(1, 1);
+
+      return function(texture) {
+        material.map = texture;
+        material.map.needsUpdate = true;
+        let renderer = this.renderer;
+        let pixeldata = new Uint8Array(4);
+        renderer.setRenderTarget(rendertarget);
+        renderer.render(scene, camera);
+        renderer.readRenderTargetPixels(rendertarget, 0, 0, 1, 1, pixeldata);
+        return pixeldata[3] < 255;
+      }
+    })()
     this.world_thing_add = function(ev) {
       this.setdirty();
     }
