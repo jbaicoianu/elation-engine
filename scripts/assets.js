@@ -144,19 +144,19 @@ if (!ENV_IS_BROWSER) return;
       if (this.corsproxy && fullurl.indexOf(this.corsproxy) != 0) fullurl = this.corsproxy + fullurl;
       return fullurl in this.queue;
     }
-    this.fetchURLs = function(urls, progress) {
+    this.fetchURLs = function(urls, progress, responsetype) {
       var promises = [],
           queue = this.queue;
       for (var i = 0; i < urls.length; i++) {
-        let subpromise = this.fetchURL(urls[i], progress);
+        let subpromise = this.fetchURL(urls[i], progress, responsetype);
         promises.push(subpromise);
       }
       return Promise.all(promises);
     }
-    this.fetchURL = function(url, progress) {
+    this.fetchURL = function(url, progress, responsetype) {
       var corsproxy = this.corsproxy;
       let agent = this.getAgentForURL(url);
-      return agent.fetch(url, progress);
+      return agent.fetch(url, progress, responsetype);
     }
     this.getAgentForURL = function(url) {
       let urlparts = elation.utils.parseURL(url);
@@ -171,7 +171,7 @@ if (!ENV_IS_BROWSER) return;
   elation.extend('engine.assetloader.agent.xhr', new function() {
     this.getFullURL = function(url) {
     }
-    this.fetch = function(url, progress) {
+    this.fetch = function(url, progress, responsetype='arraybuffer') {
       return new Promise(function(resolve, reject) {
         if (!this.queue) this.queue = {};
         var fullurl = url;
@@ -186,7 +186,7 @@ if (!ENV_IS_BROWSER) return;
         }
         if (!this.queue[fullurl]) {
           var xhr = this.queue[fullurl] = elation.net.get(fullurl, null, {
-            responseType: 'arraybuffer',
+            responseType: responsetype,
             onload: (ev) => {
               delete this.queue[fullurl];
               var status = ev.target.status;
