@@ -20,7 +20,7 @@ elation.require([
       THREE.Cache.enabled = true;
       THREE.ImageLoader.prototype.load = function ( url, onLoad, onProgress, onError ) {
 
-        if ( this.path !== undefined ) url = this.path + url;
+        if ( this.path !== undefined && !url.match(/[^\/]+:/)) url = this.path + url;
 
         var scope = this;
 
