@@ -631,7 +631,9 @@ console.log(this.client.view.xrsession);
     }
     this.startXR = function(mode="immersive-vr") {
       if (!this.xrsession) {
-        let xroptions = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
+        let xroptions = {
+          optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking' ]
+        };
         navigator.xr.requestSession(mode, xroptions).then((session) => {
           session.requestReferenceSpace('local-floor').then(refspace => { console.log('got XR refspace', refspace); this.xrspace = refspace; });
           let xr = this.engine.systems.render.renderer.xr;
