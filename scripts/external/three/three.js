@@ -18768,7 +18768,7 @@
 
 				generatePrecision( parameters ),
 
-				'#define SHADER_NAME ' + parameters.shaderName,
+				//'#define SHADER_NAME ' + parameters.shaderName,
 
 				customDefines,
 
@@ -18896,7 +18896,7 @@
 
 				generatePrecision( parameters ),
 
-				'#define SHADER_NAME ' + parameters.shaderName,
+				//'#define SHADER_NAME ' + parameters.shaderName,
 
 				customDefines,
 
