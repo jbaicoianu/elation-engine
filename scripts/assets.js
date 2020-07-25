@@ -355,6 +355,7 @@ if (!ENV_IS_BROWSER) return;
     proxy: true,
     preload: false,
     instances: [],
+    assetpack: null,
 
     _construct: function(args) {
       elation.class.call(this, args);
@@ -1056,6 +1057,7 @@ if (!ENV_IS_BROWSER) return;
     modeltype: '',
     compression: 'none',
     object: false,
+    assetpack: null,
 
     loadworkers: [
     ],
@@ -1345,19 +1347,29 @@ if (!ENV_IS_BROWSER) return;
           materials.forEach(elation.bind(this, function(material) {
             types.forEach(elation.bind(this, function(texname) { 
               var tex = material[texname];
-
               if (tex) { // && tex.image instanceof HTMLImageElement) {
                 var img = tex.image;
                 var src = img.originalSrc || img.src;
                 if (!textures[src]) {
                   //elation.engine.assets.loadJSON([{"assettype": "image", name: src, "src": src}], this.baseurl); 
                   //tex = elation.engine.assets.find('image', src);
+                  let asset = null;
+                  if (this.assetpack) {
+                    asset = this.assetpack.get('image', src, {
+                      name: src,
+                      src: src,
+                      hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
+                      baseurl: this.baseurl,
+                      flipy: tex.flipY,
+                      srgb: (tex.encoding == THREE.sRGBEncoding),
+                      invert: (texname == 'specularMap')
+                    });
+                  }
 
-                  var asset = elation.engine.assets.find('image', src, true);
                   if (!asset) {
                     asset = elation.engine.assets.get({
-                      assettype: 'image', 
-                      name: src, 
+                      assettype: 'image',
+                      name: src,
                       src: src,
                       hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
                       baseurl: this.baseurl,
@@ -1527,6 +1539,7 @@ if (!ENV_IS_BROWSER) return;
       for (var i = 0; i < json.length; i++) {
         var assetdef = json[i];
         assetdef.baseurl = baseurl;
+        assetdef.assetpack = this;
         var existing = elation.utils.arrayget(this.assetmap, assetdef.assettype + '.' + assetdef.name); //elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
         if (!existing) {
           var asset = elation.engine.assets.get(assetdef);
