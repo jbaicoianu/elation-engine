@@ -1813,6 +1813,7 @@ if (!ENV_IS_BROWSER) return;
       this._script.src = bloburl;
       elation.events.fire({type: 'asset_load', element: this._script});
       elation.events.fire({type: 'asset_load', element: this});
+      elation.events.fire({type: 'asset_load_complete', element: this});
     },
     handleProgress: function(ev) {
     },
