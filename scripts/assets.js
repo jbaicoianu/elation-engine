@@ -515,7 +515,7 @@ if (!ENV_IS_BROWSER) return;
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
         } else {
-          elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress)).then(
+          elation.engine.assetdownloader.fetchURLs([fullurl], elation.bind(this, this.handleProgress), 'blob').then(
             elation.bind(this, function(events) {
               var xhr = events[0].target;
               // FIXME - we're looking at both mime type and file extension here, we should really just use one or the other
@@ -524,11 +524,14 @@ if (!ENV_IS_BROWSER) return;
 
               if (imagetype == 'basis') {
                 let loader = elation.engine.assets.basisloader;
-                loader._createTexture( events[0].target.response )
-                  .then( texture => this.handleLoadBasis(texture) )
+                // FIXME - we switched loader to request Blob responses, make sure Basis textures still load
+                let blob = events[0].target.response;
+                blob.arrayBuffer()
+                  .then(buffer => loader._createTexture(buffer))
+                  .then(texture => this.handleLoadBasis(texture))
               } else {
                 if (typeof createImageBitmap == 'function' && type != 'image/gif') {
-                  var blob = new Blob([xhr.response], {type: type});
+                  let blob = xhr.response;
                   createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleBitmapError));
                 } else {
                   this.loadImageByURL();
@@ -631,7 +634,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
     handleBitmapError: function(src, ev) {
-      console.log('Error loading image via createImageBitmap, fall back on normal image', src);
+      console.log('Error loading image via createImageBitmap, fall back on normal image', this.src);
       this.loadImageByURL();
     },
     handleError: function(ev) {
