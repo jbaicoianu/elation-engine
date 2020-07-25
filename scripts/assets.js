@@ -1400,8 +1400,8 @@ if (!ENV_IS_BROWSER) return;
         for (var k in textures) {
           var tex = textures[k];
           if (tex) {
-            //tex.minFilter = minFilter;
-            //tex.magFilter = magFilter;
+            tex.minFilter = minFilter;
+            tex.magFilter = magFilter;
           }
         }
       }));
