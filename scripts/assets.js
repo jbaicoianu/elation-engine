@@ -842,11 +842,7 @@ if (!ENV_IS_BROWSER) return;
       ctx.putImageData(pixeldata, 0, 0);
     },
     nextHighestPowerOfTwo: function(num) {
-      num--;
-      for (var i = 1; i < 32; i <<= 1) {
-        num = num | num >> i;
-      }
-      return num + 1;
+      return Math.pow(2, Math.ceil(Math.log(num) / Math.log(2)));
     },
     dispose() {
       if (this.assetpack) this.assetpack = null;
