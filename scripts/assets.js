@@ -1336,7 +1336,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progressdata});
     },
     extractTextures: function(scene) {
-      var types = ['map', 'bumpMap', 'lightMap', 'normalMap', 'specularMap', 'aoMap'];
+      var types = ['map', 'bumpMap', 'lightMap', 'normalMap', 'specularMap', 'aoMap', 'emissiveMap', 'displacementMap'];
       var textures = {};
       var texturepromises = [];
 
