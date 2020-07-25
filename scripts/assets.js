@@ -83,6 +83,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
       loader.setTranscoderPath(libpath);
       loader.detectSupport(renderer);
       this.basisloader = loader;
+      this.rendersystem = rendersystem;
     },
     loadAssetPack: function(url, baseurl) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
@@ -794,6 +795,7 @@ if (!ENV_IS_BROWSER) return;
       // that pixel value with readPixels().  If there was any alpha in the original image, this final 
       // pixel should also be transparent.
 
+      /*
       var width = Math.min(64, canvas.width), 
           height = Math.min(64, canvas.height); 
 
@@ -818,6 +820,8 @@ if (!ENV_IS_BROWSER) return;
         }
       }
       return false;
+      */
+      return elation.engine.assets.rendersystem.textureHasAlpha(this._texture);
     },
     invertImage: function(canvas) {
       var ctx = canvas.getContext('2d');
