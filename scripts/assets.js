@@ -462,6 +462,10 @@ if (!ENV_IS_BROWSER) return;
           this[k] = args[k];
         }
       }
+    },
+    dispose() {
+      console.log('dispose of basic asset', this);
+      if (this.assetpack) this.assetpack = null;
     }
   }, elation.class);
 
@@ -843,6 +847,16 @@ if (!ENV_IS_BROWSER) return;
         num = num | num >> i;
       }
       return num + 1;
+    },
+    dispose() {
+      if (this.assetpack) this.assetpack = null;
+      console.log('dispose of image', this);
+      delete this.rawimage;
+      delete this.canvas;
+      if (this._texture) {
+        this._texture.dispose();
+      }
+      this.loaded = false;
     }
   }, elation.engine.assets.base);
 
@@ -1500,6 +1514,48 @@ if (!ENV_IS_BROWSER) return;
         }
       });
       return stats;
+    },
+    dispose() {
+      if (this.assetpack) this.assetpack = null;
+      console.log('dispose of model', this);
+      while (this.instances.length > 0) {
+        let instance = this.instances.pop();
+        if (instance.parent) {
+          instance.parent.remove(instance);
+        }
+        instance.traverse(n => {
+          this.disposeModel(n);
+        });
+        if (this._model) {
+          this.disposeModel(this._model);
+          delete this._model;
+        }
+      }
+    },
+    disposeModel(model) {
+      console.log('  - dispose of model object', model);
+      if (model.material && elation.utils.isArray(model.material)) {
+        model.material.forEach(m => this.disposeMaterial(m));
+      } else if (model.material) {
+        this.disposeMaterial(model.material);
+      }
+      if (this.geometry) {
+        this.geometry.dispose();
+      }
+    },
+    disposeMaterial(material) {
+      console.log('    - dispose of model material', material);
+      if (material.map) material.map.dispose();
+      if (material.normalMap) material.normalMap.dispose();
+      if (material.displacementMap) material.displacementMap.dispose();
+      if (material.roughnessMap) material.roughnessMap.dispose();
+      if (material.metalnessMap) material.metalnessMap.dispose();
+      if (material.emissiveMap) material.emissiveMap.dispose();
+      if (material.bumpMap) material.bumpMap.dispose();
+      if (material.alphaMap) material.alphaMap.dispose();
+      if (material.aoMap) material.aoMap.dispose();
+      if (material.specularMap) material.specularMap.dispose();
+      material.dispose();
     }
   }, elation.engine.assets.base);
 
@@ -1579,6 +1635,14 @@ if (!ENV_IS_BROWSER) return;
       elation.engine.assets.base.call(this, args);
       if (!this.name) {
         this.name = this.getFullURL();
+      }
+    },
+    dispose: function() {
+      console.log('dispose of asset pack', this);
+      while (this.assets.length > 0) {
+        let asset = this.assets.pop();
+        delete this.assetmap[asset.assettype][asset.name];
+        asset.dispose();
       }
     }
   }, elation.engine.assets.base);
