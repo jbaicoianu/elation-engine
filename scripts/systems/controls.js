@@ -727,14 +727,6 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         }
         this.firstclick = false;
       }
-      if (!skiplock && ev.button === 0 && !this.getPointerLockElement() && this.engine.systems.admin.hidden) {
-        if (this.requestPointerLock()) {
-          this.cancelclick = true;
-          ev.stopPropagation();
-          ev.preventDefault();
-        }
-      }
-
       var bindid = "mouse_button_" + ev.button;
       if (!this.state[bindid]) {
         this.state[bindid] = 1;
@@ -826,6 +818,13 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           this.state['mouse_drag_y'] = 0;
           this.changes.push("mouse_drag_x");
           this.changes.push("mouse_drag_y");
+        }
+      }
+      if (ev.button === 0 && !this.getPointerLockElement() && this.engine.systems.admin.hidden) {
+        if (this.requestPointerLock()) {
+          //this.cancelclick = true;
+          //ev.stopPropagation();
+          //ev.preventDefault();
         }
       }
     }
