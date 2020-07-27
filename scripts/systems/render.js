@@ -1937,7 +1937,8 @@ console.log('dun it', msaafilter);
         var fired = false;
         while (intersects.length > 0) {
           hit = intersects.shift();
-          if (!(hit.object instanceof THREE.EdgesHelper)) {
+          let thing = hit.object.userData.thing;
+          if (thing.pickable && !(hit.object instanceof THREE.EdgesHelper)) {
             if (hit !== this.lasthit) {
               this.lasthit = hit; // FIXME - hack for demo
             }
