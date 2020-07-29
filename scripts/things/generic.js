@@ -1,6 +1,7 @@
 elation.require([
   //"engine.things.trigger"
-  "utils.proxy"
+  "utils.proxy",
+  "engine.math"
 ], function() {
 
 elation.component.add("engine.things.generic", function() {
@@ -334,6 +335,27 @@ elation.component.add("engine.things.generic", function() {
             }
           }));
           */
+        }
+      }
+    } else if (prop.type == 'euler') {
+      if (propval && !this._proxies[propname]) {
+        // Create proxy objects for these special types
+        var propval = elation.utils.arrayget(this.properties, propname, null);
+        let degrees = new EulerDegrees(propval);
+        var proxydef = {
+            x: ['property', 'x'],
+            y: ['property', 'y'],
+            z: ['property', 'z'],
+            order: ['property', 'order'],
+            set: ['function', 'set'],
+            copy: ['function', 'copy'],
+            clone: ['function', 'clone'],
+            toArray: ['function', 'toArray'],
+        };
+        if (propval) {
+          this._proxies[propname] = new elation.proxy(
+            degrees, proxydef, true
+          );
         }
       }
     }
