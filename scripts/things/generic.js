@@ -1790,6 +1790,11 @@ elation.component.add("engine.things.generic", function() {
     var bounds = new THREE.Box3();
     bounds.setFromObject(this.objects['3d']);
 
+    if (bounds.min.lengthSq() === Infinity || bounds.max.lengthSq === Infinity) {
+      bounds.min.set(0,0,0);
+      bounds.max.set(0,0,0);
+    }
+
     if (local) {
       this.worldToLocal(bounds.min);
       this.worldToLocal(bounds.max);
