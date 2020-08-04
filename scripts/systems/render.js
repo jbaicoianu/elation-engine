@@ -1398,7 +1398,9 @@ if (vivehack) {
         var raw = args.raw;
         var format = args.format || 'jpg';
         var renderer = this.rendersystem.renderer;
-        var cubecam = new THREE.CubeCamera(camera.near, camera.far, width);
+        var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( width, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
+
+        var cubecam = new THREE.CubeCamera(camera.near, camera.far, cubeRenderTarget);
         cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
         this.scene.add(cubecam);
 
