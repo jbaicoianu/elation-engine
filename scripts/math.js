@@ -1,5 +1,12 @@
-function EulerDegrees(radians) {
-  this.radians = radians;
+function EulerDegrees(x, y, z, order) {
+  this.radians = new THREE.Euler();
+  if (x instanceof THREE.Euler) {
+    this.copy(x);
+  } else if (x instanceof THREE.Vector3) {
+    this.set(x.x, x.y, x.z);
+  } else {
+    this.set(x, y, z, order);
+  }
 }
 EulerDegrees.prototype = Object.assign( Object.create( THREE.Euler.prototype ), {
   isEuler: true,
