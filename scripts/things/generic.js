@@ -151,12 +151,12 @@ elation.component.add("engine.things.generic", function() {
         break;
       case 'euler':
         if (elation.utils.isArray(value)) {
-          value = new THREE.Euler(+value[0], +value[1], +value[2]);
+          value = new EulerDegrees().set(+value[0], +value[1], +value[2]);
         } else if (elation.utils.isString(value)) {
           var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
-          value = new THREE.Euler(+split[0], +split[1], +split[2]);
+          value = new EulerDegrees().set(+split[0], +split[1], +split[2]);
         } else if (value instanceof THREE.Vector3) {
-          value = new THREE.Euler(value.x, value.y, value.z);
+          value = new EulerDegrees().set(value.x, value.y, value.z);
         }
         break;
       case 'quaternion':
@@ -353,9 +353,11 @@ elation.component.add("engine.things.generic", function() {
             toArray: ['function', 'toArray'],
         };
         if (propval) {
+/*
           this._proxies[propname] = new elation.proxy(
             degrees, proxydef, true
           );
+*/
         }
       }
     }
