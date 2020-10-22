@@ -848,6 +848,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       this.state[bindid] = 1;
       this.changes.push(bindid);
       //ev.preventDefault();
+      setTimeout(() => {
+        this.state[bindid] = 0;
+        this.changes.push(bindid);
+      }, 20);
     }
     this.keydown = function(ev) {
       // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
