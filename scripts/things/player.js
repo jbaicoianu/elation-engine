@@ -507,7 +507,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.handleCreate = function(ev) {
       if (this.properties.defaultplayer) {
         this.engine.client.setActiveThing(this);
-        this.enable();
+        //this.enable();
+        this.engine.systems.controls.enablePointerLock(true);
       }
     }
     this.handleTargeting = function() {
