@@ -200,6 +200,7 @@ elation.component.add("engine.things.generic", function() {
         value = +value;
         break;
       case 'int':
+      case 'integer':
         value = value | 0;
         break;
       case 'texture':
