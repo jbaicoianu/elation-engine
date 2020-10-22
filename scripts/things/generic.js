@@ -827,7 +827,7 @@ elation.component.add("engine.things.generic", function() {
           radialSegments: 12
         });
         if (args.offset) {
-          collidergeom.applyMatrix(new THREE.Matrix4().makeTranslation(args.offset.x, args.offset.y, args.offset.z));
+          collidergeom.applyMatrix4(new THREE.Matrix4().makeTranslation(args.offset.x, args.offset.y, args.offset.z));
         }
       } else if (type == 'capsule') {
         collidergeom = elation.engine.geometries.generate('capsule', {
