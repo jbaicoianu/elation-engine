@@ -700,7 +700,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //let camera = this.camera.camera;
         //let camera = this.engine.systems.render.views.main.actualcamera;
         let camera = this.engine.systems.render.views.main.effects.default.camera; // FIXME - come on, really?
-        frustum.setFromMatrix( mat4.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
+        frustum.setFromProjectionMatrix( mat4.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
         return frustum;
       }
     })();
