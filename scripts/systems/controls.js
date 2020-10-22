@@ -121,7 +121,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.capturekeys = [
       'keyboard_f1',
       'keyboard_f6',
-      'keyboard_tab',
+      //'keyboard_tab',
     ];
 
     this.initialized = false;
@@ -1027,6 +1027,18 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       } 
       return [x * adjusted, y * adjusted];
       //return (Math.abs(value) < this.settings.gamepad.deadzone ? 0 : value);
+    }
+    this.enableKeyboardCapture = function(key) {
+      let idx = this.capturekeys.indexOf(key);
+      if (idx == -1) {
+        this.capturekeys.push(key);
+      }
+    }
+    this.disableKeyboardCapture = function(key) {
+      let idx = this.capturekeys.indexOf(key);
+      if (idx == -1) {
+        this.capturekeys.splice(idx, 1);
+      }
     }
   });
   elation.component.add('engine.systems.controls.config', function() {
