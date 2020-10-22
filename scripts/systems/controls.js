@@ -91,6 +91,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     this.hmdframes = [];
 
     this.firstclick = true;
+    this.mousedowntime = 0;
 
     this.settings = {
       mouse: {
@@ -721,6 +722,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.mousedown = function(ev, skiplock) {
       this.cancelclick = false;
+      this.mousedowntime = performance.now();
       if (this.firstclick) {
         if (!this.engine.systems.sound.canPlaySound) {
           this.engine.systems.sound.enableSound();
@@ -820,7 +822,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           this.changes.push("mouse_drag_y");
         }
       }
-      if (ev.button === 0 && !this.getPointerLockElement() && this.engine.systems.admin.hidden) {
+      if (ev.button === 0 && !this.getPointerLockElement() && this.engine.systems.admin.hidden && performance.now() - this.mousedowntime <= 500) {
         if (this.requestPointerLock()) {
           //this.cancelclick = true;
           //ev.stopPropagation();
