@@ -374,6 +374,13 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         if (ev.data.pose) {
           this.updateXR(ev.data.pose, ev.data.xrspace);
         }
+        if (this.headconstraint) {
+          if (this.engine.client.xrsession) {
+            this.headconstraint.enabled = false;
+          } else {
+            this.headconstraint.enabled = true;
+          }
+        }
       }
     })();
     this.updateHMD = (function() {
