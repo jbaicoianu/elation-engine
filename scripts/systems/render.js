@@ -88,6 +88,9 @@ elation.require([
 
       // FIXME - globally-bound events are dirty, things should fire events when their properties change
       elation.events.add(null, 'physics_update,thing_drag_move,thing_rotate_move,engine_texture_load', elation.bind(this, this.setdirty));
+
+      // Hide the canvas from accessibility API
+      this.renderer.domElement.setAttribute('aria-hidden', true);
     }
     this.setclearcolor = function(color, opacity) {
       if (typeof color == 'undefined') color = 0xffffff;
