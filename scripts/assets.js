@@ -1192,7 +1192,7 @@ if (!ENV_IS_BROWSER) return;
               m.map.minFilter = minFilter;
               m.map.magFilter = magFilter;
             }
-            m.needsUpdate = true;
+            //m.needsUpdate = true;
             //if (m.color) m.color.setHex(0xffffff);
           });
         } 
@@ -1900,6 +1900,7 @@ if (!ENV_IS_BROWSER) return;
     shadertype: 'default',
     fragment_src: false,
     vertex_src: false,
+    hasalpha: false,
     uniforms: {},
 
     _construct: function(args) {
@@ -1942,6 +1943,7 @@ if (!ENV_IS_BROWSER) return;
     },
     load: function() {
       this._material = new THREE.ShaderMaterial();
+      this._material.transparent = this.hasalpha;
       if (this.fragment_src || this.vertex_src) {
         if (this.fragment_src) {
           elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.fragment_src)).then(ev => {
