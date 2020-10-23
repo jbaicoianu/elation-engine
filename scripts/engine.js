@@ -634,16 +634,28 @@ console.log(this.client.view.xrsession);
         let xroptions = {
           optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking' ]
         };
+        if (!this.xrwindow) {
+          this.xrwindow = elation.elements.create('ui-window', {
+            bottom: true,
+            center: true,
+            className: 'webxr_notification',
+            resizable: 0,
+            //content: 'WebXR active.  Please put on your headset',
+            append: this.engine.systems.render.views.main.container,
+          });
+        } else {
+          this.xrwindow.show();
+        }
+        this.xrwindow.setcontent('Initializing WebXR session...');
         navigator.xr.requestSession(mode, xroptions).then((session) => {
-          session.requestReferenceSpace('local-floor').then(refspace => { console.log('got XR refspace', refspace); this.xrspace = refspace; });
           let xr = this.engine.systems.render.renderer.xr;
-          xr.setSession(session, { frameOfReferenceType: 'stage' });
-          xr.enabled = true;
           this.xrsession = session;
-console.log('add session event listeners', session);
+          xr.setSession(session);
+          xr.enabled = true;
+          /*
+          // TODO - Oculus' OpenVR support currently (Oct 2020) ends the session when the HMD is removed, instead of sending a visibilitychange event.  We should revisit this once they've fixed it.
           session.addEventListener('visibilitychange', (ev) => { 
             console.log('visibility changed', ev);
-/*
             if (session.visibilityState == 'visible') {
               xr.enabled = true;
               xr.setSession(session);
@@ -651,46 +663,74 @@ console.log('add session event listeners', session);
               xr.enabled = false;
               xr.setSession(null);
             }
-*/
           });
-          session.addEventListener('end', (ev) => { console.log('session ended', ev); this.stopXR(); });
-          if (!this.engine.systems.render.views.xr) {
-            let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
-                fullsize: false,
-                picking: true,
-                engine: this.engine.name,
-                crosshair: false,
-                useWebVRPolyfill: false,
-                enablePostprocessing: false,
-                xrsession: session
-              } );
-            this.engine.systems.render.view_add('xr', view);
-            this.xrview = view;
-            this.engine.systems.render.views.main.enabled = false;
-            console.log('new xr guy', view, this.engine.systems.render.views);
-          } else {
-            this.engine.systems.render.views.main.enabled = false;
-            this.engine.systems.render.views.xr.enabled = true;
-            this.engine.systems.render.views.xr.setXRSession(session);
-            console.log('set new immersive session', session);
-            if (this.xrplayer) {
-              this.xrplayer.setSession(session);
+          */
+          session.requestAnimationFrame(() => {
+            // Create our new render view on the first XR frame, so the session has time to initialize properly
+            if (!this.engine.systems.render.views.xr) {
+              let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
+                  fullsize: false,
+                  picking: true,
+                  engine: this.engine.name,
+                  crosshair: false,
+                  useWebVRPolyfill: false,
+                  enablePostprocessing: false,
+                  xrsession: session
+                } );
+              this.engine.systems.render.view_add('xr', view);
+              this.xrview = view;
+              this.engine.systems.render.views.main.enabled = false;
+              console.log('new xr guy', view, this.engine.systems.render.views);
+            } else {
+              this.engine.systems.render.views.main.enabled = false;
+              this.engine.systems.render.views.xr.enabled = true;
+              this.engine.systems.render.views.xr.setXRSession(session);
+              console.log('set new immersive session', session);
+              if (this.xrplayer) {
+                this.xrplayer.setSession(session, this.engine.systems.render.views.xr);
+              }
             }
-          }
+            session.addEventListener('end', (ev) => this.handleXRend());
+            elation.html.addclass(this.engine.systems.render.views.main.container, 'webxr_session_active');
+
+            this.xrwindow.setcontent('WebXR session is active.  Please put on your headset.');
+            elation.events.fire({element: this, type: 'xrsessionstart', data: session});
+          });
         });
       }
       if (this.engine.systems.sound) {
         this.engine.systems.sound.enableSound();
       }
     }
-    this.stopXR = function() {
+    this.handleXRend = function(ev) {
       this.engine.systems.render.views.main.enabled = true;
       this.engine.systems.render.views.xr.enabled = false;
-      this.engine.systems.render.views.xr.stopXR();
+      this.engine.systems.render.views.xr.handleXRend(ev);
+      elation.html.removeclass(this.engine.systems.render.views.main.container, 'webxr_session_active');
+      console.log('xr session stopped', this.xrsession);
       this.xrsession = false;
       if (this.xrplayer) {
         this.xrplayer.setSession(false);
       }
+      if (this.xrwindow) {
+        this.xrwindow.setcontent('WebXR session ended');
+        this.xrwindow.hide();
+      }
+      elation.events.fire({element: this, type: 'xrsessionend'});
+    }
+    this.stopXR = function() {
+      //this.handleXRend();
+      if (this.xrsession) {
+        try {
+          this.xrsession.end();
+        } catch (e) {
+          console.log('Tried to end XR session that was already ended');
+          this.xrsession = false;
+        };
+      }
+      //this.engine.systems.render.views.main.enabled = true;
+      //this.engine.systems.render.views.xr.enabled = false;
+      //this.xrsession = false;
     }
   }, elation.ui.base);
   
