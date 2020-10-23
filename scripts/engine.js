@@ -381,7 +381,7 @@ console.log(this.client.view.xrsession);
     }
     this.initControls = function() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
-        'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
+        //'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
         'share_screenshot': ['keyboard_ctrl_period', elation.bind(this, this.shareScreenshot)],
         //'share_gif': ['keyboard_period', elation.bind(this, this.shareMP4)],
         'pointerlock': ['pointerlock', elation.bind(this, this.togglePointerLock)],
