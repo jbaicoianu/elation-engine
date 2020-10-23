@@ -322,6 +322,11 @@ console.log(this.client.view.xrsession);
       } 
       this.enginecfg.systems.push("render");
       this.enginecfg.systems.push("sound");
+
+      // Register sessiongranted event handler, to automatically enter XR for in-XR navigation
+      navigator.xr.addEventListener('sessiongranted', (ev) => {
+        this.startXR();
+      });
     }
     this.setEngineConfig = function(args) {
       var cfg = this.enginecfg;
