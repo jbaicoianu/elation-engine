@@ -35,7 +35,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
   THREE.SBSVideoTexture.prototype = Object.create( THREE.SBSTexture.prototype );
   THREE.SBSVideoTexture.prototype.constructor = THREE.SBSVideoTexture;
 
-  THREE.SBSVideoTexture.prototype = Object.assign( Object.create( THREE.Texture.prototype ), {
+  THREE.SBSVideoTexture.prototype = Object.assign( Object.create( THREE.VideoTexture.prototype ), {
 
     constructor: THREE.SBSVideoTexture,
 
@@ -513,7 +513,7 @@ if (!ENV_IS_BROWSER) return;
         texture.image = this.canvas = this.getCanvas();
         texture.image.originalSrc = this.src;
         texture.sourceFile = this.src;
-        texture.needsUpdate = true;
+        //texture.needsUpdate = true;
         texture.flipY = (this.flipy === true || this.flipy === 'true');
         texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
         if (this.isURLData(fullurl)) {
@@ -862,11 +862,16 @@ if (!ENV_IS_BROWSER) return;
     video: false,
     sbs3d: false,
     ou3d: false,
+    eac360: false,
     hasalpha: false,
     reverse3d: false,
     auto_play: false,
+    loop: false,
     texture: false,
     srgb: true,
+    tex_linear: true,
+    preload: false,
+    hls: null,
     type: THREE.UnsignedByteType,
     format: THREE.RGBFormat,
 
@@ -876,8 +881,10 @@ if (!ENV_IS_BROWSER) return;
         var url = this.getProxiedURL(this.src);
         var video = document.createElement('video');
         video.muted = false;
+        video.preload = this.preload;
         video.src = url;
         video.crossOrigin = 'anonymous';
+        video.loop = this.loop;
         if (url.match(/\.webm$/)) {
           this.hasalpha = true;
         }
@@ -891,6 +898,7 @@ if (!ENV_IS_BROWSER) return;
         this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
       }
       this._texture.minFilter = THREE.LinearFilter;
+      this._texture.magFilter = THREE.LinearFilter;
       this._texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
 
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
@@ -905,20 +913,24 @@ if (!ENV_IS_BROWSER) return;
           elation.events.add(video, 'playing', this.handleAutoplayStart);
           this._autoplaytimeout = setTimeout(elation.bind(this, this.handleAutoplayTimeout), 1000);
         }), 0);
-        var promise = video.play();
-        if (promise) {
-          promise.then(elation.bind(this, function() {
-            this.handleAutoplayStart();
-          })).catch(elation.bind(this, function(err) {
-            // If autoplay failed, retry with muted video
-            var strerr = err.toString();
-            if (strerr.indexOf('NotAllowedError') == 0) {
-              video.muted = true;
-              video.play().catch(elation.bind(this, this.handleAutoplayError));
-            } else if (strerr.indexOf('NotSupportedError') == 0) {
-              this.initHLS();
-            }
-          }));
+        if (this.hls === true) {
+          this.initHLS();
+        } else {
+          var promise = video.play();
+          if (promise) {
+            promise.then(elation.bind(this, function() {
+              this.handleAutoplayStart();
+            })).catch(elation.bind(this, function(err) {
+              // If autoplay failed, retry with muted video
+              var strerr = err.toString();
+              if (strerr.indexOf('NotAllowedError') == 0) {
+                video.muted = true;
+                video.play().catch(elation.bind(this, this.handleAutoplayError));
+              } else if (strerr.indexOf('NotSupportedError') == 0 && this.hls !== false) {
+                this.initHLS();
+              }
+            }));
+          }
         }
       }
     },
@@ -940,7 +952,7 @@ if (!ENV_IS_BROWSER) return;
     handleError: function(ev) {
       //console.log('video uh oh!', ev);
       //this._texture = false;
-      //console.log('Video failed to load, try HLS');
+      console.log('Video failed to load, try HLS', this._video.error, ev);
     },
     handleAutoplayStart: function(ev) {
       if (this._autoplaytimeout) {
@@ -966,9 +978,20 @@ if (!ENV_IS_BROWSER) return;
         elation.file.get('js', 'https://cdn.jsdelivr.net/npm/hls.js@latest', elation.bind(this, this.initHLS));
         return;
       }
-      var hls = new Hls();
+      let hlsConfig = {
+        debug: false,
+        xhrSetup: function (xhr,url) {
+            //xhr.withCredentials = true; // do send cookie
+            xhr.setRequestHeader("Access-Control-Allow-Headers","Content-Type, Accept, X-Requested-With");
+            xhr.setRequestHeader("Access-Control-Allow-Origin",document.location.origin);
+            xhr.setRequestHeader("Access-Control-Allow-Credentials","true");
+        },
+      };
+      var hls = new Hls(hlsConfig);
+
       hls.loadSource(this.getProxiedURL());
       hls.attachMedia(this._video);
+      this.hls = hls;
 
       if (this.auto_play) {
         var video = this._video;
