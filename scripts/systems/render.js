@@ -69,10 +69,9 @@ elation.require([
       //this.renderer.setAnimationLoop((ev) => this.render());
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
-
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
-      this.renderer.outputEncoding = THREE.LinearEncoding;
+      this.renderer.outputEncoding = THREE.sRGBEncoding;
       this.renderer.gammaFactor = 2;
 
 /*
