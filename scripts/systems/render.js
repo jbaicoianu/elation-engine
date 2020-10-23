@@ -140,15 +140,22 @@ elation.require([
       let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
       scene.add(camera);
       let rendertarget = new THREE.WebGLRenderTarget(1, 1);
+      let oldviewport = new THREE.Vector4();
+      let viewport = new THREE.Vector4(0, 0, 1, 1);
 
       return function(texture) {
         material.map = texture;
         material.map.needsUpdate = true;
         let renderer = this.renderer;
         let pixeldata = new Uint8Array(4);
+        let oldrendertarget = renderer.getRenderTarget();
+        renderer.getViewport(oldviewport);
+        renderer.setViewport(viewport);
         renderer.setRenderTarget(rendertarget);
         renderer.render(scene, camera);
         renderer.readRenderTargetPixels(rendertarget, 0, 0, 1, 1, pixeldata);
+        renderer.setRenderTarget(oldrendertarget);
+        renderer.setViewport(oldviewport);
         return pixeldata[3] < 255;
       }
     })()
