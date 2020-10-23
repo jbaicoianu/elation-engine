@@ -628,7 +628,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       
       if (fullscreen) {
         //var c = this.container;
-        var c = document.body;
+        var c = document.documentElement;
         c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
         if (typeof c.requestFullscreen == 'function') {
           //c.requestFullscreen({vrDisplay: this.vrdisplay});
