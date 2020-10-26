@@ -573,7 +573,7 @@ elation.require([
         if (!geometry.attributes.normal) {
           geometry.computeVertexNormals();
         }
-        geometry.applyMatrix(new THREE.Matrix4().makeScale(.01, .01, .01));
+        geometry.applyMatrix4(new THREE.Matrix4().makeScale(.01, .01, .01));
         var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial());
         encoded = mesh.toJSON();
         resolve(encoded);
