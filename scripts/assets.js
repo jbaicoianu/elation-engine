@@ -952,7 +952,11 @@ if (!ENV_IS_BROWSER) return;
     handleError: function(ev) {
       //console.log('video uh oh!', ev);
       //this._texture = false;
-      console.log('Video failed to load, try HLS', this._video.error, ev);
+      //console.log('Video failed to load, try HLS', this._video.error, ev);
+      let hls = this.hls;
+      if (hls) {
+        this.hlsDropHighestLevel();
+      }
     },
     handleAutoplayStart: function(ev) {
       if (this._autoplaytimeout) {
@@ -980,6 +984,8 @@ if (!ENV_IS_BROWSER) return;
       }
       let hlsConfig = {
         debug: false,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 60,
         xhrSetup: function (xhr,url) {
             //xhr.withCredentials = true; // do send cookie
             xhr.setRequestHeader("Access-Control-Allow-Headers","Content-Type, Accept, X-Requested-With");
@@ -988,6 +994,29 @@ if (!ENV_IS_BROWSER) return;
         },
       };
       var hls = new Hls(hlsConfig);
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.log('HLS.Events.ERROR: ', event, data);
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              // try to recover network error
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              // cannot recover
+              hls.destroy();
+              break;
+          }
+        } else if (data.details === 'internalException' && data.type === 'otherError' && isMobile()) {
+          this.hlsDropHighestLevel();
+        } else if (data.details == 'bufferStalledError') {
+          //hls.recoverMediaError();
+        }
+      });
 
       hls.loadSource(this.getProxiedURL());
       hls.attachMedia(this._video);
@@ -998,6 +1027,25 @@ if (!ENV_IS_BROWSER) return;
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play();
         });
+      }
+
+    },
+    hlsDropHighestLevel() {
+      if (this.hls) {
+        const levels = this.hls.levels;
+        if (levels.length > 0) {
+          const level = levels[levels.length - 1];
+
+          if (level) {
+            this.hls.removeLevel(level.level, level.urlId);
+          }
+          console.log('HLS load failed, try removing highest res and trying again', level, this.hls, this.hls.levels, this);
+          this.hls.recoverMediaError();
+          return true;
+        } else {
+          console.log('HLS load exhausted all possible sources, giving up', this.hls, this);
+          return false;
+        }
       }
     },
     update: function(args) {
