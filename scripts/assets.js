@@ -1992,6 +1992,7 @@ if (!ENV_IS_BROWSER) return;
     load: function() {
       this._material = new THREE.ShaderMaterial();
       this._material.transparent = this.hasalpha;
+      this._material.fragmentShader = `void main() { gl_FragColor = vec4(0., 0., 0., 1.); }`;
       if (this.fragment_src || this.vertex_src) {
         if (this.fragment_src) {
           elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.fragment_src)).then(ev => {
