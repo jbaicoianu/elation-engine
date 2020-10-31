@@ -1346,7 +1346,7 @@ if (vivehack) {
       }
       if (obj) {
         var element = this.getParentThing(obj),
-            data = this.getPickingData(obj, [ev.clientX, ev.clientY]);
+            data = (ev.data ? ev.data : this.getPickingData(obj, [ev.clientX, ev.clientY]));
 
         var event = elation.events.getEvent({
           type: ev.type,
@@ -1582,12 +1582,13 @@ if (vivehack) {
       });
     }
   }, elation.ui.base);
-  elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport) {
+  elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport, intersection) {
     // Represents an intersection between the mouse and an object in the scene as viewed from the specified viewport
 
     this.init = function() {
       this.object = mesh;
       this.thing = this.getParentThing(mesh);
+      this.intersection = intersection;
 
       // Accessor functions let us avoid doing the heavy calculations for every single 
       // intersection, and instead generates more specific information as it's requested
@@ -1942,8 +1943,8 @@ console.log('dun it', msaafilter);
       }
       return this.pickingmaterials[id];
     }
-    this.getPickingData = function(mesh, mousepos) {
-      return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this);
+    this.getPickingData = function(mesh, mousepos, intersection) {
+      return new elation.engine.systems.render.picking_intersection(mesh, mousepos, this, intersection);
     }
     this.keydown = function(ev) {
       for (var k in this.keystates) {
