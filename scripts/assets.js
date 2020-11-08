@@ -863,6 +863,7 @@ if (!ENV_IS_BROWSER) return;
     sbs3d: false,
     ou3d: false,
     eac360: false,
+    vr180: false,
     hasalpha: false,
     reverse3d: false,
     auto_play: false,
@@ -916,22 +917,26 @@ if (!ENV_IS_BROWSER) return;
         if (this.hls === true) {
           this.initHLS();
         } else {
-          var promise = video.play();
-          if (promise) {
-            promise.then(elation.bind(this, function() {
-              this.handleAutoplayStart();
-            })).catch(elation.bind(this, function(err) {
-              // If autoplay failed, retry with muted video
-              var strerr = err.toString();
-              if (strerr.indexOf('NotAllowedError') == 0) {
-                video.muted = true;
-                video.play().catch(elation.bind(this, this.handleAutoplayError));
-              } else if (strerr.indexOf('NotSupportedError') == 0 && this.hls !== false) {
-                this.initHLS();
-              }
-            }));
-          }
+          this.play();
         }
+      }
+    },
+    play: function() {
+      let video = this._video;
+      var promise = video.play();
+      if (promise) {
+        promise.then(elation.bind(this, function() {
+          this.handleAutoplayStart();
+        })).catch(elation.bind(this, function(err) {
+          // If autoplay failed, retry with muted video
+          var strerr = err.toString();
+          if (strerr.indexOf('NotAllowedError') == 0) {
+            video.muted = true;
+            video.play().catch(elation.bind(this, this.handleAutoplayError));
+          } else if (strerr.indexOf('NotSupportedError') == 0 && this.hls !== false) {
+            this.initHLS();
+          }
+        }));
       }
     },
     handleLoad: function() {
@@ -1031,15 +1036,18 @@ if (!ENV_IS_BROWSER) return;
 
     },
     hlsDropHighestLevel() {
-      if (this.hls) {
+      if (this._video && this._video.src == '') {
+        console.log('video stopped, do nothing');
+        this.hls.destroy();
+      } else if (this.hls) {
         const levels = this.hls.levels;
-        if (levels.length > 0) {
+        if (levels && levels.length > 0) {
           const level = levels[levels.length - 1];
 
           if (level) {
             this.hls.removeLevel(level.level, level.urlId);
           }
-          console.log('HLS load failed, try removing highest res and trying again', level, this.hls, this.hls.levels, this);
+          console.log('HLS load failed, try removing highest res and trying again', level, this.hls, this.hls.levels, this._video, this._video.src);
           this.hls.recoverMediaError();
           return true;
         } else {
