@@ -702,7 +702,11 @@ if (vivehack) {
 
       this.rendersystem.renderer.setAnimationLoop((time, frame) => {
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
-        this.handleXRFrame(session, frame);
+        try {
+          this.handleXRFrame(session, frame);
+        } catch (e) {
+          console.log('Error during XR frame:', e);
+        }
       });
 
       this.xrlayer = session.renderState.baseLayer;
