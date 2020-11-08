@@ -2023,7 +2023,7 @@ console.log('dun it', msaafilter);
         var fired = false;
         while (intersects.length > 0) {
           hit = intersects.shift();
-          let thing = hit.object.userData.thing;
+          let thing = this.view.getParentThing(hit.object);
           if (thing.pickable && !(hit.object instanceof THREE.EdgesHelper)) {
             if (hit !== this.lasthit) {
               this.lasthit = hit; // FIXME - hack for demo
