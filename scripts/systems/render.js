@@ -56,7 +56,7 @@ elation.require([
       };
       if (webglmode == 'webgl2') {
         rendererargs.canvas = document.createElement( 'canvas' );
-        rendererargs.context = rendererargs.canvas.getContext( 'webgl2', { antialias: false } );
+        rendererargs.context = rendererargs.canvas.getContext( 'webgl2', { antialias: true } );
       }
       this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
