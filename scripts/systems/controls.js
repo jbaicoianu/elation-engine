@@ -848,7 +848,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       this.state[bindid] = 1;
       this.changes.push(bindid);
       //ev.preventDefault();
-      setTimeout(() => {
+      if (this.mousewheeltimer) {
+        clearTimeout(this.mousewheeltimer);
+      }
+      this.mousewheeltimer = setTimeout(() => {
         this.state[bindid] = 0;
         this.changes.push(bindid);
       }, 20);
