@@ -71,7 +71,7 @@ elation.require([
 
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
-      this.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.renderer.outputEncoding = THREE.LinearEncoding;
       this.renderer.gammaFactor = 2;
 
 /*
