@@ -958,10 +958,13 @@ if (!ENV_IS_BROWSER) return;
       //console.log('video uh oh!', ev);
       //this._texture = false;
       //console.log('Video failed to load, try HLS', this._video.error, ev);
+      /*
+      // Disabled Feb 2021 - this caused users with intermediate connection issues to constantly degrade HLS stream quality
       let hls = this.hls;
       if (hls) {
         this.hlsDropHighestLevel();
       }
+      */
     },
     handleAutoplayStart: function(ev) {
       if (this._autoplaytimeout) {
