@@ -1893,6 +1893,7 @@ if (!ENV_IS_BROWSER) return;
       var blob = new Blob(['\n' + data + '\n'], {type: 'application/javascript'});
       var bloburl = URL.createObjectURL(blob);
       this._script.src = bloburl;
+      this.loaded = true;
       elation.events.fire({type: 'asset_load', element: this._script});
       elation.events.fire({type: 'asset_load', element: this});
       elation.events.fire({type: 'asset_load_complete', element: this});
