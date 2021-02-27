@@ -45,7 +45,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //'toss': ['keyboard_space,gamepad_any_button_0,mouse_button_0', elation.bind(this, this.toss)],
         //'toss_cube': ['keyboard_shift_space,gamepad_any_button_1', elation.bind(this, this.toss_cube)],
         //'use': ['keyboard_e,gamepad_any_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
-        //'toggle_flying': ['keyboard_f', elation.bind(this, this.toggle_flying)],
+        'toggle_flying': ['keyboard_g', (ev) => { if (ev.value == 1) this.toggle_flying(); }],
         'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
         'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
@@ -148,14 +148,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.toggle_flying = function(value) {
       if (value === undefined) value = !this.flying;
-      //if (ev.value == 1) {
-        //this.flying = !this.flying;
-        this.properties.flying = value;
-        this.usegravity = !this.flying;
-        if (this.gravityForce) {
-          this.gravityForce.update(this.gravityVector.set(0,(this.usegravity ? -9.8 : 0), 0));
-        }
-      //}
+
+      this.flying = value;
+      this.usegravity = !this.flying;
+      console.log('toggle flying', this.flying);
     }
     this.reset_position = function(ev) {
       if (!ev || ev.value == 1) {
@@ -373,6 +369,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         this.camera.camera.updateProjectionMatrix(); // FIXME - this should only be needed if camera parameters change
         this.viewfrustum.setFromProjectionMatrix(this.viewmatrix.multiplyMatrices(this.camera.camera.projectionMatrix, this.camera.camera.matrixWorldInverse));
 
+        this.objects.dynamics.gravity = !this.flying;
         if (ev.data.pose) {
           this.updateXR(ev.data.pose, ev.data.xrspace);
         }
