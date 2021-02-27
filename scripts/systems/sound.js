@@ -6,6 +6,8 @@ elation.require([ ], function() {
     this.canPlaySound = false;
     this.volume = 100;
 
+    this.channels = {};
+
     Object.defineProperty(this, 'volume', {get: function() { return this.reallistener.getMasterVolume(); }, set: function(v) { this.reallistener.setMasterVolume(v); }});
 
     this.system_attach = function(ev) {
@@ -37,6 +39,31 @@ elation.require([ ], function() {
         }
       }
       return this.reallistener;
+    }
+    this.getRealListenerAsync = async function() {
+      return new Promise(resolve => {
+        if (this.reallistener) {
+          resolve(this.reallistener);
+        } else {
+          elation.events.add(this, 'sound_enabled', ev => {
+            resolve(this.getRealListener());
+          });
+        }
+      });
+    }
+    this.getOutputChannel = async function(channelname='main') {
+      if (this.channels[channelname]) {
+        return this.channels[channelname];
+      }
+
+      let listener = await this.getRealListenerAsync();
+
+      let channel = listener.context.createGain();
+      channel.connect(listener.getInput());
+
+      this.channels[channelname] = channel;
+
+      return channel;
     }
     this.mute = function(mutestate) {
       this.enabled = (typeof mutestate == 'undefined' ? false : !mutestate);
