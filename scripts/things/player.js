@@ -3,7 +3,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.targetrange = 8;
     this.postinit = function() {
       this.defineProperties({
-        height: { type: 'float', default: 2.0 },
+        height: { type: 'float', default: 1.9 },
         fatness: { type: 'float', default: .25 },
         mass: { type: 'float', default: 10.0 },
         movestrength: { type: 'float', default: 200.0 },
@@ -22,6 +22,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         walking: { type: 'boolean', default: true },
         running: { type: 'boolean', default: false },
         flying: { type: 'boolean', default: false, set: function(key, value) { this.properties.flying = value; this.toggle_flying(value); }},
+        dynamicfriction:{ type: 'float', default: 2.0, comment: 'Dynamic friction inherent to this object' },
+        staticfriction: { type: 'float', default: 1.9, comment: 'Static friction inherent to this object' },
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
