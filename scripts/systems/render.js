@@ -12,7 +12,7 @@ elation.require([
   "engine.external.three.CSS3DRenderer",
   "engine.external.three.CubemapToEquirectangular",
 
-  //"engine.external.webvr-polyfill",
+  "engine.external.webxr-polyfill",
 
   "engine.materials",
   "engine.geometries",
@@ -181,7 +181,7 @@ elation.require([
     this.init = function() {
       elation.html.addclass(this.container, "engine_view");
       this.picking = this.args.picking || false;
-      this.useWebVRPolyfill = elation.utils.any(this.args.useWebVRPolyfill, true);
+      this.useWebXRPolyfill = elation.utils.any(this.args.useWebXRPolyfill, true);
       this.size = [0, 0];
       this.size_old = [0, 0];
       this.scale = 100;// * devicePixelRatio;
@@ -389,39 +389,10 @@ elation.require([
       }
     }
     this.initVRDisplays = function() {
-      if (this.useWebVRPolyfill && ENV_IS_BROWSER && !navigator.getVRDisplays && !this.initializedPolyfill && typeof InitializeWebVRPolyfill != 'undefined') {
+      if (!navigator.xr  && this.useWebXRPolyfill && ENV_IS_BROWSER && !this.initializedPolyfill) {
         this.initializedPolyfill = true;
-        //InitializeWebVRPolyfill();
-      }
-      if (navigator.xr) {
-        // WebXR Working Draft
-        // This is all handled by the engine now...
-      } else if (navigator.getVRDisplays) {
-        // WebVR 1.0 spec
-        navigator.getVRDisplays().then(function(n) {
-          for (var i = 0; i < n.length; i++) {  
-            // TODO - if we see multiple VR devices, we should enumerate them and let the user pick the one they want to use
-            this.vrdisplay = n[i];
-            elation.events.fire({element: this, type: 'engine_render_view_vr_detected', data: this.vrdisplay});
-            elation.events.add(window, 'vrdisplayactivate', elation.bind(this, this.toggleVR, true));
-            elation.events.add(window, 'vrdisplaydeactivate', elation.bind(this, this.toggleVR, false));
-
-            break;
-          }
-        }.bind(this));
-        
-      } else if (navigator.getVRDevices) {
-        navigator.getVRDevices().then(function(n) {
-          for (var i = 0; i < n.length; i++) {  
-            if (n[i] instanceof HMDVRDevice) {
-              this.vrdisplay = n[i];
-              setTimeout(elation.bind(this, function() {
-                //this.engine.client.toggleVR({value: 1});
-              }), 1000);
-              break;
-            }
-          }
-        }.bind(this));
+        this.webxrPolyfill = new WebXRPolyfill();
+console.log('created a webxr polyfill', this.webxrPolyfill);
       }
     }
     this.handleVRDisplayPresentChange = function(ev) {
