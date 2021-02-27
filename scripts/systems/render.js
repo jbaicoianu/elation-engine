@@ -130,6 +130,45 @@ elation.require([
         this.lastframetime = 0;
       }
     }
+    this.textureSampleMipmapLevel = (function() {
+      let scene = new THREE.Scene();
+      let plane = new THREE.PlaneBufferGeometry(2, 2);
+      let material = new THREE.MeshBasicMaterial({color: 0xffffff});
+      let mesh = new THREE.Mesh(plane, material);
+      mesh.position.set(0,0,-1);
+      scene.add(mesh);
+      let camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000);
+      scene.add(camera);
+      let rendertarget = new THREE.WebGLRenderTarget(1, 1);
+      let oldviewport = new THREE.Vector4();
+      let viewport = new THREE.Vector4(0, 0, 1, 1);
+      return function(texture, level=0) {
+        material.map = texture;
+        material.map.needsUpdate = true;
+
+        let size = Math.pow(2, level);
+        rendertarget.setSize(size, size);
+
+        let renderer = this.renderer;
+        let pixeldata = new Uint8Array(4 * size * size);
+        let oldrendertarget = renderer.getRenderTarget();
+
+        let oldencoding = texture.encoding;
+        texture.encoding = THREE.LinearEncoding;
+
+        renderer.getViewport(oldviewport);
+        renderer.setViewport(viewport);
+        renderer.setRenderTarget(rendertarget);
+        renderer.render(scene, camera);
+        renderer.readRenderTargetPixels(rendertarget, 0, 0, size, size, pixeldata);
+        renderer.setRenderTarget(oldrendertarget);
+        renderer.setViewport(oldviewport);
+
+        texture.encoding = oldencoding;
+
+        return pixeldata;
+      }
+    })();
     this.textureHasAlpha = (function() {
       let scene = new THREE.Scene();
       let plane = new THREE.PlaneBufferGeometry(2, 2);
