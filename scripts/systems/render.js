@@ -71,8 +71,10 @@ elation.require([
 
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
+      //this.renderer.outputEncoding = THREE.LinearEncoding;
+      //this.renderer.outputEncoding = THREE.sRGBEncoding;
       this.renderer.outputEncoding = THREE.LinearEncoding;
-      this.renderer.gammaFactor = 2;
+      this.renderer.gammaFactor = 1;
 
 /*
       this.renderer.toneMapping = THREE.CineonToneMapping;
@@ -319,6 +321,7 @@ elation.require([
         stencilBuffer: true,
         depthBuffer: true,
       });
+      this.rendertarget.texture.encoding = THREE.sRGBEncoding;
       this.rendertarget.depthTexture = new THREE.DepthTexture();
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
@@ -719,6 +722,7 @@ if (vivehack) {
         }
       });
 
+      this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
       this.xrlayer = session.renderState.baseLayer;
       if (!this.xrscene) {
         // Set up a scene with an ortho camera to clone our XR framebuffer to, for display on the main screen
@@ -765,6 +769,7 @@ if (vivehack) {
       elation.html.removeclass(this.container, 'webxr_session_active');
       this.rendersystem.renderer.setAnimationLoop(null);
       this.xrsession = false;
+      this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
     }
     this.updateCameras = (function() {
       // Closure scratch variables
