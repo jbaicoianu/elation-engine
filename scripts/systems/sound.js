@@ -68,9 +68,13 @@ elation.require([ ], function() {
     this.mute = function(mutestate) {
       this.enabled = (typeof mutestate == 'undefined' ? false : !mutestate);
       if (this.enabled) {
-        this.reallistener.context.resume();
+        //this.reallistener.context.resume();
+        this.reallistener.gain.gain.value = 1;
+        elation.events.fire({type: 'unmute', element: this});
       } else {
-        this.reallistener.context.suspend();
+        //this.reallistener.context.suspend();
+        this.reallistener.gain.gain.value = 0;
+        elation.events.fire({type: 'mute', element: this});
       }
     }
     this.toggleMute = function() {
