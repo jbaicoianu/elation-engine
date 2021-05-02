@@ -59,7 +59,9 @@ elation.component.add("engine.things.generic", function() {
       'visible':        { type: 'bool', default: true, comment: 'Is visible' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
-      'restitution':    { type: 'float', default: 1.0, comment: 'Amount of energy preserved after each bounce' },
+      'restitution':    { type: 'float', default: 0.5, comment: 'Amount of energy preserved after each bounce', set: this.updatePhysics },
+      'dynamicfriction':{ type: 'float', default: 0.0, comment: 'Dynamic friction inherent to this object', set: this.updatePhysics },
+      'staticfriction': { type: 'float', default: 0.0, comment: 'Static friction inherent to this object', set: this.updatePhysics },
       //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
       'shadow':         { type: 'bool', default: true, refreshMaterial: true, comment: 'Casts and receives shadows' },
       'wireframe':      { type: 'bool', default: false, refreshMaterial: true, comment: 'Render this object as a wireframe' },
@@ -736,6 +738,10 @@ elation.component.add("engine.things.generic", function() {
         angular: this.properties.angular,
         angularacceleration: this.properties.angularacceleration,
         restitution: this.properties.restitution,
+        material: {
+          dynamicfriction: this.properties.dynamicfriction,
+          staticfriction: this.properties.staticfriction,
+        },
         object: this
       });
       //this.engine.systems.physics.add(this.objects['dynamics']);
@@ -1852,6 +1858,13 @@ elation.component.add("engine.things.generic", function() {
     }
     if (this.objects.dynamics) {
       this.engine.systems.physics.disableDebug(this);
+    }
+  }
+  this.updatePhysics = function() {
+    if (this.objects.dynamics) {
+      this.objects.dynamics.restitution = this.restitution;
+      this.objects.dynamics.material.dynamicfriction = this.dynamicfriction;
+      this.objects.dynamics.material.staticfriction = this.staticfriction;
     }
   }
 });
