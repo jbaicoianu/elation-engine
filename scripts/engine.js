@@ -634,11 +634,13 @@ console.log(this.client.view.xrsession);
     this.screenshot = function(args) {
       return this.view.screenshot(args);
     }
-    this.startXR = function(mode="immersive-vr") {
+    this.startXR = function(mode="immersive-vr", xroptions) {
       if (!this.xrsession) {
-        let xroptions = {
-          optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking' ]
-        };
+        if (!xroptions) {
+          xroptions = {
+            optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking' ]
+          };
+        }
         if (!this.xrwindow) {
           this.xrwindow = elation.elements.create('ui-window', {
             bottom: true,
