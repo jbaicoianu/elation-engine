@@ -645,6 +645,7 @@ console.log(this.client.view.xrsession);
           this.xrwindow = elation.elements.create('ui-window', {
             bottom: true,
             center: true,
+            controls: 0,
             className: 'webxr_notification',
             resizable: 0,
             //content: 'WebXR active.  Please put on your headset',
