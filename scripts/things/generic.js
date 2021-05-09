@@ -145,10 +145,10 @@ elation.component.add("engine.things.generic", function() {
         break;
       case 'vector3':
         if (elation.utils.isArray(value)) {
-          value = new THREE.Vector3(+value[0], +value[1], +value[2]);
+          value = new elation.physics.vector3(+value[0], +value[1], +value[2]);
         } else if (elation.utils.isString(value)) {
           var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
-          value = new THREE.Vector3(+split[0], +split[1], +split[2]);
+          value = new elation.physics.vector3(+split[0], +split[1], +split[2]);
         }
         break;
       case 'euler':
@@ -163,10 +163,12 @@ elation.component.add("engine.things.generic", function() {
         break;
       case 'quaternion':
         if (elation.utils.isArray(value)) {
-          value = new THREE.Quaternion(+value[0], +value[1], +value[2], +value[3]);
+          value = new elation.physics.quaternion(+value[0], +value[1], +value[2], +value[3]);
         } else if (elation.utils.isString(value)) {
           var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
-          value = new THREE.Quaternion(+split[0], +split[1], +split[2], +split[3]);
+          value = new elation.physics.quaternion(+split[0], +split[1], +split[2], +split[3]);
+        } else if (value instanceof THREE.Quaternion && !(value instanceof elation.physics.quaternion)) {
+          value = new elation.physics.quaternion().copy(value);
         }
         break;
       case 'color':
@@ -263,6 +265,7 @@ elation.component.add("engine.things.generic", function() {
             x: ['property', 'x'],
             y: ['property', 'y'],
             z: ['property', 'z'],
+            changed: ['property', 'changed'],
             add: ['function', 'add'],
             addScalar: ['function', 'addScalar'],
             addScaledVector: ['function', 'addScaledVector'],
@@ -309,6 +312,7 @@ elation.component.add("engine.things.generic", function() {
             subScalar: ['function', 'subScalar'],
             subVectors: ['function', 'subVectors'],
             toArray: ['function', 'toArray'],
+            reset: ['function', 'reset'],
         };
         if (prop.type == 'quaternion') {
           proxydef.w = ['property', 'w'];
@@ -1155,7 +1159,7 @@ elation.component.add("engine.things.generic", function() {
     //this.colliders.bindPosition(this.localToWorld(new THREE.Vector3()));
 
     //var flip = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
-    var flip = new THREE.Quaternion();
+    var flip = new elation.physics.quaternion();
     var root = new elation.physics.rigidbody({orientation: flip, object: this});// orientation: obj.quaternion.clone() });
     //root.orientation.multiply(flip);
 
