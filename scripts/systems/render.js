@@ -742,7 +742,7 @@ if (vivehack) {
         this.xrsceneplane.position.set(w / 4, 0, -10);
         //this.xrsceneplane.rotation.set(Math.PI/4, 0, 0);
         this.xrscene.add(this.xrsceneplane);
-        this.xrscenecam = new THREE.OrthographicCamera(-w / 2, w / 2, h / 2, -h / 2, -1000, 1000);
+        this.xrscenecam = new THREE.OrthographicCamera(-w / 2, w, h, -h / 2, -1000, 1000);
         //this.xrscenecam = new THREE.PerspectiveCamera();
         this.xrscene.add(this.xrscenecam);
       }
@@ -753,6 +753,8 @@ if (vivehack) {
         if (this.activething && this.activething.updateXR) {
           this.activething.updateXR(frame);
         }
+        let xrReferenceSpace =  this.engine.systems.render.renderer.xr.getReferenceSpace();
+        elation.events.fire({ element: this.engine, type: 'xrframe', data: { frame, session, xrReferenceSpace } });
         this.engine.advance();
         this.render();
         //session.requestAnimationFrame((ts, frame) => this.handleXRFrame(session, frame));
@@ -770,6 +772,10 @@ if (vivehack) {
       this.rendersystem.renderer.setAnimationLoop(null);
       this.xrsession = false;
       this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
+      setTimeout(() => {
+        this.size = [0, 0];
+        this.getsize();
+      }, 100);
     }
     this.updateCameras = (function() {
       // Closure scratch variables
