@@ -11,7 +11,7 @@ elation.require(["physics.cyclone"], function() {
 
     this.system_attach = function(ev) {
       console.log('INIT: physics');
-      this.system = new elation.physics.system({autostart: false});
+      this.system = new elation.physics.system({autostart: false, processortype: 'cpu'});
 
       // Only show second framerate gauge if physics system is decoupled from framerate
       if (this.async && ENV_IS_BROWSER) {
