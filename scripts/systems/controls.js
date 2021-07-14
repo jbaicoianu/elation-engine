@@ -379,10 +379,12 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.changes = [];
       }
       if (this.state['mouse_delta_x'] != 0 || this.state['mouse_delta_y'] != 0) {
+        this.state['mouse_delta'] = [0, 0];
         this.state['mouse_delta_x'] = 0;
         this.state['mouse_delta_y'] = 0;
         this.changes.push('mouse_delta_x');
         this.changes.push('mouse_delta_y');
+        this.changes.push('mouse_delta');
       }
     }
     this.getBindingName = function(type, id, subid) {
@@ -854,7 +856,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       this.mousewheeltimer = setTimeout(() => {
         this.state[bindid] = 0;
         this.changes.push(bindid);
-      }, 20);
+      }, 10);
     }
     this.keydown = function(ev) {
       // Send key events for both keyboard_<key> and keyboard_<modname>_<key>
