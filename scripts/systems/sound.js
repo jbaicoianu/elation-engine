@@ -67,6 +67,7 @@ elation.require([ ], function() {
     }
     this.mute = function(mutestate) {
       this.enabled = (typeof mutestate == 'undefined' ? false : !mutestate);
+      if (!this.reallistener) return;
       if (this.enabled) {
         //this.reallistener.context.resume();
         this.reallistener.gain.gain.value = 1;
