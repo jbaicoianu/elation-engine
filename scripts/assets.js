@@ -2023,7 +2023,7 @@ if (!ENV_IS_BROWSER) return;
           { name: 'iChannel2', value: new THREE.Texture() },
           { name: 'iChannel3', value: new THREE.Texture() },
         ];
-
+        this.uniformsMap = this.parseUniforms(this.uniforms);
         // FIXME - this hack is used to update the Shadertoy uniforms at 60fps, but it should be abstracted out and driven by the object that's using the shader
         // As a general shader harness, this will give us the means to update uniforms based on custom functions, so we can pass in things like mouse position,
         // multiple textures, audio data, etc.
@@ -2031,15 +2031,19 @@ if (!ENV_IS_BROWSER) return;
         let starttime = new Date().getTime();
             lasttime = starttime;
         setInterval(() => {
+          let d = new Date();
+          let now = d.getTime();
+          this.uniformsMap.iTime.value = (now - starttime) / 1000;
+          this.uniformsMap.iTimeDelta.value = (now - lasttime) / 1000;
+          this.uniformsMap.iFrame.value++;
+          this.uniformsMap.iDate.value.set(d.getFullYear(), d.getMonth() + 1, d.getDate(), (d.getHours() * 60 + d.getMinutes()) * 60 + d.getSeconds() + d.getMilliseconds() / 1000);
+
           if (this._material && this._material.uniforms.iTime) {
-            let d = new Date();
-            let now = d.getTime();
 
-            this._material.uniforms.iTime.value = (now - starttime) / 1000;
-            this._material.uniforms.iTimeDelta.value = (now - lasttime) / 1000;
-            this._material.uniforms.iFrame.value++;
-
-            this._material.uniforms.iDate.value.set(d.getFullYear(), d.getMonth() + 1, d.getDate(), (d.getHours() * 60 + d.getMinutes()) * 60 + d.getSeconds() + d.getMilliseconds() / 1000);
+            this._material.uniforms.iTime.value = this.uniformsMap.iTime.value;
+            this._material.uniforms.iTimeDelta.value = this.uniformsMap.iTimeDelta.value;
+            this._material.uniforms.iFrame.value = this.uniformsMap.iFrame.value;
+            this._material.uniforms.iDate.value = this.uniformsMap.iDate.value;
             lasttime = now;
           }
         }, 16);
@@ -2110,7 +2114,7 @@ if (!ENV_IS_BROWSER) return;
         }
       }
       if (this.uniforms) {
-        this._material.uniforms = this.parseUniforms(this.uniforms);
+        this._material.uniforms = this.uniformsMap;
       }
       this.complete();
     },
@@ -2122,7 +2126,7 @@ if (!ENV_IS_BROWSER) return;
     parseUniforms(uniforms) {
       let matuniforms = {};
       uniforms.forEach(u => {
-        matuniforms[u.name] = { value: u.value };
+        matuniforms[u.name] = u;
       });
       return matuniforms;
     },
