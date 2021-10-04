@@ -277,6 +277,7 @@ elation.component.add("engine.things.generic", function() {
             clampLength: ['function', 'clampLength'],
             clampScalar: ['function', 'clampScalar'],
             clone: ['function', 'clone'],
+            constructor: ['function', 'constructor'],
             copy: ['function', 'copy'],
             cross: ['function', 'cross'],
             crossVectors: ['function', 'crossVectors'],
@@ -357,6 +358,7 @@ elation.component.add("engine.things.generic", function() {
             set: ['function', 'set'],
             copy: ['function', 'copy'],
             clone: ['function', 'clone'],
+            constructor: ['function', 'constructor'],
             toArray: ['function', 'toArray'],
         };
         if (propval) {
