@@ -1348,7 +1348,11 @@ if (!ENV_IS_BROWSER) return;
             }
           });
           this.state = 'processing';
-          this.loadWithWorker(jobdata);
+          if (this.isglTF(jobdata)) {
+            this.loadglTF(jobdata);
+          } else {
+            this.loadWithWorker(jobdata);
+          }
           elation.events.fire({element: this, type: 'asset_load_processing'});
         }), 
         elation.bind(this, function(error) {
@@ -1357,6 +1361,34 @@ if (!ENV_IS_BROWSER) return;
         })
       );
       elation.events.fire({element: this, type: 'asset_load_queued'});
+    },
+    isglTF: function(jobdata) {
+      let d = new Uint8Array(jobdata.srcdata);
+      let isGLB = String.fromCharCode(d[0]) == 'g' && String.fromCharCode(d[1]) == 'l' && String.fromCharCode(d[2]) == 'T' && String.fromCharCode(d[3]) == 'F';
+      return isGLB;
+    },
+    loadglTF: function(jobdata) {
+      let proxypath = this.getProxiedURL(jobdata.src);
+      var loader = new THREE.GLTFLoader();
+      if (elation.engine.assets.dracopath) {
+        loader.setDRACOLoader(new THREE.DRACOLoader().setDecoderPath(elation.engine.assets.dracopath));
+      }
+      this._model = new THREE.Group();
+      this._model.userData.loaded = false;
+      loader.parse(jobdata.srcdata, proxypath, elation.bind(this, function(modeldata) {
+        if (modeldata.scene) {
+          this.loaded = true;
+          this.animations = modeldata.animations;
+
+          if (modeldata.userData && modeldata.userData.gltfExtensions && modeldata.userData.gltfExtensions.VRM) {
+            THREE.VRM.from(modeldata).then(vrm => {
+              this.vrm = vrm;
+              this.complete(vrm.scene);
+            });
+          }
+          this.complete(modeldata.scene);
+        }
+      }));
     },
     loadWithWorker: function(jobdata) {
       this._model = new THREE.Group();
