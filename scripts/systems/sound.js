@@ -91,6 +91,7 @@ elation.require([ ], function() {
       }
     }
   });
+if (0) {
   elation.component.add('engine.systems.sound.config', function() {
     this.init = function() {
         this.args.orientation = 'vertical'
@@ -152,4 +153,5 @@ elation.require([ ], function() {
 */
     }
   }, elation.ui.panel);
+}
 });
