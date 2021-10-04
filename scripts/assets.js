@@ -1339,7 +1339,7 @@ if (!ENV_IS_BROWSER) return;
         elation.bind(this, function(events) {
           var files = [];
           events.forEach(function(ev) {
-            var url = ev.target.responseURL,
+            var url = ev.target.responseURL.replace(elation.engine.assets.corsproxy, ''),
                 data = ev.target.response;
             if (url == jobdata.src) {
               jobdata.srcdata = data;
