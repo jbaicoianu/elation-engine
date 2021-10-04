@@ -3,7 +3,7 @@ var deps = [
   "engine.materials",
   "engine.assets",
   "engine.geometries",
-  "engine.sharing",
+  //"engine.sharing",
   "engine.things.generic",
   "engine.things.menu",
   "engine.systems.ai",
@@ -12,15 +12,15 @@ var deps = [
   "engine.systems.sound",
   "engine.systems.world",
   "utils.math",
-  "ui.panel"
+  "ui.base"
 ];
 
 if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
-    "engine.sharing",
+    //"engine.sharing",
     "engine.systems.render",
-    "engine.systems.admin",
+    //"engine.systems.admin",
   ]);
 } else if (elation.env.isNode) {
   deps.push("engine.external.three.three");
@@ -204,6 +204,7 @@ console.log(this.client.view.xrsession);
       }
     }
   });
+  if (0) {
   elation.component.add("engine.configuration", function() {
     this.init = function() {
       this.client = this.args.client;
@@ -282,6 +283,7 @@ console.log(this.client.view.xrsession);
       }
     }
   }, elation.ui.panel);
+  }
 
   elation.component.add('engine.client', function() {
     this.init = function() {
@@ -318,7 +320,7 @@ console.log(this.client.view.xrsession);
       this.enginecfg.systems.push("world");
       this.enginecfg.systems.push("ai");
       if (hashargs.admin == 1) {
-        this.enginecfg.systems.push("admin");
+        //this.enginecfg.systems.push("admin");
       } 
       this.enginecfg.systems.push("render");
       this.enginecfg.systems.push("sound");
@@ -368,6 +370,7 @@ console.log(this.client.view.xrsession);
       try {
         var cfg = this.enginecfg;
         this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), {
+          append: document.body,
           fullsize: cfg.fullsize,
           resolution: cfg.resolution,
           picking: cfg.picking,
