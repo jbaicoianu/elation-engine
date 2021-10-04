@@ -1398,8 +1398,31 @@ elation.component.add("engine.things.generic", function() {
     rootobject.traverse(function(n) {
       if (n instanceof THREE.SkinnedMesh) {
         n.rebindByName(rootobject);
+        this.skeletonhelper = new THREE.SkeletonHelper(this.objects['3d']);
       }
     });
+  }
+  this.initAnimations = function(animations) {
+    let skinnedmeshes = [];
+    if (!animations || animations.length == 0) {
+      this.objects['3d'].traverse(n => {
+        if (n.animations && n.animations.length > 0) {
+          animations = n.animations;
+        }
+      });
+    }
+
+    this.animationmixer = false;
+    this.animations = {};
+    if (!animations) return;
+    let mixer = new THREE.AnimationMixer(this.objects['3d']);
+    animations.forEach(clip => {
+      let action = mixer.clipAction(clip);
+      this.animations[clip.name] = action;
+      //action.play();
+    });
+    this.animationmixer = mixer;
+    mixer.setTime(new Date().getTime() / 1000);
   }
   this.loadTextures = function(textures) {
     this.pendingtextures = 0;
