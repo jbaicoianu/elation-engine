@@ -16,8 +16,9 @@ elation.require([
 
   "engine.materials",
   "engine.geometries",
-  "ui.select",
-  "ui.slider",
+  //"ui.select",
+  //"ui.slider",
+  'ui.base',
 ], function() {
   elation.requireCSS('engine.systems.render');
 
@@ -1671,6 +1672,7 @@ if (vivehack) {
     }
     this.init();
   });
+  if (0) {
   elation.component.add('engine.systems.render.config', function() {
     this.init = function() {
         this.args.orientation = 'vertical'
@@ -1792,6 +1794,7 @@ console.log('dun it', msaafilter);
       });
     }
   }, elation.ui.panel);
+  }
 
   elation.extend('engine.systems.render.picking_gpu', function(view) {
     this.view = view;
