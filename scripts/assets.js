@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.textdecoder-polyfill'], function() {
+elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.textdecoder-polyfill', 'engine.external.three.three-loaders', 'engine.external.three.three-vrm'], function() {
 
   THREE.Cache.enabled = true;
 
@@ -67,6 +67,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     assets: {},
     types: {},
     corsproxy: '',
+    dracopath: false,
     placeholders: {},
 
     init: function(dummy) {
@@ -79,10 +80,15 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     },
     initTextureLoaders: function(rendersystem, libpath) {
       let renderer = rendersystem.renderer;
-      let loader = new THREE.BasisTextureLoader();
-      loader.setTranscoderPath(libpath);
-      loader.detectSupport(renderer);
-      this.basisloader = loader;
+      let basisloader = new THREE.BasisTextureLoader();
+      basisloader.setTranscoderPath(libpath);
+      basisloader.detectSupport(renderer);
+      this.basisloader = basisloader;
+
+      let pmremGenerator = new THREE.PMREMGenerator( renderer );
+      pmremGenerator.compileEquirectangularShader();
+      this.pmremGenerator = pmremGenerator;
+
       this.rendersystem = rendersystem;
     },
     loadAssetPack: function(url, baseurl) {
@@ -131,6 +137,9 @@ if (!ENV_IS_BROWSER) return;
     },
     setPlaceholder: function(type, name) {
       this.placeholders[type] = this.find(type, name);
+    },
+    setDracoPath: function(dracopath) {
+      this.dracopath = dracopath;
     },
     loaderpool: false
   });
@@ -533,6 +542,25 @@ if (!ENV_IS_BROWSER) return;
                 blob.arrayBuffer()
                   .then(buffer => loader._createTexture(buffer))
                   .then(texture => this.handleLoadBasis(texture))
+              } else if (imagetype == 'exr') {
+                // TODO - this should probably done off-thread if possible, it currently locks rendering for a noticable amount of time
+                let loader = new THREE.EXRLoader();
+                if (loader) {
+                  loader.setDataType( THREE.UnsignedByteType );
+                  loader.load(fullurl, (exrtexture) => {
+                    let exrCubeRenderTarget = elation.engine.assets.pmremGenerator.fromEquirectangular( exrtexture );
+                    let exrBackground = exrCubeRenderTarget.texture;
+
+                    exrtexture.dispose();
+
+                    this._texture = exrBackground;
+                    this.loaded = true;
+                    this.uploaded = false;
+
+                    this.sendLoadEvents();
+
+                  });
+                }
               } else {
                 if (typeof createImageBitmap == 'function' && type != 'image/gif') {
                   let blob = xhr.response;
