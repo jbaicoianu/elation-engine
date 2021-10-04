@@ -1181,6 +1181,7 @@ if (!ENV_IS_BROWSER) return;
     compression: 'none',
     object: false,
     assetpack: null,
+    animations: false,
 
     loadworkers: [
     ],
@@ -1211,29 +1212,13 @@ if (!ENV_IS_BROWSER) return;
       this.instances.push(group);
       return group;
     },
-    fillGroup: function(group, source) {
+    fillGroup: function(group, source, clone=true) {
       if (!source) source = this._model;
       if (source) {
-/*
-        group.position.copy(source.position);
-        group.quaternion.copy(source.quaternion);
-        //group.scale.copy(source.scale);
-        if (source.children) {
-          source.children.forEach(function(n) {
-            group.add(n.clone());
-          });
-        }
-*/
-        var newguy = source.clone();
+        var newguy = (clone ? THREE.SkeletonUtils.cloneWithAnimations(source, this.animations) : source);
         group.add(newguy);
         newguy.updateMatrix(true);
         newguy.updateMatrixWorld(true);
-
-        newguy.traverse(function(n) {
-          if (n instanceof THREE.SkinnedMesh) {
-            //n.rebindByName(newguy);
-          }
-        });
       }
       return group;
     },
@@ -1395,7 +1380,7 @@ if (!ENV_IS_BROWSER) return;
       this.removePlaceholders();
       this._model.userData.loaded = true;
       //this._model.add(scene);
-      this.fillGroup(this._model, object);
+      this.fillGroup(this._model, object, false);
 
       this.extractTextures(object);
       //this.assignTextures(scene);
