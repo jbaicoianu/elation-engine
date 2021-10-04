@@ -999,6 +999,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
     }
   });
+if (0) {
   elation.component.add('engine.systems.controls.config', function() {
     this.init = function() {
       this.controlsystem = this.args.controlsystem;
@@ -1495,4 +1496,5 @@ console.log(rpoint, point, len);
       }
     }
   }, elation.ui.base);
+}
 });
