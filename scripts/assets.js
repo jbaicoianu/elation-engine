@@ -917,6 +917,9 @@ if (!ENV_IS_BROWSER) return;
         if (url.match(/\.webm$/)) {
           this.hasalpha = true;
         }
+        if ('requestVideoFrameCallback' in video) {
+          video.requestVideoFrameCallback((time, metadata) => this.updateVideoFrame(time, metadata));
+        }
       }
       this._video = video;
       let textureFormat = (this.format == THREE.RGBFormat && this.hasalpha ? THREE.RGBAFormat : this.format);
@@ -1006,6 +1009,11 @@ if (!ENV_IS_BROWSER) return;
     },
     handleAutoplayFail: function(ev) {
       elation.events.fire({element: this._texture, type: 'autoplayfail'});
+    },
+    updateVideoFrame: function(time, metadata) {
+      //elation.events.fire({element: this, type: 'videoframe'});
+      elation.events.fire({element: this._texture, type: 'videoframe'});
+      this._video.requestVideoFrameCallback((time, metadata) => this.updateVideoFrame(time, metadata));
     },
     getInstance: function(args) {
       if (!this._texture) {
