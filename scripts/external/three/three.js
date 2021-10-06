@@ -1393,6 +1393,8 @@
 					height: image.height,
 					type: image.data.constructor.name
 				};
+			} else if (image.src) {
+				return image.src;
 			} else {
 				console.warn('THREE.Texture: Unable to serialize Texture.');
 				return {};
