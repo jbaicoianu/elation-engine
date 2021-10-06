@@ -414,13 +414,13 @@ elation.require([
           }
           parsed.scene.traverse(function(n) {
             if (n.geometry && n.geometry instanceof THREE.BufferGeometry && !n.geometry.attributes.normals) {
-              n.geometry.computeFaceNormals();
+              //n.geometry.computeFaceNormals();
               n.geometry.computeVertexNormals();
             }
           });
           data = parsed;        
 
-          data.scene.animations = parsed.animations;
+          //data.scene.animations = parsed.animations;
           data.scene.rotation.x = -Math.PI/2;
           data.scene.updateMatrix();
           resolve(data.scene.toJSON());
