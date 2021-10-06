@@ -47,7 +47,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         //'use': ['keyboard_e,gamepad_any_button_0,mouse_button_0', elation.bind(this, this.handleUse)],
         'toggle_flying': ['keyboard_g', (ev) => { if (ev.value == 1) this.toggle_flying(); }],
         'reset_position': ['keyboard_backspace', elation.bind(this, this.reset_position)],
-        'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
+        //'pointerlock': ['mouse_0', elation.bind(this, this.updateControls)],
       });
       // Separate HMD context so it can remain active when player controls are disabled
       this.hmdstate = this.engine.systems.controls.addContext('playerhmd', {
