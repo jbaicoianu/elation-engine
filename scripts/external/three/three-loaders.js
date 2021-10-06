@@ -1112,6 +1112,10 @@ if (typeof THREE == 'undefined') var THREE = {};
 							data.parameters = parseEffectParameters( child );
 							break;
 
+						case 'extra':
+							data.extra = parseEffectExtra( child );
+							break;
+
 					}
 
 				}
@@ -1269,6 +1273,10 @@ if (typeof THREE == 'undefined') var THREE = {};
 
 							break;
 
+						case 'bump':
+							data[ child.nodeName ] = parseEffectExtraTechniqueBump( child );
+							break;
+
 					}
 
 				}
@@ -1311,6 +1319,33 @@ if (typeof THREE == 'undefined') var THREE = {};
 
 						case 'double_sided':
 							data[ child.nodeName ] = parseInt( child.textContent );
+							break;
+
+						case 'bump':
+							data[ child.nodeName ] = parseEffectExtraTechniqueBump( child );
+							break;
+
+					}
+
+				}
+
+				return data;
+
+			}
+
+			function parseEffectExtraTechniqueBump( xml ) {
+				var data = {};
+
+				for ( var i = 0, l = xml.childNodes.length; i < l; i ++ ) {
+
+					var child = xml.childNodes[ i ];
+
+					if ( child.nodeType !== 1 ) continue;
+
+					switch ( child.nodeName ) {
+
+						case 'texture':
+							data[ child.nodeName ] = { id: child.getAttribute( 'texture' ), texcoord: child.getAttribute( 'texcoord' ), extra: parseEffectParameterTexture( child ) };
 							break;
 
 					}
@@ -1572,9 +1607,28 @@ if (typeof THREE == 'undefined') var THREE = {};
 				} //
 
 
-				if ( extra !== undefined && extra.technique !== undefined && extra.technique.double_sided === 1 ) {
+				if ( technique.extra !== undefined && technique.extra.technique !== undefined ) {
 
-					material.side = THREE.DoubleSide;
+					let techniques = technique.extra.technique;
+
+					for ( let k in techniques ) {
+
+						let v = techniques[k];
+
+						switch (k) {
+
+							case 'double_sided':
+								material.side = ( v === 1 ? THREE.DoubleSide : THREE.FrontSide );
+								break;
+
+							case 'bump':
+								material.normalMap = getTexture( v.texture );
+								material.normalScale = new THREE.Vector2( 1, 1 );
+								break;
+
+						}
+
+					}
 
 				}
 
@@ -9499,7 +9553,7 @@ if (typeof THREE == 'undefined') var THREE = {};
 			this.nodeNamesUsed = {}; // Use an THREE.ImageBitmapLoader if imageBitmaps are supported. Moves much of the
 			// expensive work of uploading a texture to the GPU off the main thread.
 
-			if ( typeof createImageBitmap !== 'undefined' && /Firefox/.test( navigator.userAgent ) === false ) {
+			if ( false && typeof createImageBitmap !== 'undefined' && /Firefox/.test( navigator.userAgent ) === false ) {
 
 				this.textureLoader = new THREE.ImageBitmapLoader( this.options.manager );
 
