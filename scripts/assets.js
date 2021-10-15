@@ -608,11 +608,12 @@ if (!ENV_IS_BROWSER) return;
                   });
                 }
               } else {
+                let blob = xhr.response;
                 if (typeof createImageBitmap == 'function' && type != 'image/gif') {
-                  let blob = xhr.response;
                   createImageBitmap(blob).then(elation.bind(this, this.handleLoad), elation.bind(this, this.handleBitmapError));
                 } else {
-                  this.loadImageByURL();
+                  let imgurl = URL.createObjectURL(blob);
+                  this.loadImageByURL(imgurl);
                 }
               }
 
@@ -639,13 +640,15 @@ if (!ENV_IS_BROWSER) return;
         setTimeout(() => this.sendLoadEvents(), 0);
       }
     },
-    loadImageByURL: function() {
-      var proxiedurl = this.getProxiedURL(this.src);
+    loadImageByURL: function(src) {
+      if (!src) {
+        src = this.getProxiedURL(this.src);
+      }
       var image = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'img' );
       elation.events.add(image, 'load', elation.bind(this, this.handleLoad, image));
       elation.events.add(image, 'error', elation.bind(this, this.handleError));
       image.crossOrigin = 'anonymous';
-      image.src = proxiedurl;
+      image.src = src;
       return image;
     },
     getCanvas: function() {
