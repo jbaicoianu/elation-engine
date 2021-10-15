@@ -69,6 +69,7 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     corsproxy: '',
     dracopath: false,
     placeholders: {},
+    scriptOverrides: {},
 
     init: function(dummy) {
       var corsproxy = elation.config.get('engine.assets.corsproxy', '');
@@ -1969,6 +1970,7 @@ if (!ENV_IS_BROWSER) return;
   elation.define('engine.assets.script', {
     assettype: 'script',
     src: false,
+    override: false,
     code: false,
 
     _construct: function(args) {
@@ -1991,8 +1993,21 @@ if (!ENV_IS_BROWSER) return;
       }
     },
     parse: function(data) {
-      //var blob = new Blob(['(function(window) {\n' + data + '\n})(self)'], {type: 'application/javascript'});
-      var blob = new Blob(['\n' + data + '\n'], {type: 'application/javascript'});
+      // If overrides are specified, we inject them into the script as locally-scoped variables
+      // This lets us bind our scripts to specific instances of objects, rather than relying on globals
+      let overrideScript = '';
+      if (this.override) {
+        let overrides = elation.engine.assets.scriptOverrides[this.src];
+        if (!overrides) {
+          overrides = elation.engine.assets.scriptOverrides[this.src] = {};
+        }
+        for (let k in this.override) {
+          overrides[k] = this.override[k];
+          overrideScript += 'let ' + k + ' = elation.engine.assets.scriptOverrides["' + this.src + '"]["' + k + '"];\n';
+        }
+      }
+      //var blob = new Blob(['\n(function() { ' + overrideScript + '\n' + data + ' })();\n'], {type: 'application/javascript'});
+      var blob = new Blob(['\n{ ' + overrideScript + '\n' + data + ' };\n'], {type: 'application/javascript'});
       var bloburl = URL.createObjectURL(blob);
       this._script.src = bloburl;
       this.loaded = true;
