@@ -751,8 +751,8 @@ if (!ENV_IS_BROWSER) return;
         canvas.originalSrc = this.src;
 
         var imagemax = elation.utils.any(this.maxsize, elation.config.get('engine.assets.image.maxsize', Infinity));
-        canvas.width = (this.tex_linear ? Math.min(imagemax, this.nextHighestPowerOfTwo(image.width)) : image.width);
-        canvas.height = (this.tex_linear ? Math.min(imagemax, this.nextHighestPowerOfTwo(image.height)) : image.height);
+        canvas.width = Math.min(image.width, imagemax); //(this.tex_linear ? Math.min(imagemax, this.nextHighestPowerOfTwo(image.width)) : image.width);
+        canvas.height = Math.min(image.height, imagemax); //(this.tex_linear ? Math.min(imagemax, this.nextHighestPowerOfTwo(image.height)) : image.height);
         var ctx = canvas.getContext("2d");
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
         if (this.hasalpha === null) {
