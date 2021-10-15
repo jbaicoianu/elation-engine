@@ -141,6 +141,64 @@ if (!ENV_IS_BROWSER) return;
     setDracoPath: function(dracopath) {
       this.dracopath = dracopath;
     },
+    getOrigin(baseurl=null) {
+      if (baseurl) {
+        let m = baseurl.match(/(https?:\/\/[^\/]+)/i);
+        if (m) {
+          return m[1];
+        }
+      }
+      return self.location.origin;
+    },
+    isURLRelative: function(src) {
+      if (src && src.match(/^(https?:)?\/\//) || src[0] == '/') {
+        return false;
+      }
+      return true;
+    },
+    isURLAbsolute: function(src) {
+      return (src[0] == '/' && src[1] != '/');
+    },
+    isURLLocal: function(src) {
+      if (this.isURLBlob(src) || this.isURLData(src)) {
+        return true;
+      }
+      if (src.match(/^(https?:)?\/\//i)) {
+        return (src.indexOf(self.location.origin) == 0);
+      }
+      return (
+        (src[0] == '/' && src[1] != '/') ||
+        (src[0] != '/')
+      );
+    },
+    isURLData: function(url) {
+      if (!url) return false;
+      return url.indexOf('data:') == 0;
+    },
+    isURLBlob: function(url) {
+      if (!url) return false;
+      return url.indexOf('blob:') == 0;
+    },
+    isURLProxied: function(url) {
+      if (!url || !elation.engine.assets.corsproxy) return false;
+      return url.indexOf(elation.engine.assets.corsproxy) == 0;
+    },
+    getFullURL: function(url, baseurl=null) {
+      if (!url) url = '';
+      if (!baseurl) baseurl = '';
+      var fullurl = url;
+      if (!this.isURLBlob(fullurl) && !this.isURLData(fullurl)) {
+        if (this.isURLRelative(fullurl) && fullurl.substr(0, baseurl.length) != baseurl) {
+          fullurl = baseurl + fullurl;
+        } else if (this.isURLProxied(fullurl)) {
+          fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
+        } else if (this.isURLAbsolute(fullurl)) {
+          fullurl = this.getOrigin(baseurl) + fullurl;
+        }
+      }
+
+      return fullurl;
+    },
     loaderpool: false
   });
   elation.extend('engine.assetdownloader', new function() {
@@ -380,37 +438,22 @@ if (!ENV_IS_BROWSER) return;
       console.log('engine.assets.base load() should not be called directly', this);
     },
     isURLRelative: function(src) {
-      if (src && src.match(/^(https?:)?\/\//) || src[0] == '/') {
-        return false;
-      }
-      return true;
+      return elation.engine.assets.isURLRelative(src);
     },
     isURLAbsolute: function(src) {
-      return (src[0] == '/' && src[1] != '/');
+      return elation.engine.assets.isURLAbsolute(src);
     },
     isURLLocal: function(src) {
-      if (this.isURLBlob(src) || this.isURLData(src)) {
-        return true;
-      }
-      if (src.match(/^(https?:)?\/\//i)) {
-        return (src.indexOf(self.location.origin) == 0);
-      }
-      return (
-        (src[0] == '/' && src[1] != '/') ||
-        (src[0] != '/')
-      );
+      return elation.engine.assets.isURLLocal(src);
     },
     isURLData: function(url) {
-      if (!url) return false;
-      return url.indexOf('data:') == 0;
+      return elation.engine.assets.isURLData(url);
     },
     isURLBlob: function(url) {
-      if (!url) return false;
-      return url.indexOf('blob:') == 0;
+      return elation.engine.assets.isURLBlob(url);
     },
     isURLProxied: function(url) {
-      if (!url || !elation.engine.assets.corsproxy) return false;
-      return url.indexOf(elation.engine.assets.corsproxy) == 0;
+      return elation.engine.assets.isURLProxied(url);
     },
     getFullURL: function(url, baseurl) {
       if (!url) url = this.src;
@@ -423,11 +466,14 @@ if (!ENV_IS_BROWSER) return;
         } else if (this.isURLProxied(fullurl)) {
           fullurl = fullurl.replace(elation.engine.assets.corsproxy, '');
         } else if (this.isURLAbsolute(fullurl)) {
-          fullurl = self.location.origin + fullurl;
+          fullurl = this.getOrigin() + fullurl;
         }
       }
 
       return fullurl;
+    },
+    getOrigin() {
+      return elation.engine.assets.getOrigin(this.baseurl);
     },
     getProxiedURL: function(url, baseurl) {
       var proxiedurl = this.getFullURL(url, baseurl);
