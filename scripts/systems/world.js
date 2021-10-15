@@ -112,9 +112,9 @@ elation.require([
       //elation.events.fire({type: 'world_thing_add', element: this, data: ev.data});
       this.attachEvents(ev.data.thing);
 
-      if (this.hasLights(ev.data.thing)) {
-        this.refreshLights();
-      }
+      //if (this.hasLights(ev.data.thing)) {
+      //  this.refreshLights();
+      //}
     }
     this.thing_remove = function(ev) {
       this.removeEvents(ev.data.thing);
@@ -135,9 +135,9 @@ elation.require([
       //elation.events.add(ev.data.thing, 'thing_add,thing_remove,thing_change', this);
       this.attachEvents(ev.data.thing);
 
-      if (this.hasLights(ev.data.thing)) {
-        this.refreshLights();
-      }
+      //if (this.hasLights(ev.data.thing)) {
+      //  this.refreshLights();
+      //}
     }
     this.remove = function(thing) {
       if (this.children[thing.name]) {
