@@ -182,7 +182,11 @@ elation.component.add("engine.things.generic", function() {
           var splitpos = value.indexOf(' ');
           if (splitpos == -1) splitpos = value.indexOf(',');
           if (splitpos == -1) {
-            value = new THREE.Color(value);
+            if (elation.utils.isnumeric(value) && value <= 1.0) {
+              value = new THREE.Color(value, value, value);
+            } else {
+              value = new THREE.Color(value);
+            }
           } else {
             var split = value.split((value.indexOf(' ') != -1 ? ' ' : ','));
             value = new THREE.Color(clamp(split[0], 0, 1), clamp(split[1], 0, 1), clamp(split[2], 0, 1));
