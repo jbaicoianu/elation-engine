@@ -14,6 +14,7 @@ elation.require([
     this.persistdelay = 1000;
     this.lastpersist = 0;
     this.framechanges = [];
+    this.eventMappedObjects = new Set();
 
     //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
     //this.scene['world-3d'].fog = new THREE.FogExp2(0xffffff, 0.01);
@@ -63,6 +64,7 @@ elation.require([
       console.log('SHUTDOWN: world');
     }
     this.add = function(thing) {
+      this.attachEvents(thing);
       if (!this.children[thing.name]) {
         this.children[thing.name] = thing;
         thing.parent = this;
@@ -78,14 +80,16 @@ elation.require([
         if (thing.colliders) {
           this.scene['colliders'].add(thing.colliders);
         }
-        this.attachEvents(thing);
         elation.events.fire({type: 'world_thing_add', element: this, data: {thing: thing}});
         return true;
       }
       return false;
     }
     this.attachEvents = function(thing) {
-      elation.events.add(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
+      if (!this.eventMappedObjects.has(thing)) {
+        elation.events.add(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
+        this.eventMappedObjects.add(thing);
+      }
       if (thing.children) {
         for (var k in thing.children) {
           this.attachEvents(thing.children[k]);
@@ -93,11 +97,14 @@ elation.require([
       }
     }
     this.removeEvents = function(thing) {
-      elation.events.remove(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
-      if (thing.children) {
-        for (var k in thing.children) {
-          this.removeEvents(thing.children[k]);
+      if (this.eventMappedObjects.has(thing)) {
+        elation.events.remove(thing, 'thing_add,thing_remove,thing_change,thing_change_queued', this);
+        if (thing.children) {
+          for (var k in thing.children) {
+            this.removeEvents(thing.children[k]);
+          }
         }
+        this.eventMappedObjects.delete(thing);
       }
     }
       
