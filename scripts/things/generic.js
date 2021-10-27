@@ -848,7 +848,7 @@ elation.component.add("engine.things.generic", function() {
       } else if (type == 'capsule') {
         collidergeom = elation.engine.geometries.generate('capsule', {
           radius: args.radius,
-          length: args.length,
+          length: elation.utils.any(args.length, args.height),
           radialSegments: 8,
           offset: args.offset,
         });
