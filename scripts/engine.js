@@ -608,7 +608,7 @@ elation.require(deps, function() {
       if (!this.xrsession) {
         if (!xroptions) {
           xroptions = {
-            optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking' ]
+            optionalFeatures: [ 'local-floor', 'bounded-floor', 'hand-tracking', 'layers' ]
           };
         }
         if (!this.xrwindow) {
