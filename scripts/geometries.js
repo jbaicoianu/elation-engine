@@ -121,7 +121,6 @@ elation.require([], function() {
         return new THREE.CylinderGeometry(radius, radius, height, radialSegments, heightSegments);
       },
       'capsule': function(params) {
-        var capsulegeo = new THREE.Geometry();
         var radius = params.radius,
             length = params.length,
             radialSegments = params.radialSegments || 8,
@@ -130,12 +129,13 @@ elation.require([], function() {
 
         var cylgeo = new THREE.CylinderGeometry(radius, radius, length, radialSegments, heightSegments, true);
         var cap = new THREE.SphereGeometry(radius, radialSegments, radialSegments/2, 0, Math.PI*2, 0, Math.PI/2);
+        var cap2 = new THREE.SphereGeometry(radius, radialSegments, radialSegments/2, 0, Math.PI*2, 0, Math.PI/2);
         var mat4 = new THREE.Matrix4();
         mat4.makeTranslation(0, length / 2, 0);
-        capsulegeo.merge(cylgeo);
-        capsulegeo.merge(cap, mat4);
+        cap.applyMatrix4(mat4);
         mat4.makeRotationX(Math.PI).setPosition(new THREE.Vector3(0, -length / 2, 0));
-        capsulegeo.merge(cap, mat4);
+        cap2.applyMatrix4(mat4);
+        let capsulegeo = THREE.BufferGeometryUtils.mergeBufferGeometries([cylgeo, cap, cap2], false);
 
         if (offset) {
           capsulegeo.applyMatrix4(mat4.makeTranslation(offset.x, offset.y, offset.z));
