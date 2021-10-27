@@ -492,6 +492,7 @@ if (!ENV_IS_BROWSER) return;
     },
     getBaseURL: function(url) {
       var url = url || this.getFullURL();
+      if (url.indexOf('/') == -1) url = document.location.href;
       var parts = url.split('/');
       parts.pop();
       return parts.join('/') + '/';
