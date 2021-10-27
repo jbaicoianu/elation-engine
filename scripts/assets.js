@@ -1106,8 +1106,8 @@ if (!ENV_IS_BROWSER) return;
               hls.destroy();
               break;
           }
-        } else if (data.details === 'internalException' && data.type === 'otherError' && isMobile()) {
-          this.hlsDropHighestLevel();
+        //} else if (data.details === 'internalException' && data.type === 'otherError' && isMobile()) {
+        //  this.hlsDropHighestLevel();
         } else if (data.details == 'bufferStalledError') {
           //hls.recoverMediaError();
         }
