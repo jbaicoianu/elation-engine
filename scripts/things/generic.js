@@ -1353,7 +1353,7 @@ elation.component.add("engine.things.generic", function() {
         n.skeleton = skeleton;
       });
 */
-      if (true) { //meshes.length > 0) {
+      if (false) { //meshes.length > 0) {
         var skeletons = [];
         for (var i = 0; i < meshes.length; i++) {
           //meshes[i].bind(this.skeleton);
