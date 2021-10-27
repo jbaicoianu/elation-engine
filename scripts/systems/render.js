@@ -67,7 +67,11 @@ elation.require([
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       this.renderer.xr.enabled = false;
       //this.renderer.xr.manageCameraPosition = true;
-      //this.renderer.setAnimationLoop((ev) => this.render());
+      this.lastframetime = performance.now();
+      this.renderer.setAnimationLoop((time, frame) => {
+        this.render(time - this.lastframetime, frame);
+        this.lastframetime = time;
+      });
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
       //this.renderer.gammaInput = true;
@@ -110,27 +114,26 @@ elation.require([
       };
     }
     this.engine_frame = function(ev) {
-      this.lastframetime += ev.data.delta;
-      this.render();
+      // Disabled rendering on engine_frame, use Three's setAnimationLoop instead
+      //this.lastframetime += ev.data.delta;
+      //this.render();
     }
-    this.render = function(ev) {
+    this.render = function(time, frame) {
       for (var k in this.views) {
         this.views[k].updatePickingObject();
         if (this.views[k].stats) {
           this.views[k].stats.update();
         }
       }
+      this.engine.advance();
       if (this.forcerefresh || this.dirty) {
         //console.log('FRAME: render');
         this.dirty = false;
         //this.renderer.clear();
         for (var k in this.views) {
-          // If we've got an active XR session, we'll be rendering using its rAF callback instead of our main engine loop's
-          if (!this.views[k].xrsession) {
-            this.views[k].render(this.lastframetime);
-          }
+          this.views[k].render(time, frame);
         }
-        this.lastframetime = 0;
+        //this.lastframetime = 0;
       }
     }
     this.textureSampleMipmapLevel = (function() {
@@ -279,8 +282,6 @@ elation.require([
       if (this.args.xrsession) {
         this.setXRSession(this.args.xrsession);
       }
-
-      //this.getsize();
 
       this.rendersystem.view_add(this.id, this);
 
@@ -601,24 +602,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     this.startXR = function(mode='immersive-vr') {
     }
-    this.setXRSession = function(session) {
+    this.setXRSession = async function(session) {
       this.xrsession = session;
-      //this.xrsession.requestAnimationFrame(() => this.handleXRFrame(session));
-      //this.rendersystem.renderer.xr.setSession(session);
-      //this.rendersystem.renderer.xr.enabled = true;
-
-      this.rendersystem.renderer.setAnimationLoop((time, frame) => {
-        //this.rendersystem.renderer.render(this.scene, this.actualcamera);
-        try {
-          this.handleXRFrame(session, frame);
-        } catch (e) {
-          console.log('Error during XR frame:', e);
-        }
-      });
+      await this.rendersystem.renderer.xr.setSession(session);
+      this.rendersystem.renderer.xr.enabled = true;
 
       this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
-      this.xrlayer = session.renderState.baseLayer;
-      if (!this.xrscene) {
+      this.xrlayer = this.getXRBaseLayer(session);
+      if (false && !this.xrscene) {
         // Set up a scene with an ortho camera to clone our XR framebuffer to, for display on the main screen
         this.xrscene = new THREE.Scene();
         this.xrscene.background = new THREE.Color(0x000000);
@@ -636,7 +627,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.xrsceneplane.position.set(w / 4, 0, -10);
         //this.xrsceneplane.rotation.set(Math.PI/4, 0, 0);
         this.xrscene.add(this.xrsceneplane);
-        this.xrscenecam = new THREE.OrthographicCamera(-w / 2, w, h, -h / 2, -1000, 1000);
+        this.xrscenecam = new THREE.OrthographicCamera(-w / 4, w, h, -h / 2, -1000, 1000);
         //this.xrscenecam = new THREE.PerspectiveCamera();
         this.xrscene.add(this.xrscenecam);
       }
@@ -649,9 +640,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
         let xrReferenceSpace =  this.engine.systems.render.renderer.xr.getReferenceSpace();
         elation.events.fire({ element: this.engine, type: 'xrframe', data: { frame, session, xrReferenceSpace } });
-        this.engine.advance();
-        this.render();
-        //session.requestAnimationFrame((ts, frame) => this.handleXRFrame(session, frame));
       }
     }
     this.stopXR = function() {
@@ -662,14 +650,19 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.handleXRend = function(ev) {
       this.rendersystem.renderer.xr.setSession(null);
       this.rendersystem.renderer.xr.enabled = false;
+      this.enabled = false;
       elation.html.removeclass(this.container, 'webxr_session_active');
-      this.rendersystem.renderer.setAnimationLoop(null);
       this.xrsession = false;
       this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
       setTimeout(() => {
-        this.size = [0, 0];
-        this.getsize();
+        elation.events.fire({type: 'resize', element: window, data: true });
       }, 100);
+    }
+    this.getXRBaseLayer = function(session) {
+      if (session.renderState.layers && session.renderState.layers.length > 0) {
+        return session.renderState.layers[session.renderState.layers.length - 1];
+      }
+      return session.renderState.baseLayer;
     }
     this.updateCameras = (function() {
       // Closure scratch variables
@@ -724,8 +717,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
       }
     })();
-    this.render = function(delta) {
+    this.render = function(delta, xrframe) {
       if (this.enabled && this.scene && this.camera) {
+        if (xrframe && this.xrsession) {
+          this.handleXRFrame(this.xrsession, xrframe);
+        }
         if (this.size[0] != this.size_old[0] || this.size[1] != this.size_old[1] || this.scale != this.scale_old) {
           this.setrendersize(this.size[0], this.size[1]);
         }
@@ -765,16 +761,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           if (this.xrsession) {
             //this.rendersystem.renderer.xr.enabled = true;
             //this.rendersystem.renderer.xr.setSession(this.xrsession);
-            let layer = this.xrsession.renderState.baseLayer;
+            let layer = this.getXRBaseLayer(this.xrsession);
             if (layer) {
               this.xrlayer = layer;
-              this.getsize();
               let renderer = this.rendersystem.renderer;
-              renderer.setFramebuffer(layer.framebuffer);
               renderer.clear();
               renderer.render(this.scene, this.camera);
 
-              if (document.visibilityState == 'visible') { 
+              if (false && document.visibilityState == 'visible') { 
                 if (true) {
                   //console.log('try to clone framebuffer onto screen', this.xrscene, this.xrscenecam, this.xrsceneplane.material.map);
 /*
@@ -786,7 +780,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 */
                   renderer.xr.enabled = false;
                   renderer.copyFramebufferToTexture( V(layer.framebufferWidth / 2, 0, 0), this.xrscenetexture );
-                  renderer.setFramebuffer(null);
+                  //renderer.setFramebuffer(null);
+                  renderer.state.bindXRFramebuffer(null);
+                  renderer.setRenderTarget( renderer.getRenderTarget() );
 
                   let oldOutputEncoding = renderer.outputEncoding;
                   renderer.outputEncoding = THREE.LinearEncoding;
@@ -796,10 +792,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
                   renderer.outputEncoding = oldOutputEncoding;
                 } else {
                   // FIXME - cloning the framebuffer to the main canvas output isn't working right as implemented, so in this codepath we just double-render
-                  this.rendersystem.renderer.setFramebuffer(null);
+                  //this.rendersystem.renderer.setFramebuffer(null);
+                  renderer.state.bindXRFramebuffer(null);
+                  renderer.setRenderTarget( renderer.getRenderTarget() );
                   this.rendersystem.renderer.render(this.scene, this.camera);
 
-                  this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+                  //this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
+                  renderer.state.bindXRFramebuffer(layer.framebuffer);
+                  renderer.setRenderTarget( renderer.getRenderTarget() );
                 }
               }
             } else {
@@ -808,12 +808,14 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           } else {
             this.rendersystem.renderer.xr.enabled = false;
             //this.rendersystem.renderer.xr.setSession(null);
-            this.rendersystem.renderer.setFramebuffer(null);
+            //this.rendersystem.renderer.setFramebuffer(null);
+            this.rendersystem.renderer.state.bindXRFramebuffer(null);
+            this.rendersystem.renderer.setRenderTarget( renderer.getRenderTarget() );
             this.rendersystem.renderer.render(this.scene, this.camera);
           }
         }
 
-        if (this.rendersystem.cssrenderer && !(this.vrdisplay && this.vrdisplay.isPresenting)) {
+        if (this.rendersystem.cssrenderer && !this.xrsession) {
           this.rendersystem.cssrenderer.render(this.scene, this.actualcamera);
         }
       }
@@ -859,8 +861,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     this.setactivething = function(thing) {
       if (thing.camera) {
         this.setcamera(thing.camera);
-        // update camera aspect ratio
-        //this.getsize();
       }
       this.activething = thing;
     }
@@ -988,30 +988,23 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       return false;
     }
-    this.getsize = function() {
+    this.getsize = function(force) {
       //this.size = [this.container.offsetWidth, this.container.offsetHeight];
       var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : 
               (this.args.resolution ? {w: this.args.resolution[0], h: this.args.resolution[1]} : 
                elation.html.dimensions(this.container)
               ));
-      if (this.vrdisplay && this.vrdisplay.isPresenting) {
-        var leftEye = this.vrdisplay.getEyeParameters("left");
-        var rightEye = this.vrdisplay.getEyeParameters("right");
-
-        s = {
-          w: leftEye.renderWidth + rightEye.renderWidth,
-          h: Math.max(leftEye.renderHeight, rightEye.renderHeight)
-        };
-      } else if (this.xrsession) {
-        if (this.xrsession.renderState.baseLayer) {
+      if (this.xrsession) {
+        let xrlayer = this.getXRBaseLayer(this.xrsession);
+        if (xrlayer) {
           s = {
-            w: this.xrsession.renderState.baseLayer.framebufferWidth,
-            h: this.xrsession.renderState.baseLayer.framebufferHeight,
+            w: xrlayer.framebufferWidth,
+            h: xrlayer.framebufferHeight,
           };
         }
       }
       var domel = this.rendersystem.renderer.domElement;
-      if (domel && (s.w != this.size[0] || s.h != this.size[1]) && (s.w > 0 && s.h > 0)) {
+      if (domel && (force || ((s.w != this.size[0] || s.h != this.size[1]) && (s.w > 0 && s.h > 0)))) {
         this.size = [s.w, s.h];
         this.setrendersize(this.size[0], this.size[1]);
       }
@@ -1084,7 +1077,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       console.log('SHUTDOWN: view (' + this.id + ')');
     }
     this.resize = function(ev) {
-      this.getsize();
+      this.getsize(ev.data);
     }
     this.mouseover = function(ev) {
       if (!this.pickingactive) {
