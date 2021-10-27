@@ -73,12 +73,12 @@ elation.require(deps, function() {
     this.run = function(ts, xrpose) {
       // recursively request another frame until we're no longer running
       //if (!ts) ts = new Date().getTime();
+      //let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
+      let nextframetime = this.advance();
       if (this.running) {
         if (!this.boundfunc) this.boundfunc = elation.bind(this, this.run);
-        this.frame(this.boundfunc);
+        this.frame(this.boundfunc, nextframetime);
       }
-      //let xrspace = this.systems.render.views.main.xrspace; // FIXME - hacky
-      this.advance();
     }
 
     this.advance = function() {
@@ -92,40 +92,16 @@ elation.require(deps, function() {
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
       elation.events.fire({type: "engine_frame", element: this, data: evdata});
+			let dt = ts - this.lastupdate;
       this.lastupdate = ts;
+			return (1000 / this.targetFramerate) - dt;
     }
 
-    // simple requestAnimationFrame wrapper
-    this.requestAnimationFrame = (elation.bind(this, function() {
-        var framerate = this.targetFramerate || 60;
-        if (this.useAnimationFrame && typeof window !== 'undefined') {
-          // Browsers
-          return  window.requestAnimationFrame       || 
-                  window.webkitRequestAnimationFrame || 
-                  window.mozRequestAnimationFrame    || 
-                  window.oRequestAnimationFrame      || 
-                  window.msRequestAnimationFrame     || 
-                  function( callback ) {
-                    setTimeout(callback, 1000 / framerate);
-                  };
-        } else {
-          // NodeJS
-          return function( callback ) {
-            setTimeout(callback, 1000 / this.targetFramerate);
-          }.bind(this);
-        }
-      }))();
-    this.frame = function(fn) {
-      if (elation.env.isNode) var window;
-      /*if (this.client && this.client.view && this.client.view.xrsession && this.client.view.xrsession.requestAnimationFrame) {
-console.log(this.client.view.xrsession);
-        this.client.view.xrsession.requestAnimationFrame(fn);
-      } else */
-      if (this.client && this.client.view && this.client.view.vrdisplay && this.client.view.vrdisplay.requestAnimationFrame) {
-        this.client.view.vrdisplay.requestAnimationFrame(fn);
-      } else {
-        this.requestAnimationFrame.call(window, fn);
-      }
+    this.frame = function(fn, nextframetime) {
+			// Advance the engine by one frame
+			// Note that the render loop runs separately using requestAnimationFrame()
+			//setTimeout(fn, nextframetime);
+			//requestAnimationFrame(fn);
     }
 
     // Convenience functions for querying objects from world
@@ -499,17 +475,6 @@ console.log(this.client.view.xrsession);
         view.toggleFullscreen();
       }
     }
-    this.toggleVR = function(ev) {
-      var view = this.view;
-      if (view && (typeof ev == 'undefined' || ev.value == 1 || typeof ev.value == 'undefined')) {
-        view.toggleVR();
-      }
-    }
-    this.calibrateVR = function(ev) {
-      if (this.engine.systems.controls && (typeof ev == 'undefined' || ev.value == 1)) {
-        this.engine.systems.controls.calibrateHMDs();
-      }
-    }
     this.configureOptions = function() {
       if (!this.configmenu) {
         var configpanel = elation.engine.configuration({client: this});
@@ -660,10 +625,10 @@ console.log(this.client.view.xrsession);
           this.xrwindow.show();
         }
         this.xrwindow.setcontent('Initializing WebXR session...');
-        navigator.xr.requestSession(mode, xroptions).then((session) => {
+        navigator.xr.requestSession(mode, xroptions).then(async (session) => {
           let xr = this.engine.systems.render.renderer.xr;
           this.xrsession = session;
-          xr.setSession(session);
+          await xr.setSession(session);
           xr.enabled = true;
           /*
           // TODO - Oculus' OpenVR support currently (Oct 2020) ends the session when the HMD is removed, instead of sending a visibilitychange event.  We should revisit this once they've fixed it.
@@ -678,7 +643,7 @@ console.log(this.client.view.xrsession);
             }
           });
           */
-          session.requestAnimationFrame(() => {
+          //session.requestAnimationFrame(() => {
             // Create our new render view on the first XR frame, so the session has time to initialize properly
             if (!this.engine.systems.render.views.xr) {
               let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
@@ -708,7 +673,7 @@ console.log(this.client.view.xrsession);
 
             this.xrwindow.setcontent('WebXR session is active.  Please put on your headset.');
             elation.events.fire({element: this, type: 'xrsessionstart', data: session});
-          });
+          //});
         });
       }
       if (this.engine.systems.sound) {
