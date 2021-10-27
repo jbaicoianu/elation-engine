@@ -263,10 +263,7 @@ elation.require([
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
-      elation.events.add(window, 'vrdisplayconnect,vrdisplaydisconnect', elation.bind(this, this.initVRDisplays));
-      elation.events.add(window, 'vrdisplaypresentchange', elation.bind(this, this.handleVRDisplayPresentChange));
       elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
-      this.initVRDisplays();
     }
     this.create = function() {
       this.rendersystem = this.engine.systems.render;
@@ -331,42 +328,6 @@ elation.require([
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
-/*
-      this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
-      //this.vreffect = new THREE.VREffect(this.composer, function(e) { console.log('ERROR, ERROR', e); });
-      this.vreffect.preRenderLeft = elation.bind(this.vreffect, function(scene, camera) {
-        var sbstextures = [];
-        scene.traverse(function(n) {
-          if (n.material) {
-            if (n.material instanceof THREE.MultiMaterial) {
-              n.material.materials.forEach(function(m) {
-                if (m.map instanceof THREE.SBSTexture) {
-                  sbstextures.push(m.map);
-                }
-              });
-            } else if (n.material.map instanceof THREE.SBSTexture) {
-              sbstextures.push(n.material.map);
-            }
-          }
-        });
-        sbstextures.forEach(function(t) {
-          t.setEye('left');
-        });
-        this.sbstextures = sbstextures;
-      });
-      this.vreffect.preRenderRight = elation.bind(this.vreffect, function(scene, camera) {
-        if (this.sbstextures) {
-          this.sbstextures.forEach(function(t) {
-            t.setEye('right');
-          });
-        }
-      });
-      //this.vreffect = new THREE.VREffect(this.rendersystem.renderer, function(e) { console.log('ERROR, ERROR', e); });
-
-      this.vrdisplay = false;
-      this.initVRDisplays();
-*/
-
       if (this.showstats) {
         // FIXME - not smart!
         elation.events.add(this.composer.passes[3], 'render', elation.bind(this, this.updateRenderStats));
@@ -429,22 +390,6 @@ elation.require([
         this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
         this.engine.systems.controls.addBindings('view', {'gamepad_any_button_0': 'picking_select'});
         this.engine.systems.controls.activateContext('view');
-      }
-    }
-    this.initVRDisplays = function() {
-      if (!navigator.xr  && this.useWebXRPolyfill && ENV_IS_BROWSER && !this.initializedPolyfill) {
-        this.initializedPolyfill = true;
-        this.webxrPolyfill = new WebXRPolyfill();
-console.log('created a webxr polyfill', this.webxrPolyfill);
-      }
-    }
-    this.handleVRDisplayPresentChange = function(ev) {
-      let presenting = this.vrdisplay.isPresenting,
-          hasclass = this.hasclass('vr_presenting');
-      if (presenting && !hasclass) {
-        this.addclass('vr_presenting');
-      } else if (!presenting && hasclass) {
-        this.removeclass('vr_presenting');
       }
     }
     this.destroy = function() {
@@ -643,7 +588,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         var c = document.documentElement;
         c.requestFullscreen = c.requestFullscreen || c.webkitRequestFullscreen || c.mozRequestFullScreen;
         if (typeof c.requestFullscreen == 'function') {
-          //c.requestFullscreen({vrDisplay: this.vrdisplay});
           c.requestFullscreen();
         }
       } else {
@@ -654,57 +598,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
       }
       this.fullscreen = fullscreen;
-    }
-    this.toggleVR = function(newstate) {
-      if (this.vrdisplay) {
-        if (typeof newstate == 'undefined') newstate = !this.vrdisplay.isPresenting;
-
-        // FIXME - DEMO HACK 
-        var hmdname = this.vrdisplay.displayName;
-        var vivehack = false;
-        if (hmdname.match('Vive')) {
-          vivehack = true;
-        }
-        var player = this.engine.client.player;
-
-        this.rendersystem.renderer.xr.setDevice(this.vrdisplay);
-
-        if (newstate && !this.vrdisplay.isPresenting) {
-if (vivehack) {
-  //player.head.reparent(player);
-}
-          this.vrdisplay.requestPresent([{
-            source: this.rendersystem.renderer.domElement,
-            leftBounds: [0.0, 0.0, 0.5, 1.0],
-            rightBounds: [0.5, 0.0, 0.5, 1.0]
-          }]).then(elation.bind(this, function() {
-            var eyeL = this.vrdisplay.getEyeParameters('left');
-            var eyeR = this.vrdisplay.getEyeParameters('right');
-
-            this.aspectscale = 1;
-            this.getsize();
-            if (this.size[0] > 0 && this.size[1] > 0) {
-              // Force mouse position to middle of screen for gaze tracing
-              this.pickingactive = true;
-              this.mousepos = [this.size[0] / 2, this.size[1] / 2, 0];
-            }
-            this.addclass("vr_presenting");
-            this.rendersystem.renderer.xr.enabled = true;
-            elation.events.fire({element: this, type: 'engine_render_view_vr_start'});
-          }));
-        } else if (this.vrdisplay.isPresenting && !newstate) {
-          this.vrdisplay.exitPresent().then(elation.bind(this, function() {
-            this.camera.fov = 75;
-            this.aspectscale = 1;
-            this.getsize();
-//if (vivehack) player.head.reparent(player.neck);
-            this.removeclass("vr_presenting");
-            this.rendersystem.renderer.xr.enabled = false;
-            elation.events.fire({element: this, type: 'engine_render_view_vr_end'});
-          }));
-        }
-      }
-      this.getsize();
     }
     this.startXR = function(mode='immersive-vr') {
     }
@@ -855,13 +748,7 @@ if (vivehack) {
         */
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
-        if (this.vrdisplay && this.vrdisplay.isPresenting) {
-          var player = this.engine.client.player;
-          this.effects[this.rendermode].camera = this.rendersystem.renderer.xr.getCamera(this.actualcamera);
-          player.updateHMD(this.vrdisplay, this.effects[this.rendermode].camera);
-        } else {
-          this.effects[this.rendermode].camera = this.actualcamera;
-        }
+        this.effects[this.rendermode].camera = this.actualcamera;
 
         let colliderscene = this.engine.systems.world.scene['colliders'],
             worldscene = this.engine.systems.world.scene['world-3d'];
@@ -924,9 +811,6 @@ if (vivehack) {
             this.rendersystem.renderer.setFramebuffer(null);
             this.rendersystem.renderer.render(this.scene, this.camera);
           }
-        }
-        if (this.vrdisplay && this.vrdisplay.isPresenting) {
-          this.rendersystem.renderer.xr.submitFrame();
         }
 
         if (this.rendersystem.cssrenderer && !(this.vrdisplay && this.vrdisplay.isPresenting)) {
@@ -1151,14 +1035,10 @@ if (vivehack) {
       this.sizevecinverse.set(1/scaledwidth, 1/scaledheight);
 
       var pixelratio = 1; //(window.devicePixelRatio ? window.devicePixelRatio : 1);
-      if (this.vreffect && this.vreffect.isPresenting) {
-        this.vreffect.setSize(scaledwidth, scaledheight);
-      } else {
-        if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
-          this.rendersystem.renderer.setPixelRatio(pixelratio);
-        }
-        this.rendersystem.renderer.setSize(scaledwidth, scaledheight);
+      if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
+        this.rendersystem.renderer.setPixelRatio(pixelratio);
       }
+      this.rendersystem.renderer.setSize(scaledwidth, scaledheight);
       if (this.composer) {
         this.composer.setSize(scaledwidth, scaledheight);  
       }
@@ -2020,10 +1900,8 @@ console.log('dun it', msaafilter);
       this.mousevec.x = (x / this.view.size[0]) * 2 - 1;
       this.mousevec.y = -(y / this.view.size[1]) * 2 + 1;
 
-      var vrdisplay = this.view.vrdisplay;
-
       try {
-        var camera = (vrdisplay && vrdisplay.isPresenting ? this.view.camera : this.view.actualcamera);
+        var camera = this.view.actualcamera;
         this.scene.updateMatrix();
         this.scene.updateMatrixWorld();
         camera.updateMatrix();
