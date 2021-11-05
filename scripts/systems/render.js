@@ -794,8 +794,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
                 } else {
                   // FIXME - cloning the framebuffer to the main canvas output isn't working right as implemented, so in this codepath we just double-render
                   //this.rendersystem.renderer.setFramebuffer(null);
-                  renderer.state.bindXRFramebuffer(null);
-                  renderer.setRenderTarget( renderer.getRenderTarget() );
+                  //renderer.state.bindXRFramebuffer(null);
+                  //renderer.setRenderTarget( renderer.getRenderTarget() );
                   this.rendersystem.renderer.render(this.scene, this.camera);
 
                   //this.rendersystem.renderer.setFramebuffer(layer.framebuffer);
@@ -810,8 +810,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.rendersystem.renderer.xr.enabled = false;
             //this.rendersystem.renderer.xr.setSession(null);
             //this.rendersystem.renderer.setFramebuffer(null);
-            this.rendersystem.renderer.state.bindXRFramebuffer(null);
-            this.rendersystem.renderer.setRenderTarget( renderer.getRenderTarget() );
+            //this.rendersystem.renderer.state.bindXRFramebuffer(null);
+            //this.rendersystem.renderer.setRenderTarget( renderer.getRenderTarget() );
             this.rendersystem.renderer.render(this.scene, this.camera);
           }
         }
