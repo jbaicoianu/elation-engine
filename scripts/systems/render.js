@@ -79,7 +79,7 @@ elation.require([
       //this.renderer.outputEncoding = THREE.LinearEncoding;
       //this.renderer.outputEncoding = THREE.sRGBEncoding;
       this.renderer.outputEncoding = THREE.LinearEncoding;
-      this.renderer.gammaFactor = 1;
+      this.renderer.gammaFactor = 1.3;
 
 /*
       this.renderer.toneMapping = THREE.CineonToneMapping;
@@ -316,7 +316,8 @@ elation.require([
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
         format: THREE.RGBAFormat,
-        type: THREE.FloatType,
+        //type: THREE.FloatType,
+        //type: THREE.UnsignedShortType,
         stencilBuffer: true,
         depthBuffer: true,
       });
