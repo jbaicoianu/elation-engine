@@ -1990,6 +1990,9 @@ if (!ENV_IS_BROWSER) return;
         elation.engine.assetdownloader.fetchURL(url).then(ev => {
           let decoder = new TextDecoder('utf-8');
           this.parse(decoder.decode(ev.target.response));
+        },
+        err => {
+          this.handleError();
         });
       }
     },
@@ -2020,6 +2023,7 @@ if (!ENV_IS_BROWSER) return;
     },
     handleError: function(ev) {
       this._script = false;
+      elation.events.fire({element: this, type: 'asset_error'});
     },
     getInstance: function(args) {
       if (!this._script) {
