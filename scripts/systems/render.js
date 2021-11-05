@@ -872,7 +872,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.camera = camera;
       this.setscene(this.getscene(camera));
       this.updateCameras();
-      this.setrendersize(this.size[0], this.size[1]);
+      if (this.size[0] > 0 && this.size[1] > 0) {
+        this.setrendersize(this.size[0], this.size[1]);
+      }
   /*
       if (this.composer) {
         this.composer.passes[0].camera = this.camera;
