@@ -273,6 +273,21 @@ elation.require([
 
       if (this.rendersystem.renderer.domElement && !this.rendersystem.renderer.domElement.parentNode) {
         this.container.appendChild(this.rendersystem.renderer.domElement);
+
+        // Handle context loss and restore
+        elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', elation.bind(this, function(ev) {
+          console.warn('WebGL context lost');
+          ev.preventDefault();
+          //this.engine.stop();
+        }));
+        elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextrestored', elation.bind(this, function(ev) {
+          console.log('context restored');
+          ev.preventDefault();
+          //this.engine.start();
+          this.create();
+          this.rendersystem.setdirty();
+        }));
+
       }
       if (this.rendersystem.cssrenderer && !this.rendersystem.cssrenderer.domElement.parentNode) {
         this.container.appendChild(this.rendersystem.cssrenderer.domElement);
@@ -285,10 +300,11 @@ elation.require([
 
       this.rendersystem.view_add(this.id, this);
 
-      var cam = new THREE.PerspectiveCamera(75, 4/3, 1e-2, 1e4);
-      this.actualcamera = cam;
-
-      this.setcamera(cam);
+      if (!this.actualcamera) {
+        var cam = new THREE.PerspectiveCamera(75, 4/3, 1e-2, 1e4);
+        this.actualcamera = cam;
+      }
+      this.setcamera(this.actualcamera);
 
       if (this.pickingdebug) {
         this.setscene(this.engine.systems.world.scene['colliders']);
@@ -301,15 +317,17 @@ elation.require([
       //console.log(this.engine.systems.world.scene['world-3d']);
 
       // Depth shader, used for SSAO, god rays, etc
-      var depthShader = THREE.ShaderLib[ "depth" ];
-      var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+      if (!this.depthTarget) {
+        var depthShader = THREE.ShaderLib[ "depth" ];
+        var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
 
-      this.depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
-      this.depthMaterial.blending = THREE.NoBlending;
-      this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], {
-        minFilter: THREE.NearestFilter,
-        magFilter: THREE.NearestFilter,
-      });
+        this.depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
+        this.depthMaterial.blending = THREE.NoBlending;
+        this.depthTarget = new THREE.WebGLRenderTarget( this.size[0], this.size[1], {
+          minFilter: THREE.NearestFilter,
+          magFilter: THREE.NearestFilter,
+        });
+      }
 
       //this.composer = this.createRenderPath([this.rendermode]);
       this.rendertarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
@@ -352,17 +370,6 @@ elation.require([
       }
 
       this.glcontext = this.rendersystem.renderer.getContext();
-
-      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', elation.bind(this, function(ev) {
-        console.log('ERROR - context lost!  Can we handle this somehow?');
-        ev.preventDefault();
-        this.engine.stop();
-      }));
-      elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextrestored', elation.bind(this, function(ev) {
-        console.log('context restored');
-        ev.preventDefault();
-        this.engine.start();
-      }));
 
       if (this.picking) {
         this.mousepos = [0, 0, document.body.scrollTop];
