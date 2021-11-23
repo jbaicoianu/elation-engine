@@ -1439,6 +1439,13 @@ if (!ENV_IS_BROWSER) return;
           this.loaded = true;
           this.animations = modeldata.animations;
 
+          // Cmompute vertex normals, if missing
+          modeldata.scene.traverse(n => {
+            if (n.geometry && !n.geometry.attributes.normal) {
+              n.geometry.computeVertexNormals();
+            }
+          });
+
           if (modeldata.userData && modeldata.userData.gltfExtensions && modeldata.userData.gltfExtensions.VRM) {
             THREE.VRM.from(modeldata).then(vrm => {
               this.vrm = vrm;
