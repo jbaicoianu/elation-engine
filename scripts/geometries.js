@@ -131,9 +131,11 @@ elation.require([], function() {
         var cap = new THREE.SphereGeometry(radius, radialSegments, radialSegments/2, 0, Math.PI*2, 0, Math.PI/2);
         var cap2 = new THREE.SphereGeometry(radius, radialSegments, radialSegments/2, 0, Math.PI*2, 0, Math.PI/2);
         var mat4 = new THREE.Matrix4();
-        mat4.makeTranslation(0, length / 2, 0);
+        mat4.makeRotationX(Math.PI);
         cap.applyMatrix4(mat4);
-        mat4.makeRotationX(Math.PI).setPosition(new THREE.Vector3(0, -length / 2, 0));
+        mat4.makeTranslation(0, length / 2, 0);
+        cylgeo.applyMatrix4(mat4);
+        mat4.setPosition(new THREE.Vector3(0, length, 0));
         cap2.applyMatrix4(mat4);
         let capsulegeo = THREE.BufferGeometryUtils.mergeBufferGeometries([cylgeo, cap, cap2], false);
 
