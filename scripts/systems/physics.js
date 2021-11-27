@@ -334,6 +334,9 @@ elation.require(["physics.cyclone"], function() {
           case 'mesh':
             obj = this.createBoundingMesh(collider);
             break;
+          case 'capsule':
+            obj = this.createBoundingCapsule(collider);
+            break;
           case 'box':
           default:
             obj = this.createBoundingBox(collider);
@@ -454,6 +457,16 @@ console.log('my offset', collider.offset, collider);
         return mesh;
       }
       return new THREE.Object3D();
+    }
+    this.createBoundingCapsule = function(collider) {
+      let collidergeom = elation.engine.geometries.generate('capsule', {
+          radius: collider.radius,
+          length: collider.length,
+          radialSegments: 8,
+          offset: collider.offset,
+        });
+      let wiremat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
+      return new THREE.Mesh(collidergeom, wiremat);
     }
     this.createCG = function() {
       // Create yellow checkerboard texture
