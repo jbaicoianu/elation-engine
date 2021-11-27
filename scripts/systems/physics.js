@@ -381,17 +381,20 @@ elation.require(["physics.cyclone"], function() {
         [corners[2], corners[6]],
         [corners[3], corners[7]]
       ]
-      var linegeo = new THREE.Geometry();
+/*
+      var linegeo = new THREE.BufferGeometry();
       for (var i = 0; i < edges.length; i++) {
         var edge = edges[i];
         linegeo.vertices.push(new THREE.Vector3(edge[0][0], edge[0][1], edge[0][2]));
         linegeo.vertices.push(new THREE.Vector3(edge[1][0], edge[1][1], edge[1][2]));
       }
+*/
       //var boxgeo = new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z);
+      let boxgeo = new THREE.BoxBufferGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10);
       var boxmat = new THREE.LineBasicMaterial({color: 0x0000ff, transparent: true, depthWrite: false, depthTest: false, opacity: .2, blending: THREE.AdditiveBlending});
-      var outline = new THREE.LineSegments(linegeo, boxmat, THREE.LinePieces);
+      var outline = new THREE.LineSegments(boxgeo, boxmat, THREE.LinePieces);
 
-      var volume = new THREE.Mesh(new THREE.BoxBufferGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10), new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
+      var volume = new THREE.Mesh(boxgeo, new THREE.MeshPhongMaterial({color: 0xaaaaaa, emissive: 0x666666, depthTest: true, depthWrite: true, opacity: .1, transparent: true}));
       volume.position.addVectors(bbox.max, bbox.min).multiplyScalar(.5);
   console.log(this.properties.body);
       //outline.add(volume);
