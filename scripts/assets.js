@@ -2143,6 +2143,7 @@ if (!ENV_IS_BROWSER) return;
           elation.engine.assetdownloader.fetchURL(this.getProxiedURL(this.fragment_src)).then(ev => {
             let decoder = new TextDecoder('utf-8');
             let shadercode = decoder.decode(ev.target.response);
+            this.loaded = true;
             if (this.shadertype == 'default') {
               this._material.fragmentShader = shadercode;
             } else if (this.shadertype == 'shadertoy') {
