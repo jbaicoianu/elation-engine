@@ -760,8 +760,8 @@ elation.component.add("engine.things.generic", function() {
         setTimeout(elation.bind(this, this.updateColliderFromGeometry), 0);
       }
 
-      elation.events.add(this.objects['dynamics'], "physics_update,physics_collide", this);
-      elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
+      elation.events.add(this.objects['dynamics'], "physics_collide", this);
+      //elation.events.add(this.objects['dynamics'], "physics_update", elation.bind(this, this.refresh));
     }
   }
   this.removeDynamics = function() {
@@ -954,10 +954,11 @@ elation.component.add("engine.things.generic", function() {
     }
   }
   this.physics_collide = function(ev) {
-    var obj1 = ev.data.bodies[0].object, obj2 = ev.data.bodies[1].object;
+    let obj1 = ev.data.bodies[0].object, obj2 = ev.data.bodies[1].object,
+        other = (obj1 == this ? obj2 : obj1);
 
     let events = elation.events.fire({type: 'collide', element: this, data: {
-      other: (obj1 == this ? obj2 : obj1),
+      other: other,
       collision: ev.data
     } });
     if (elation.events.wasDefaultPrevented(events)) {
