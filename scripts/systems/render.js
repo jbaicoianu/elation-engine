@@ -18,7 +18,7 @@ elation.require([
   "engine.geometries",
   //"ui.select",
   //"ui.slider",
-  'ui.base',
+  'elements.base',
 ], function() {
   elation.requireCSS('engine.systems.render');
 
@@ -28,7 +28,7 @@ elation.require([
     this.forcerefresh = false;
 
     this.view_init = function(viewname, viewargs) {
-      var newview = new elation.engine.systems.render.view(viewargs);
+      let newview = elation.elements.create('engine-systems-render-view', viewargs);
       return this.view_add(viewname, newview);
     }
     this.view_add = function(viewname, view) {
@@ -213,24 +213,41 @@ elation.require([
     this.world_thing_change = function(ev) {
       this.setdirty();
     }
-    this.world_change = function(ev) {
-      this.setdirty();
+    this.world_change = function(ev) { this.setdirty();
     }
   });
 
-  elation.component.add("engine.systems.render.view", function() {
+  elation.elements.define("engine.systems.render.view", class extends elation.elements.base {
     //elation.implement(this, elation.engine.systems.system);
-    this.effects = {};
-    this.defaultcontainer = { tag: 'div' };
 
-    this.init = function() {
-      elation.html.addclass(this.container, "engine_view");
-      this.picking = this.args.picking || false;
-      this.useWebXRPolyfill = elation.utils.any(this.args.useWebXRPolyfill, true);
-      this.size = [0, 0];
+    init() {
+      super.init();
+      this.effects = {};
+
+      this.defineAttributes({
+        picking: { type: 'boolean', default: false },
+        useWebXRPolyfill: { type: 'boolean', default: true },
+        size: { type: 'object', default: [0, 0] },
+        showstats: { type: 'boolean', default: false },
+        fullsize: { type: 'boolean', default: false },
+        rendermode: { type: 'string', default: 'default' },
+        resolution: { type: 'object' },
+        enabled: { type: 'boolean', default: true },
+        crosshair: { type: 'boolean', default: false },
+        engine: { type: 'string', default: 'default' },
+        xrsession: { type: 'object' },
+        enablePostprocessing: { type: 'boolean', default: true },
+        fullsize: { type: 'boolean', default: false },
+        fullsize: { type: 'boolean', default: false },
+      });
+
+      //elation.html.addclass(this, "engine_view");
+      //this.picking = this.args.picking || false;
+      //this.useWebXRPolyfill = elation.utils.any(this.args.useWebXRPolyfill, true);
+      //this.size = [0, 0];
       this.size_old = [0, 0];
       this.scale = 100;// * devicePixelRatio;
-      this.showstats = this.args.showstats || false;
+      //this.showstats = this.args.showstats || false;
       this.fullscreen = false;
       this.renderpasses = {};
       this.aspectscale = 1;
@@ -240,39 +257,44 @@ elation.require([
       this.sizevec = new THREE.Vector2();
       this.sizevecinverse = new THREE.Vector2();
 
-      this.rendermode = this.args.rendermode || 'default';
+      //this.rendermode = this.args.rendermode || 'default';
 
-      if (this.args.fullsize == 1) {
-        elation.html.addclass(this.container, "engine_view_fullsize");
+/*
+      if (this.fullsize) {
+        elation.html.addclass(this, "engine_view_fullsize");
       }
-      if (this.args.resolution) {
-        elation.html.addclass(this.container, "engine_view_fixedsize");
+      if (this.resolution) {
+        elation.html.addclass(this, "engine_view_fixedsize");
       }
-      if (this.args.crosshair == 1) {
-        elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this.container});
+      if (this.crosshair) {
+        elation.html.create({tag: 'div', classname: 'engine_view_crosshair', append: this});
       }
-      this.container.tabIndex = 1;
-      if (!this.args.engine) {
+*/
+    }
+    create() {
+      super.create();
+      if (!this.engine) {
         console.log("ERROR: couldn't create view, missing engine parameter");
-      } else if (typeof elation.engine.instances[this.args.engine] == 'undefined') {
-        console.log("ERROR: couldn't create view, engine '" + this.args.engine + "' doesn't exist");
+      } else if (typeof elation.engine.instances[this.engine] == 'undefined') {
+        console.log("ERROR: couldn't create view, engine '" + this.engine + "' doesn't exist");
       } else {
-        this.engine = elation.engine.instances[this.args.engine];
-        this.create();
+        this.engine = elation.engine.instances[this.engine];
+        //this.createView();
       }
+      this.rendersystem = this.engine.systems.render;
+
+      this.tabIndex = 1;
+
       this.canvas = this.rendersystem.renderer.domElement;
       elation.events.add(window, "resize", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
-      elation.events.add(this.container, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
-    }
-    this.create = function() {
-      this.rendersystem = this.engine.systems.render;
+      elation.events.add(this, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
 
       if (this.rendersystem.renderer.domElement && !this.rendersystem.renderer.domElement.parentNode) {
-        this.container.appendChild(this.rendersystem.renderer.domElement);
+        this.appendChild(this.rendersystem.renderer.domElement);
 
         // Handle context loss and restore
         elation.events.add(this.rendersystem.renderer.domElement, 'webglcontextlost', elation.bind(this, function(ev) {
@@ -290,15 +312,15 @@ elation.require([
 
       }
       if (this.rendersystem.cssrenderer && !this.rendersystem.cssrenderer.domElement.parentNode) {
-        this.container.appendChild(this.rendersystem.cssrenderer.domElement);
+        this.appendChild(this.rendersystem.cssrenderer.domElement);
         elation.html.addclass(this.rendersystem.cssrenderer.domElement, 'engine_systems_render_css3d');
       }
 
-      if (this.args.xrsession) {
-        this.setXRSession(this.args.xrsession);
+      if (this.xrsession) {
+        this.setXRSession(this.xrsession);
       }
 
-      this.rendersystem.view_add(this.id, this);
+      this.rendersystem.view_add(this.name, this);
 
       if (!this.actualcamera) {
         var cam = new THREE.PerspectiveCamera(75, 4/3, 1e-2, 1e4);
@@ -344,7 +366,7 @@ elation.require([
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', 'fxaa', 'gamma'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', /*'fxaa',*/ 'gamma'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -360,13 +382,13 @@ elation.require([
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.top = '0px';
         this.stats.domElement.style.right = '0px';
-        this.container.appendChild(this.stats.domElement);
+        this.appendChild(this.stats.domElement);
 
         this.renderstats = new THREEx.RendererStats()
         this.renderstats.domElement.style.position = 'absolute'
         this.renderstats.domElement.style.right = '0px'
         this.renderstats.domElement.style.top = '50px'
-        this.container.appendChild( this.renderstats.domElement )
+        this.appendChild( this.renderstats.domElement )
       }
 
       this.glcontext = this.rendersystem.renderer.getContext();
@@ -401,10 +423,10 @@ elation.require([
         this.engine.systems.controls.activateContext('view');
       }
     }
-    this.destroy = function() {
+    destroy() {
       // TODO - deeallocate resources
     }
-    this.createRenderPath = function(passes, target) {
+    createRenderPath(passes, target) {
       // this.createRenderPath(['picking', 'oculus_deform'], depthTarget)
       // this.createRenderPath(['depth', 'oculus_deform'], pickingTarget)
       // this.createRenderPath(['sky', 'default', 'FXAA', 'oculus_deform', 'oculus_colorshift'])
@@ -432,7 +454,7 @@ elation.require([
 
       return composer;
     }
-    this.createRenderPass = function(name, args) {
+    createRenderPass(name, args) {
       var pass = false;
       switch (name) {
         case 'default':
@@ -554,7 +576,7 @@ window.maskobj = maskobj;
       if (pass) this.effects[name] = pass;
       return pass;
     }
-    this.setRenderMode = function(mode) {
+    setRenderMode(mode) {
       // Supported values: 'default', 'oculus'
 
       var lastpass = this.renderpasses[this.rendermode];
@@ -571,21 +593,21 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (this.pickingcomposer) this.pickingcomposer.passes[passidx] = pass;
       pass.camera = this.actualcamera;
 
-      elation.html.removeclass(this.container, "engine_view_rendermode_" + this.rendermode);
+      elation.html.removeclass(this, "engine_view_rendermode_" + this.rendermode);
       this.rendermode = mode;
-      elation.html.addclass(this.container, "engine_view_rendermode_" + this.rendermode);
+      elation.html.addclass(this, "engine_view_rendermode_" + this.rendermode);
 
 
       this.rendersystem.setdirty();
     }
-    this.isFullscreen = function() {
+    isFullscreen() {
       var fsel = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
       if (fsel) {
         return true;
       }
       return false;
     }
-    this.toggleFullscreen = function(fullscreen) {
+    toggleFullscreen(fullscreen) {
       if (typeof fullscreen == 'undefined') {
         fullscreen = !this.isFullscreen();
       } else if (typeof fullscreen.data != 'undefined') {
@@ -608,9 +630,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       this.fullscreen = fullscreen;
     }
-    this.startXR = function(mode='immersive-vr') {
+    startXR(mode='immersive-vr') {
     }
-    this.setXRSession = async function(session) {
+    async setXRSession(session) {
       this.xrsession = session;
       await this.rendersystem.renderer.xr.setSession(session);
       this.rendersystem.renderer.xr.enabled = true;
@@ -640,7 +662,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.xrscene.add(this.xrscenecam);
       }
     }
-    this.handleXRFrame = function(session, frame) {
+    handleXRFrame(session, frame) {
       if (session) {
         this.xrsession = session;
         if (this.activething && this.activething.updateXR) {
@@ -650,35 +672,34 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         elation.events.fire({ element: this.engine, type: 'xrframe', data: { frame, session, xrReferenceSpace } });
       }
     }
-    this.stopXR = function() {
+    stopXR() {
       if (this.xrsession) {
         this.xrsession.end();
       }
     }
-    this.handleXRend = function(ev) {
+    handleXRend(ev) {
       this.rendersystem.renderer.xr.setSession(null);
       this.rendersystem.renderer.xr.enabled = false;
       this.enabled = false;
-      elation.html.removeclass(this.container, 'webxr_session_active');
+      elation.html.removeclass(this, 'webxr_session_active');
       this.xrsession = false;
       this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
       setTimeout(() => {
         elation.events.fire({type: 'resize', element: window, data: true });
       }, 100);
     }
-    this.getXRBaseLayer = function(session) {
+    getXRBaseLayer(session) {
       if (session.renderState.layers && session.renderState.layers.length > 0) {
         return session.renderState.layers[session.renderState.layers.length - 1];
       }
       return session.renderState.baseLayer;
     }
-    this.updateCameras = (function() {
+    updateCameras() {
       // Closure scratch variables
       var _position = new THREE.Vector3(),
           _quaternion = new THREE.Quaternion(),
           _scale = new THREE.Vector3();
       
-      return function() {
         // Make sure the parent's matrixWorld is up to date
         if (this.camera.parent) {
           this.camera.parent.updateMatrix(true);
@@ -723,9 +744,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.skycamera.updateProjectionMatrix();
           }
         }
-      }
-    })();
-    this.render = function(delta, xrframe) {
+    }
+    render(delta, xrframe) {
       if (this.enabled && this.scene && this.camera) {
         if (xrframe && this.xrsession) {
           this.handleXRFrame(this.xrsession, xrframe);
@@ -763,7 +783,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         } else if (colliderscene.parent === worldscene) {
           worldscene.remove(colliderscene);
         }
-        if (this.args.enablePostprocessing) {
+        if (this.enablePostprocessing) {
           this.composer.render(delta);
         } else {
           if (this.xrsession) {
@@ -838,7 +858,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.scale_old = this.scale;
   //this.camera.rotation.y += Math.PI/32 * delta;
     }
-    this.updateRenderStats = function() {
+    updateRenderStats() {
       this.renderstats.update(this.rendersystem.renderer);
       var renderinfo = this.rendersystem.renderer.info;
 
@@ -847,32 +867,32 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       
       //this.renderinfo.render.faces = renderinfo.render.faces;
     }
-    this.toggleStats = function() {
+    toggleStats() {
       if (this.showstats) {
         if (this.renderstats) {
-          this.container.removeChild(this.renderstats.domElement)
+          this.removeChild(this.renderstats.domElement)
         }
         if (this.stats) {
-          this.container.removeChild(this.stats.domElement);
+          this.removeChild(this.stats.domElement);
         }
         this.showstats = false;
       } else {
         if (this.renderstats) {
-          this.container.appendChild(this.renderstats.domElement)
+          this.appendChild(this.renderstats.domElement)
         }
         if (this.stats) {
-          this.container.appendChild(this.stats.domElement);
+          this.appendChild(this.stats.domElement);
         }
         this.showstats = true;
       }
     }
-    this.setactivething = function(thing) {
+    setactivething(thing) {
       if (thing.camera) {
         this.setcamera(thing.camera);
       }
       this.activething = thing;
     }
-    this.setcamera = function(camera) {
+    setcamera(camera) {
       if (camera instanceof elation.component.base && camera.type == 'camera') {
         camera = camera.objects['3d'];
       }
@@ -891,7 +911,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
   */
     }
-    this.setscene = function(scene) {
+    setscene(scene) {
       var oldscene = this.scene;
       this.scene = scene;
       if (this.composer) {
@@ -904,7 +924,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       this.rendersystem.setdirty();
     }
-    this.setcameranearfar = function(near, far) {
+    setcameranearfar(near, far) {
       /*
       if (!this.camdebug) {
         this.camdebug = elation.ui.window('camdebug', elation.html.create({append: document.body}), {title: 'Camera Debug'});
@@ -974,7 +994,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
 
     }
-    this.setskyscene = function(scene) {
+    setskyscene(scene) {
       this.skyscene = scene || new THREE.Scene();
       this.skycamera = new THREE.PerspectiveCamera(this.camera.fov, this.camera.aspect, 0.1, 10000);
       //this.skycamera.rotation = this.camera.rotation;
@@ -987,7 +1007,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.composer.passes.unshift(this.skypass);
       }
     }
-    this.getscene = function(obj) {
+    getscene(obj) {
       var scene = obj;
 
       while ( scene.parent ) {
@@ -998,11 +1018,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       return false;
     }
-    this.getsize = function(force) {
-      //this.size = [this.container.offsetWidth, this.container.offsetHeight];
-      var s = (this.args.fullsize ? {w: window.innerWidth, h: window.innerHeight} : 
-              (this.args.resolution ? {w: this.args.resolution[0], h: this.args.resolution[1]} : 
-               elation.html.dimensions(this.container)
+    getsize(force) {
+      //this.size = [this.offsetWidth, this.offsetHeight];
+      var s = (this.fullsize ? {w: window.innerWidth, h: window.innerHeight} :
+              (this.resolution ? {w: this.resolution[0], h: this.resolution[1]} :
+               elation.html.dimensions(this)
               ));
       if (this.xrsession) {
         let xrlayer = this.getXRBaseLayer(this.xrsession);
@@ -1022,7 +1042,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
       return this.size;
     }
-    this.setrendersize = function(width, height) {
+    setrendersize(width, height) {
       if (this.xrsession) return;
       var scale = this.scale / 100,
           invscale = 100 / this.scale,
@@ -1070,33 +1090,36 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.actualcamera.updateProjectionMatrix();
       }
     }
-    this.setscale = function(scale) {
+    setscale(scale) {
       this.scale = scale;
     }
-    this.system_attach = function(ev) {
+    system_attach(ev) {
       console.log('INIT: view (' + this.id + ')');
 
     }
-    this.engine_start = function(ev) {
+    engine_start(ev) {
     }
-    this.engine_frame = function(ev) {
+    engine_frame(ev) {
       //var scene = this.engine.systems.world.scene['world-3d'];
       //console.log('FRAME: view (' + this.id + ")");
     }
-    this.engine_stop = function(ev) {
+    engine_stop(ev) {
       console.log('SHUTDOWN: view (' + this.id + ')');
     }
-    this.resize = function(ev) {
+    handleEvent(ev) {
+      if (typeof this[ev.type] == 'function') return this[ev.type](ev);
+    }
+    resize(ev) {
       this.getsize(ev.data);
     }
-    this.mouseover = function(ev) {
+    mouseover(ev) {
       if (!this.pickingactive) {
-        //elation.events.add(this.container, 'mousemove,mouseout', this);
+        //elation.events.add(this, 'mousemove,mouseout', this);
         this.pickingactive = true;
       }
       this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
     }
-    this.mousedown = function(ev) {
+    mousedown(ev) {
       if (this.pickingactive && this.picker.pickingobject) {
         this.cancelclick = false;
         var newev = {type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey};
@@ -1110,7 +1133,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.proxyEvent(newev);
       }
     }
-    this.mousewheel = function(ev) {
+    mousewheel(ev) {
       //this.mousepos[0] = ev.clientX;
       //this.mousepos[1] = ev.clientY;
       this.mousepos[2] = document.body.scrollTop;
@@ -1122,7 +1145,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         return false;
       }
     }
-    this.mousemove = function(ev, ignorePointerLock) {
+    mousemove(ev, ignorePointerLock) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
       if (el && !ignorePointerLock) {
         var dims = elation.html.dimensions(el);
@@ -1140,15 +1163,15 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         //this.cancelclick = true;
       } 
     }
-    this.mouseenter = function(ev) {
+    mouseenter(ev) {
       this.rendersystem.setdirty();
     }
-    this.mouseleave = function(ev) {
+    mouseleave(ev) {
       this.rendersystem.setdirty();
     }
-    this.mouseout = function(ev) {
+    mouseout(ev) {
       if (this.pickingactive) {
-        elation.events.remove(this.container, 'mousemove,mouseout', this);
+        elation.events.remove(this, 'mousemove,mouseout', this);
         this.pickingactive = false;
         if (this.picker.pickingobject) {
           var newev = {type: "mouseout", element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY};
@@ -1163,7 +1186,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
       }
     }
-    this.mouseup = function(ev) {
+    mouseup(ev) {
       if (this.pickingactive && this.picker.pickingobject) {
         var newev = {type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button};
         /*
@@ -1175,7 +1198,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.proxyEvent(newev);
       }
     }
-    this.click = function(ev) {
+    click(ev) {
       if (this.pickingactive && this.picker.pickingobject && !this.cancelclick) {
         var clickevent = {type: 'click', event: ev, element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY])};
         /*
@@ -1189,9 +1212,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (ev && ev.preventDefault) {
         ev.preventDefault();
       }
-      this.container.focus();
+      this.focus();
     }
-    this.touchstart = function(ev) {
+    touchstart(ev) {
       if (!this.pickingactive) {
         this.pickingactive = true;
       }
@@ -1217,7 +1240,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 //      }
         ev.preventDefault();
     }
-    this.touchmove = function(ev) {
+    touchmove(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
       var fakeev = elation.events.clone(ev.touches[0], {});
       fakeev.button = 0;
@@ -1233,7 +1256,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
 
     }
-    this.touchend = function(ev) {
+    touchend(ev) {
       if (ev.touches.length == 0) {
         this.proxyEvent(ev);
         this.mouseup(ev);
@@ -1245,7 +1268,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         }
       }
     }
-    this.proxyEvent = function(ev, obj) {
+    proxyEvent(ev, obj) {
       if (!this.pickingactive) {
         this.pickingactive = true;
       }
@@ -1286,50 +1309,50 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
       }
     }
-    this.change = function(ev) {
+    change(ev) {
       console.log('change', ev);
     }
-    this.getParentThing = function(obj) {
+    getParentThing(obj) {
       while (obj) {
         if (obj.userData.thing) return obj.userData.thing;
         obj = obj.parent;
       }
       return null;
     }
-    this.initPicking = function() {
+    initPicking() {
       //this.picker = new elation.engine.systems.render.picking_gpu(this);
       this.picker = new elation.engine.systems.render.picking_cpu(this, this.engine.systems.world.scene['colliders']);
     }
-    this.updatePickingTarget = function(force) {
+    updatePickingTarget(force) {
       return this.picker.updatePickingTarget(force);
     }
-    this.updatePickingObject = function(force) {
+    updatePickingObject(force) {
       if (this.picker) {
         return this.picker.updatePickingObject(force);
       }
       return false;
     }
-    this.pick = function(x, y) {
+    pick(x, y) {
       if (this.picker) {
         return this.picker.pick(x, y);
       }
     }
-    this.getPickingData = function(obj) {
+    getPickingData(obj) {
       return this.picker.getPickingData(obj);
     }
-    this.enablePicking = function() {
+    enablePicking() {
       console.log('picking enabled');
       this.picking = true;
       this.updatePickingTarget(true);
       this.updatePickingObject(true);
     }
-    this.disablePicking = function() {
+    disablePicking() {
       console.log('picking disabled');
       this.updatePickingTarget(true);
       this.updatePickingObject(true);
       this.picking = false;
     }
-    this.pointerlockchange = function(ev) {
+    pointerlockchange(ev) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
       if (el) {
         var dims = elation.html.dimensions(el);
@@ -1338,7 +1361,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.pickingactive = true;
       }
     }
-    this.screenshot = function(args) {
+    screenshot(args) {
       if (!args) args = {};
       var type = args.type || 'single';
       var format = args.format || 'jpg';
@@ -1353,7 +1376,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
       return promise;
     }
-    this.screenshotSingle = function(args) {
+    screenshotSingle(args) {
       var format = args.format || 'jpg';
       var promise = new Promise(elation.bind(this, function(resolve, reject) {
         var img = false;
@@ -1376,84 +1399,78 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }));
       return promise;
     }
-    this.screenshotCubemap = (function() {
-      var renderTargets = [];
+    screenshotCubemap(args) {
+      if (!this.rendertargets) this.rendertargets = [];
+      var args = args || {};
+      var width = args.width || 512;
+      var camera = args.camera || this.actualcamera;
+      var raw = args.raw;
+      var format = args.format || 'jpg';
+      var renderer = this.rendersystem.renderer;
+      var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( width, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
 
-      return function(args) {
-        var args = args || {};
-        var width = args.width || 512;
-        var camera = args.camera || this.actualcamera;
-        var raw = args.raw;
-        var format = args.format || 'jpg';
-        var renderer = this.rendersystem.renderer;
-        var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( width, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
+      var cubecam = new THREE.CubeCamera(camera.near, camera.far, cubeRenderTarget);
+      cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
+      this.scene.add(cubecam);
 
-        var cubecam = new THREE.CubeCamera(camera.near, camera.far, cubeRenderTarget);
-        cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
-        this.scene.add(cubecam);
+      if (raw) {
+        cubecam.update(renderer, this.scene);
+        this.scene.remove(cubecam);
+        return cubecam;
+      } else {
+        var pos = [
+          [width*2, width],
+          [0, width],
+          [width, 0],
+          [width, width*2],
+          [width, width],
+          [width*3, width],
+        ];
+        var materials = [],
+            images = [];
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = width;
+        var ctx = canvas.getContext('2d');
+        var imageData = ctx.createImageData(width, width);
+        var buffer = new Uint8Array(width * width * 4);
 
-        if (raw) {
-          cubecam.update(renderer, this.scene);
-          this.scene.remove(cubecam);
-          return cubecam;
-        } else {
-          var pos = [
-            [width*2, width],
-            [0, width],
-            [width, 0],
-            [width, width*2],
-            [width, width],
-            [width*3, width],
-          ];
-          var materials = [],
-              images = [];
-          var canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = width;
-          var ctx = canvas.getContext('2d');
-          var imageData = ctx.createImageData(width, width);
-          var buffer = new Uint8Array(width * width * 4);
-
-          for (var i = 0; i < cubecam.children.length; i++) {
-            if (!renderTargets[i]) {
-              renderTargets[i] = new THREE.WebGLRenderTarget(width, width);
-            } else {
-              renderTargets[i].setSize(width, width);
-            }
-            renderer.render( this.scene, cubecam.children[i], renderTargets[i] );
-            renderer.readRenderTargetPixels(renderTargets[i], 0, 0, width, width, buffer);
-
-            imageData.data.set(buffer);
-
-            ctx.putImageData(imageData, 0, 0);
-            var src = canvas.toDataURL(this.formatToMime(format));
-
-            var img = document.createElement('img');
-            img.src = src;
-            images.push(img);
-            //renderTargets[i].dispose();
+        for (var i = 0; i < cubecam.children.length; i++) {
+          if (!renderTargets[i]) {
+            renderTargets[i] = new THREE.WebGLRenderTarget(width, width);
+          } else {
+            renderTargets[i].setSize(width, width);
           }
-          this.scene.remove(cubecam);
-          return images;
+          renderer.render( this.scene, cubecam.children[i], renderTargets[i] );
+          renderer.readRenderTargetPixels(renderTargets[i], 0, 0, width, width, buffer);
+
+          imageData.data.set(buffer);
+
+          ctx.putImageData(imageData, 0, 0);
+          var src = canvas.toDataURL(this.formatToMime(format));
+
+          var img = document.createElement('img');
+          img.src = src;
+          images.push(img);
+          //renderTargets[i].dispose();
         }
+        this.scene.remove(cubecam);
+        return images;
       }
-    })();
-    this.screenshotEquirectangular = (function() {
-      var converter = false;
-      return function(args) {
-        var width = args.width || 4096;
-        var format = args.format || 'jpg';
-        var height = args.height || width / 2;
-        var cubecam = this.screenshotCubemap({width: height, height: height, format: 'png', raw: true});
-        if (!converter) {
-          var renderer = this.rendersystem.renderer;
-          converter = new CubemapToEquirectangular(renderer, false);
-        }
-        converter.setSize(width, height);
-        return converter.convert(cubecam, this.formatToMime(format));
+    }
+    screenshotEquirectangular(args) {
+      var width = args.width || 4096;
+      var format = args.format || 'jpg';
+      var height = args.height || width / 2;
+      var cubecam = this.screenshotCubemap({width: height, height: height, format: 'png', raw: true});
+      if (!this.converter) {
+        var renderer = this.rendersystem.renderer;
+        this.converter = new CubemapToEquirectangular(renderer, false);
       }
-    })();
-    this.formatToMime = function(format) {
+      this.converter.setSize(width, height);
+      return this.converter.convert(cubecam, this.formatToMime(format));
+    }
+    formatToMime(format) {
       var formats = {
         gif: 'image/gif',
         jpg: 'image/jpeg',
@@ -1461,10 +1478,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       };
       return formats[format];
     }
-    this.getPixelAt = function(x, y) {
+    getPixelAt(x, y) {
       return this.getPixelsAt(x, y, 1, 1);
     }
-    this.getPixelsAt = function(x, y, w, h) {
+    getPixelsAt(x, y, w, h) {
       var renderer = this.rendersystem.renderer;
       var canvas = renderer.domElement;
       var renderTarget = this.rendertarget;
@@ -1490,7 +1507,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         resolve(pixels.data);
       });
     }
-  }, elation.ui.base);
+  });
   elation.extend("engine.systems.render.picking_intersection", function(mesh, mousepos, viewport, intersection) {
     // Represents an intersection between the mouse and an object in the scene as viewed from the specified viewport
 
@@ -1755,7 +1772,7 @@ console.log('dun it', msaafilter);
       this.view.rendersystem.renderer.setRenderTarget( this.pickingcomposer.output );
       var s = elation.html.dimensions(this.view.container);
       var scale = this.view.scale / 100;
-      this.view.glcontext.readPixels((x + s.left) * scale, (this.view.container.offsetHeight - (y + s.top)) * scale, 1, 1, this.view.glcontext.RGBA, this.view.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
+      this.view.glcontext.readPixels((x + s.left) * scale, (this.view.offsetHeight - (y + s.top)) * scale, 1, 1, this.view.glcontext.RGBA, this.view.glcontext.UNSIGNED_BYTE, this.pickingbuffer);
       this.view.rendersystem.renderer.setRenderTarget( null );
       
       var pickid = (this.pickingbuffer[0] << 16) + (this.pickingbuffer[1] << 8) + (this.pickingbuffer[2]);
