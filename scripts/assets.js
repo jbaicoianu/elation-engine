@@ -152,7 +152,7 @@ if (!ENV_IS_BROWSER) return;
       return self.location.origin;
     },
     isURLRelative: function(src) {
-      if (src && src.match(/^(https?:)?\/\//) || src[0] == '/') {
+      if (src && src.match(/^([\S]+:)?\/\//) || src[0] == '/') {
         return false;
       }
       return true;
