@@ -2021,6 +2021,7 @@ if (!ENV_IS_BROWSER) return;
       var blob = new Blob(['\n{ ' + overrideScript + '\n' + data + ' };\n'], {type: 'application/javascript'});
       var bloburl = URL.createObjectURL(blob);
       this._script.src = bloburl;
+      this.code = data;
       this.loaded = true;
       elation.events.fire({type: 'asset_load', element: this._script});
       elation.events.fire({type: 'asset_load', element: this});
