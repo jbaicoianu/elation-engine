@@ -18,7 +18,6 @@ var deps = [
 if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
-    "engine.external.three-mesh-bvh",
     //"engine.sharing",
     "engine.systems.render",
     //"engine.systems.admin",
