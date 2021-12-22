@@ -18,6 +18,7 @@ var deps = [
 if (true || elation.env.isBrowser) {
   deps = deps.concat([
     "engine.external.three.three",
+    "engine.external.three-mesh-bvh",
     //"engine.sharing",
     "engine.systems.render",
     //"engine.systems.admin",
@@ -38,7 +39,7 @@ elation.require(deps, function() {
     this.instances[name] = engine;
     return engine;
   });
-  elation.extend("engine.main", function(name) {
+  elation.extend("engine.main", function(name, client) {
     this.started = false;
     this.running = false;
     this.name = name;
@@ -47,7 +48,7 @@ elation.require(deps, function() {
     this.scratchobjects = {};
 
     this.init = function() {
-      this.client = elation.engine.client(this.name);
+      this.client = client;
       this.systems = new elation.engine.systemmanager(this);
       // shutdown cleanly if the user leaves the page
       var target = null;
@@ -92,16 +93,16 @@ elation.require(deps, function() {
       // fire engine_frame event, which kicks off processing in any active systems
       //console.log("==========");
       elation.events.fire({type: "engine_frame", element: this, data: evdata});
-			let dt = ts - this.lastupdate;
+      let dt = ts - this.lastupdate;
       this.lastupdate = ts;
-			return (1000 / this.targetFramerate) - dt;
+      return (1000 / this.targetFramerate) - dt;
     }
 
     this.frame = function(fn, nextframetime) {
-			// Advance the engine by one frame
-			// Note that the render loop runs separately using requestAnimationFrame()
-			//setTimeout(fn, nextframetime);
-			//requestAnimationFrame(fn);
+      // Advance the engine by one frame
+      // Note that the render loop runs separately using requestAnimationFrame()
+      //setTimeout(fn, nextframetime);
+      //requestAnimationFrame(fn);
     }
 
     // Convenience functions for querying objects from world
@@ -261,9 +262,20 @@ elation.require(deps, function() {
   }, elation.ui.panel);
   }
 
-  elation.component.add('engine.client', function() {
-    this.init = function() {
-      this.name = this.args.name || 'default';
+  elation.elements.define('engine.client', class extends elation.elements.base {
+    init() {
+      super.init()
+      this.defineAttributes({
+        name: { type: 'string', default: 'default' },
+        resolution: { type: 'string' },
+        fullsize: { type: 'boolean', default: false },
+        crosshair: { type: 'boolean', default: false },
+        picking: { type: 'boolean', default: false },
+        stats: { type: 'boolean', default: false },
+        useWebVRPolyfill: { type: 'boolean', default: false },
+        engine: { type: 'object' },
+      });
+      //this.name = this.args.name || 'default';
       this.enginecfg = {
         systems: [
           "physics",
@@ -275,19 +287,22 @@ elation.require(deps, function() {
           "controls"
         ],
         crosshair: true,
-        stats: true,
+        stats: false,
         picking: true,
         fullsize: true,
         resolution: null,
         useWebVRPolyfill: true,
         enablePostprocessing: true
       };
-      this.setEngineConfig(this.args);
+      //this.setEngineConfig(this.args);
+    }
+    create() {
+      super.create();
       this.initEngine();
       this.loadEngine();
     }
     // Set up engine parameters before creating.  To be overridden by extending class
-    this.initEngine = function() {
+    initEngine() {
       var hashargs = elation.url();
        
       this.enginecfg.systems = [];
@@ -308,7 +323,7 @@ elation.require(deps, function() {
         });
       }
     }
-    this.setEngineConfig = function(args) {
+    setEngineConfig(args) {
       var cfg = this.enginecfg;
       if (args.resolution) {
         cfg.resolution = args.resolution.split('x');;
@@ -321,15 +336,14 @@ elation.require(deps, function() {
       if (args.useWebVRPolyfill !== undefined) cfg.useWebVRPolyfill = args.useWebVRPolyfill;
     }
     // Instantiate the engine
-    this.loadEngine = function() {
-      this.engine = elation.engine.create(
-        this.name, 
-        this.enginecfg.systems,
-        elation.bind(this, this.startEngine)
-      );
-      this.engine.client = this;
+    loadEngine() {
+      let engine = new elation.engine.main(this.name, this);
+      this.engine = engine;
+      elation.events.add(engine.systems, 'engine_systems_added', ev => this.startEngine(engine));
+      engine.systems.add(this.enginecfg.systems);
+      elation.engine.instances[this.name] = engine;
     }
-    this.initWorld = function() {
+    initWorld() {
       // Virtual stub - inherit from elation.engine.client, then override this for your app
       var worldurl = elation.utils.arrayget(this.args, 'world.url');
       var worlddata = elation.utils.arrayget(this.args, 'world.data');
@@ -340,13 +354,14 @@ elation.require(deps, function() {
         this.engine.systems.world.load(worlddata);
       }
     }
-    this.startEngine = function(engine) {
-      this.world = this.engine.systems.world; // shortcut
+    startEngine(engine) {
+      this.world = engine.systems.world; // shortcut
 
       try {
         var cfg = this.enginecfg;
-        this.view = elation.engine.systems.render.view("main", elation.html.create({ tag: 'div', append: this }), {
-          append: document.body,
+        this.view = elation.elements.create('engine.systems.render.view', {
+          name: 'main',
+          append: this,
           fullsize: cfg.fullsize,
           resolution: cfg.resolution,
           picking: cfg.picking,
@@ -365,7 +380,7 @@ elation.require(deps, function() {
         elation.events.fire({element: this, type: 'engine_error', data: e});
       }
     }
-    this.initControls = function() {
+    initControls() {
       this.controlstate = this.engine.systems.controls.addContext(this.name, {
         //'menu': ['keyboard_esc,gamepad_0_button_9', elation.bind(this, this.toggleMenu)],
         'share_screenshot': ['keyboard_ctrl_period', elation.bind(this, this.shareScreenshot)],
@@ -376,13 +391,13 @@ elation.require(deps, function() {
       });
       this.engine.systems.controls.activateContext(this.name);
     }
-    this.setActiveThing = function(thing) {
+    setActiveThing(thing) {
       this.engine.systems.render.views.main.setactivething(thing);
       if (thing.ears) {
         this.engine.systems.sound.setActiveListener(thing.ears);
       }
     }
-    this.getPlayer = function() {
+    getPlayer() {
       if (!this.player) {
         var players = this.engine.systems.world.getThingsByTag('player');
         if (players && players.length > 0) {
@@ -391,7 +406,7 @@ elation.require(deps, function() {
       }
       return this.player;
     }
-    this.showMenu = function() {
+    showMenu() {
       var player = this.getPlayer();
       if (player){
         if (!this.menu) {
@@ -443,7 +458,7 @@ elation.require(deps, function() {
         this.menuShowing = true;
       }
     }
-    this.hideMenu = function() {
+    hideMenu() {
       var player = this.getPlayer();
       if (player && this.menu) {
         player.camera.remove(this.menu);
@@ -455,7 +470,7 @@ elation.require(deps, function() {
         this.menu.disable();
       }
     }
-    this.toggleMenu = function(ev) {
+    toggleMenu(ev) {
       if (ev.value == 1) {
         if (this.menuShowing) {
           this.hideMenu();
@@ -464,18 +479,18 @@ elation.require(deps, function() {
         }
       }
     }
-    this.togglePointerLock = function(ev) {
+    togglePointerLock(ev) {
       if (ev.value == 0) {
         this.showMenu();
       }
     }
-    this.toggleFullscreen = function(ev) {
+    toggleFullscreen(ev) {
       var view = this.view;
       if (view && (typeof ev == 'undefined' || ev.value == 1 || typeof ev.value == 'undefined')) {
         view.toggleFullscreen();
       }
     }
-    this.configureOptions = function() {
+    configureOptions() {
       if (!this.configmenu) {
         var configpanel = elation.engine.configuration({client: this});
         this.configmenu = elation.ui.window({
@@ -492,17 +507,17 @@ elation.require(deps, function() {
       }
       this.configmenu.show();
     }
-    this.startGame = function() {
+    startGame() {
       this.hideMenu();
     }
-    this.showAbout = function() {
+    showAbout() {
     }
-    this.createSharePicker = function() {
+    createSharePicker() {
     }
-    this.initSharing = function() {
+    initSharing() {
       this.sharedialog = elation.engine.sharing({append: document.body, client: this});
     }
-    this.shareScreenshot = function(ev) {
+    shareScreenshot(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
         if (!this.sharedialog) {
           this.sharedialog = elation.engine.sharing({append: document.body, client: this});
@@ -552,7 +567,7 @@ elation.require(deps, function() {
         }));
       }
     }
-    this.shareGif = function(ev) {
+    shareGif(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
         if (!this.sharepicker) {
           this.createSharePicker();
@@ -570,7 +585,7 @@ elation.require(deps, function() {
         }));
       }
     }
-    this.shareMP4 = function(ev) {
+    shareMP4(ev) {
       if (typeof ev == 'undefined' || ev.value == 1) {
         if (!this.sharepicker) {
           this.createSharePicker();
@@ -588,7 +603,7 @@ elation.require(deps, function() {
         }));
       }
     }
-    this.getScreenshotFilename = function(extension) {
+    getScreenshotFilename(extension) {
       if (!extension) extension = 'png';
       var now = new Date();
       function pad(n) {
@@ -601,10 +616,10 @@ elation.require(deps, function() {
       var filename = prefix + '-' + date + ' ' + time + '.' + extension
       return filename;
     }
-    this.screenshot = function(args) {
+    screenshot(args) {
       return this.view.screenshot(args);
     }
-    this.startXR = function(mode="immersive-vr", xroptions) {
+    startXR(mode="immersive-vr", xroptions) {
       if (!this.xrsession) {
         if (!xroptions) {
           xroptions = {
@@ -680,7 +695,7 @@ elation.require(deps, function() {
         this.engine.systems.sound.enableSound();
       }
     }
-    this.handleXRend = function(ev) {
+    handleXRend(ev) {
       this.engine.systems.render.views.main.enabled = true;
       this.engine.systems.render.views.xr.enabled = false;
       this.engine.systems.render.views.xr.handleXRend(ev);
@@ -696,7 +711,7 @@ elation.require(deps, function() {
       }
       elation.events.fire({element: this, type: 'xrsessionend'});
     }
-    this.stopXR = function() {
+    stopXR() {
       //this.handleXRend();
       if (this.xrsession) {
         try {
@@ -710,7 +725,7 @@ elation.require(deps, function() {
       //this.engine.systems.render.views.xr.enabled = false;
       //this.xrsession = false;
     }
-  }, elation.ui.base);
+  });
   
   elation.component.add('engine.server', function() {
     this.init = function() {
