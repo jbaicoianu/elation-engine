@@ -115,7 +115,7 @@ elation.require(['engine.things.generic', 'engine.things.leapmotion'], function(
         }
       }
       var controls = this.engine.systems.controls;
-      this.vrdisplay = this.engine.systems.render.views.main.vrdisplay;
+      //this.vrdisplay = this.engine.systems.render.views.main.vrdisplay;
       var gamepads = controls.gamepads;
       for (var i = 0; i < gamepads.length; i++) {
         if (gamepads[i] && (!this.controllers[i] || this.controllers[i].data !== gamepads[i])) {
