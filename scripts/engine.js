@@ -267,13 +267,14 @@ elation.require(deps, function() {
       this.defineAttributes({
         name: { type: 'string', default: 'default' },
         resolution: { type: 'string' },
-        fullsize: { type: 'boolean', default: false },
+        fullsize: { type: 'boolean', default: true },
         crosshair: { type: 'boolean', default: false },
         picking: { type: 'boolean', default: false },
         stats: { type: 'boolean', default: false },
         useWebVRPolyfill: { type: 'boolean', default: false },
         engine: { type: 'object' },
       });
+      if (this.fullsize == 'false') this.fullsize = false; // FIXME - the type coersion should be doing this for us
       //this.name = this.args.name || 'default';
       this.enginecfg = {
         systems: [
@@ -288,7 +289,7 @@ elation.require(deps, function() {
         crosshair: true,
         stats: false,
         picking: true,
-        fullsize: true,
+        fullsize: this.fullsize && this.fullsize != 'false',
         resolution: null,
         useWebVRPolyfill: true,
         enablePostprocessing: true
@@ -328,7 +329,7 @@ elation.require(deps, function() {
         cfg.resolution = args.resolution.split('x');;
         cfg.fullsize = false;
       } 
-      if (args.fullsize !== undefined) cfg.fullsize = args.fullsize;
+      if (args.fullsize !== undefined) cfg.fullsize = args.fullsize && args.fullsize != 'false'; // FIXME - type coersion should be doing this
       if (args.crosshair !== undefined) cfg.crosshair = args.crosshair;
       if (args.picking !== undefined) cfg.picking = args.picking;
       if (args.stats !== undefined) cfg.stats = args.stats;
@@ -355,6 +356,7 @@ elation.require(deps, function() {
     }
     startEngine(engine) {
       this.world = engine.systems.world; // shortcut
+      this.style.overflow = 'hidden';
 
       try {
         var cfg = this.enginecfg;
