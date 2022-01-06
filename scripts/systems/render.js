@@ -237,8 +237,6 @@ elation.require([
         engine: { type: 'string', default: 'default' },
         xrsession: { type: 'object' },
         enablePostprocessing: { type: 'boolean', default: true },
-        fullsize: { type: 'boolean', default: false },
-        fullsize: { type: 'boolean', default: false },
       });
 
       //elation.html.addclass(this, "engine_view");
@@ -286,6 +284,13 @@ elation.require([
       this.tabIndex = 1;
 
       this.canvas = this.rendersystem.renderer.domElement;
+
+      if (!this.fullsize) {
+        this.style.width = '100%';
+        this.style.height = '100%';
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = '100%';
+      }
       elation.events.add(window, "resize", this);
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
@@ -1020,8 +1025,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     }
     getsize(force) {
       //this.size = [this.offsetWidth, this.offsetHeight];
-      var s = (this.fullsize ? {w: window.innerWidth, h: window.innerHeight} :
-              (this.resolution ? {w: this.resolution[0], h: this.resolution[1]} :
+      var s = (this.fullsize ? {w: window.innerWidth, h: window.innerHeight, bar: 2} :
+              (this.resolution ? {w: this.resolution[0], h: this.resolution[1], foo: 1} :
                elation.html.dimensions(this)
               ));
       if (this.xrsession) {
@@ -1061,7 +1066,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       if (pixelratio != this.rendersystem.renderer.getPixelRatio()) {
         this.rendersystem.renderer.setPixelRatio(pixelratio);
       }
-      this.rendersystem.renderer.setSize(scaledwidth, scaledheight);
+      this.rendersystem.renderer.setSize(scaledwidth, scaledheight, false);
       if (this.composer) {
         this.composer.setSize(scaledwidth, scaledheight);  
       }
