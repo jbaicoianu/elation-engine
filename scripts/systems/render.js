@@ -1145,6 +1145,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
 
       var newev = {type: 'wheel', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, deltaX: ev.deltaX, deltaY: ev.deltaY, deltaZ: ev.deltaZ, deltaMode: ev.deltaMode, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, preventDefault: () => ev.preventDefault(), stopPropagation: () => ev.stopPropagation()};
       this.proxyEvent(newev);
+      if (newev.cancelBubble) {
+        ev.stopPropagation();
+      }
       if (elation.events.wasDefaultPrevented(newev)) {
         ev.preventDefault();
         return false;
