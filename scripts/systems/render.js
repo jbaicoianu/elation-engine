@@ -236,7 +236,7 @@ elation.require([
         crosshair: { type: 'boolean', default: false },
         engine: { type: 'string', default: 'default' },
         xrsession: { type: 'object' },
-        enablePostprocessing: { type: 'boolean', default: true },
+        enablepostprocessing: { type: 'boolean', default: true },
       });
 
       //elation.html.addclass(this, "engine_view");
@@ -788,7 +788,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         } else if (colliderscene.parent === worldscene) {
           worldscene.remove(colliderscene);
         }
-        if (this.enablePostprocessing) {
+        if (this.enablepostprocessing) {
           this.composer.render(delta);
         } else {
           if (this.xrsession) {
