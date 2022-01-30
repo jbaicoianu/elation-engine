@@ -1476,12 +1476,10 @@ elation.component.add("engine.things.generic", function() {
     elation.events.fire({type: 'thing_change_queued', element: this});
   }
   this.applyChanges = function() {
-/*
     var s = this.scale;
     if (s && this.objects['3d']) {
       this.objects['3d'].visible = this.visible && !(s.x == 0 || s.y == 0 || s.z == 0);
     }
-*/
     if (this.colliders) {
       this.colliders.position.copy(this.properties.position);
       this.colliders.quaternion.copy(this.properties.orientation);
