@@ -1,4 +1,5 @@
-.engine_view {
+engine-systems-render-view {
+  display: block;
   position: relative;
 }
 .engine_view_fullsize {
@@ -80,12 +81,15 @@
   width: 10em;
   display: inline-block;
 }
-.engine_view.cursor_default {
+.engine_view.cursor_default,
+engine-systems-render-view.cursor_default {
   cursor: default;
 }
-.engine_view.cursor_pointer {
+.engine_view.cursor_pointer,
+engine-systems-render-view.cursor_pointer {
   cursor: pointer;
 }
-.engine_view.cursor_crosshair {
+.engine_view.cursor_crosshair,
+engine-systems-render-view.cursor_crosshair {
   cursor: crosshair;
 }
