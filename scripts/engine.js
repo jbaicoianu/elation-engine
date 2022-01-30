@@ -370,7 +370,7 @@ elation.require(deps, function() {
           showstats: cfg.stats,
           crosshair: cfg.crosshair,
           useWebVRPolyfill: cfg.useWebVRPolyfill,
-          enablePostprocessing: cfg.enablePostprocessing
+          enablepostprocessing: cfg.enablePostprocessing
         } );
         this.initWorld();
         this.initControls();
@@ -635,7 +635,7 @@ elation.require(deps, function() {
             className: 'webxr_notification',
             resizable: 0,
             //content: 'WebXR active.  Please put on your headset',
-            append: this.engine.systems.render.views.main.container,
+            append: this.engine.systems.render.views.main,
           });
         } else {
           this.xrwindow.show();
@@ -662,15 +662,19 @@ elation.require(deps, function() {
           //session.requestAnimationFrame(() => {
             // Create our new render view on the first XR frame, so the session has time to initialize properly
             if (!this.engine.systems.render.views.xr) {
-              let view = elation.engine.systems.render.view("xr", elation.html.create({ tag: 'div' }), {
-                  fullsize: false,
-                  picking: true,
-                  engine: this.engine.name,
-                  crosshair: false,
-                  useWebVRPolyfill: false,
-                  enablePostprocessing: false,
-                  xrsession: session
-                } );
+              let view = elation.elements.create('engine.systems.render.view', {
+                name: 'xr',
+                append: this,
+                fullsize: false,
+                picking: true,
+                engine: this.engine.name,
+                showstats: false,
+                crosshair: false,
+                useWebVRPolyfill: false,
+                enablepostprocessing: false,
+                xrsession: session,
+              } );
+              view.enablepostprocessing = false; // FIXME - not sure why I have to explicitly set this here after passing it in via constructor
               this.engine.systems.render.view_add('xr', view);
               this.xrview = view;
               this.engine.systems.render.views.main.enabled = false;
@@ -685,7 +689,7 @@ elation.require(deps, function() {
               }
             }
             session.addEventListener('end', (ev) => this.handleXRend());
-            elation.html.addclass(this.engine.systems.render.views.main.container, 'webxr_session_active');
+            elation.html.addclass(this.engine.systems.render.views.main, 'webxr_session_active');
 
             this.xrwindow.setcontent('WebXR session is active.  Please put on your headset.');
             elation.events.fire({element: this, type: 'xrsessionstart', data: session});
@@ -700,7 +704,7 @@ elation.require(deps, function() {
       this.engine.systems.render.views.main.enabled = true;
       this.engine.systems.render.views.xr.enabled = false;
       this.engine.systems.render.views.xr.handleXRend(ev);
-      elation.html.removeclass(this.engine.systems.render.views.main.container, 'webxr_session_active');
+      elation.html.removeclass(this.engine.systems.render.views.main, 'webxr_session_active');
       console.log('xr session stopped', this.xrsession);
       this.xrsession = false;
       if (this.xrplayer) {
