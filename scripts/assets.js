@@ -637,7 +637,7 @@ if (!ENV_IS_BROWSER) return;
         texture.needsUpdate = true;
         texture.flipY = this.flipy;
 
-        elation.events.add(this.canvas, 'update', () => texture.needsUpdate = true);
+        elation.events.add(this.canvas, 'asset_update', () => { texture.needsUpdate = true; });
         this.loaded = true;
         setTimeout(() => this.sendLoadEvents(), 0);
       }
