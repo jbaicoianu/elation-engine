@@ -550,6 +550,7 @@ if (!ENV_IS_BROWSER) return;
     imagetype: '',
     tex_linear: true,
     srgb: false,
+    equi: false,
     hasalpha: null,
     rawimage: null,
     preload: true,
@@ -573,6 +574,9 @@ if (!ENV_IS_BROWSER) return;
         //texture.needsUpdate = true;
         texture.flipY = (this.flipy === true || this.flipy === 'true');
         texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
+        if (this.equi) {
+          texture.mapping = THREE.EquirectangularReflectionMapping;
+        }
         if (this.isURLData(fullurl)) {
           this.loadImageByURL();
         } else {
