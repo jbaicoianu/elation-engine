@@ -29,10 +29,10 @@
 				minFilter: THREE.LinearFilter,
 				magFilter: THREE.LinearFilter,
 				format: THREE.RGBFormat,
-        encoding: THREE.sRGBEncoding,
+				encoding: THREE.LinearEncoding,
 			};
 			const renderTarget = new THREE.WebGLRenderTarget( textureWidth, textureHeight, parameters );
-      renderTarget.texture.encoding = THREE.sRGBEncoding;
+			renderTarget.texture.encoding = THREE.LinearEncoding;
 
 			if ( ! THREE.MathUtils.isPowerOfTwo( textureWidth ) || ! THREE.MathUtils.isPowerOfTwo( textureHeight ) ) {
 
@@ -101,7 +101,7 @@
 				projectionMatrix.elements[ 10 ] = clipPlane.z + 1.0 - clipBias;
 				projectionMatrix.elements[ 14 ] = clipPlane.w; // Render
 
-				renderTarget.texture.encoding = renderer.outputEncoding;
+				renderTarget.texture.encoding = THREE.LinearEncoding;
 				scope.visible = false;
 				const currentRenderTarget = renderer.getRenderTarget();
 				const currentXrEnabled = renderer.xr.enabled;
@@ -111,7 +111,7 @@
 
 				renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
 
-        renderTarget.texture.encoding = THREE.sRGBEncoding;
+				renderTarget.texture.encoding = THREE.LinearEncoding;
 
 				renderer.setRenderTarget( renderTarget );
 				renderer.state.buffers.depth.setMask( true ); // make sure the depth buffer is writable so it can be properly cleared, see #18897
