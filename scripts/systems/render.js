@@ -750,6 +750,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           }
         }
     }
+    renderloop() {
+      // Disable custom element renderloop
+    }
     render(delta, xrframe) {
       if (this.enabled && this.scene && this.camera) {
         if (xrframe && this.xrsession) {
