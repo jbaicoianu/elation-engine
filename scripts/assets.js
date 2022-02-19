@@ -978,7 +978,7 @@ if (!ENV_IS_BROWSER) return;
       }
       this._video = video;
       let textureFormat = (this.format == THREE.RGBFormat && this.hasalpha ? THREE.RGBAFormat : this.format);
-      if (this.sbs3d) {
+      if (false && this.sbs3d) {
         this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
         this._texture.reverse = this.reverse3d;
       } else {
