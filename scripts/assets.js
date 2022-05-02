@@ -1,4 +1,4 @@
-elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.textdecoder-polyfill', 'engine.external.three.three-loaders', 'engine.external.three.three-vrm'], function() {
+elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.external.libgif', 'engine.external.textdecoder-polyfill', 'engine.external.three.three-loaders', 'engine.external.three.three-vrm', 'engine.external.three.three-icosa'], function() {
 
   THREE.Cache.enabled = true;
 
@@ -1442,6 +1442,9 @@ if (!ENV_IS_BROWSER) return;
       }
       if (elation.engine.assets.ktx2loader) {
         loader.setKTX2Loader(elation.engine.assets.ktx2loader);
+      }
+      if (elation.engine.assets.icosapath) {
+        loader.register(parser => new THREE.GLTFGoogleTiltBrushMaterialExtension(parser, elation.engine.assets.icosapath));
       }
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
