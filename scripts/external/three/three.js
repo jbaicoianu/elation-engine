@@ -12512,7 +12512,7 @@
 
 				getExtension('OES_texture_float_linear');
 				getExtension('EXT_color_buffer_half_float');
-				getExtension('EXT_multisampled_render_to_texture');
+				getExtension('WEBGL_multisampled_render_to_texture');
 			},
 			get: function (name) {
 				const extension = getExtension(name);
@@ -17633,7 +17633,7 @@
 			let xrFrame = null;
 			let depthStyle = null;
 			let clearStyle = null;
-			const msaartcSupported = renderer.extensions.has('EXT_multisampled_render_to_texture');
+			const msaartcSupported = renderer.extensions.has('WEBGL_multisampled_render_to_texture');
 			let msaaExt = null;
 			const controllers = [];
 			const inputSourcesMap = new Map(); //
@@ -17834,7 +17834,7 @@
 						});
 
 						if (isMultisample && msaartcSupported) {
-							msaaExt = renderer.extensions.get('EXT_multisampled_render_to_texture');
+							msaaExt = renderer.extensions.get('WEBGL_multisampled_render_to_texture');
 						} else if (isMultisample) {
 							glMultisampledFramebuffer = gl.createFramebuffer();
 							glColorRenderbuffer = gl.createRenderbuffer();
