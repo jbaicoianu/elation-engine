@@ -8161,6 +8161,13 @@
 				this.morphTargetDictionary = Object.assign({}, source.morphTargetDictionary);
 			}
 
+			if (source.onBeforeRender) {
+				this.onBeforeRender = source.onBeforeRender;
+			}
+			if (source.onAfterRender) {
+				this.onAfterRender = source.onAfterRender;
+			}
+
 			this.material = source.material;
 			this.geometry = source.geometry;
 			return this;
