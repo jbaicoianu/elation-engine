@@ -448,6 +448,23 @@ elation.require([
       return new Promise(function(resolve, reject) { 
         var loader = new THREE.FBXLoader();
         var modeldata = loader.parse(data);
+        let mapnames = ['map', 'normalMap', 'aoMap', 'bumpMap', 'alphaMap', 'emissiveMap', 'envMap', 'lightMap', 'specularMap'];
+        let baseurl = job.data.src.substr( 0, job.data.src.lastIndexOf( "/" ) + 1 );
+        modeldata.traverse(n => {
+          if (n.material) {
+            mapnames.forEach(m => {
+              if (n.material[m]) {
+                let map = n.material[m];
+                if (map.image && map.image.src.indexOf(':') == -1) {
+                  map.image.src = baseurl + map.image.src;
+                }
+              }
+            });
+          } else if (n instanceof THREE.Bone) {
+            let name = n.name.replace('mixamorig', '');
+            n.name = name[0].toLowerCase() + name.substring(1);
+          }
+        });
         resolve(modeldata.toJSON());
       });
     }
