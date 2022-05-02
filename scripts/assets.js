@@ -86,6 +86,10 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
       basisloader.detectSupport(renderer);
       this.basisloader = basisloader;
 
+      this.ktx2loader = new THREE.KTX2Loader();
+      this.ktx2loader.setTranscoderPath(libpath);
+      this.ktx2loader.detectSupport(renderer);
+
       let pmremGenerator = new THREE.PMREMGenerator( renderer );
       pmremGenerator.compileEquirectangularShader();
       this.pmremGenerator = pmremGenerator;
@@ -1435,6 +1439,9 @@ if (!ENV_IS_BROWSER) return;
       var loader = new THREE.GLTFLoader();
       if (elation.engine.assets.dracopath) {
         loader.setDRACOLoader(new THREE.DRACOLoader().setDecoderPath(elation.engine.assets.dracopath));
+      }
+      if (elation.engine.assets.ktx2loader) {
+        loader.setKTX2Loader(elation.engine.assets.ktx2loader);
       }
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
