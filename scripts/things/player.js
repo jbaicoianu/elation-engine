@@ -151,7 +151,10 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
 
       this.flying = value;
       this.usegravity = !this.flying;
-      console.log('toggle flying', this.flying);
+      if (this.gravityForce) {
+        this.gravityForce.update(this.gravityVector.set(0,this.usegravity * -9.8 , 0));
+      }
+      //console.log('toggle flying', this.flying, this.gravityForce);
     }
     this.reset_position = function(ev) {
       if (!ev || ev.value == 1) {
