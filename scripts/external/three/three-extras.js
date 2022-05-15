@@ -1,248 +1,171 @@
-/**
- * @author mrdoob / http://mrdoob.com/
+( function () {
+
+	function computeTangents() {
+
+		throw new Error( 'BufferGeometryUtils: computeTangents renamed to computeMikkTSpaceTangents.' );
+
+	}
+
+	function computeMikkTSpaceTangents( geometry, MikkTSpace, negateSign = true ) {
+
+		if ( ! MikkTSpace || ! MikkTSpace.isReady ) {
+
+			throw new Error( 'BufferGeometryUtils: Initialized MikkTSpace library required.' );
+
+		}
+
+		if ( ! geometry.hasAttribute( 'position' ) || ! geometry.hasAttribute( 'normal' ) || ! geometry.hasAttribute( 'uv' ) ) {
+
+			throw new Error( 'BufferGeometryUtils: Tangents require "position", "normal", and "uv" attributes.' );
+
+		}
+
+		function getAttributeArray( attribute ) {
+
+			if ( attribute.normalized || attribute.isInterleavedBufferAttribute ) {
+
+				const srcArray = attribute.isInterleavedBufferAttribute ? attribute.data.array : attribute.array;
+				const dstArray = new Float32Array( attribute.getCount() * attribute.itemSize );
+
+				for ( let i = 0, j = 0; i < attribute.getCount(); i ++ ) {
+
+					dstArray[ j ++ ] = THREE.MathUtils.denormalize( attribute.getX( i ), srcArray );
+					dstArray[ j ++ ] = THREE.MathUtils.denormalize( attribute.getY( i ), srcArray );
+
+					if ( attribute.itemSize > 2 ) {
+
+						dstArray[ j ++ ] = THREE.MathUtils.denormalize( attribute.getZ( i ), srcArray );
+
+					}
+
+				}
+
+				return dstArray;
+
+			}
+
+			if ( attribute.array instanceof Float32Array ) {
+
+				return attribute.array;
+
+			}
+
+			return new Float32Array( attribute.array );
+
+		} // MikkTSpace algorithm requires non-indexed input.
+
+
+		const _geometry = geometry.index ? geometry.toNonIndexed() : geometry; // Compute vertex tangents.
+
+
+		const tangents = MikkTSpace.generateTangents( getAttributeArray( _geometry.attributes.position ), getAttributeArray( _geometry.attributes.normal ), getAttributeArray( _geometry.attributes.uv ) ); // Texture coordinate convention of glTF differs from the apparent
+		// default of the MikkTSpace library; .w component must be flipped.
+
+		if ( negateSign ) {
+
+			for ( let i = 3; i < tangents.length; i += 4 ) {
+
+				tangents[ i ] *= - 1;
+
+			}
+
+		} //
+
+
+		_geometry.setAttribute( 'tangent', new THREE.BufferAttribute( tangents, 4 ) );
+
+		if ( geometry !== _geometry ) {
+
+			geometry.copy( _geometry );
+
+		}
+
+		return geometry;
+
+	}
+	/**
+ * @param  {Array<BufferGeometry>} geometries
+ * @param  {Boolean} useGroups
+ * @return {BufferGeometry}
  */
 
-THREE.BufferGeometryUtils = {
 
-	computeTangents: function ( geometry ) {
+	function mergeBufferGeometries( geometries, useGroups = false ) {
 
-		var index = geometry.index;
-		var attributes = geometry.attributes;
+		const isIndexed = geometries[ 0 ].index !== null;
+		const attributesUsed = new Set( Object.keys( geometries[ 0 ].attributes ) );
+		const morphAttributesUsed = new Set( Object.keys( geometries[ 0 ].morphAttributes ) );
+		const attributes = {};
+		const morphAttributes = {};
+		const morphTargetsRelative = geometries[ 0 ].morphTargetsRelative;
+		const mergedGeometry = new THREE.BufferGeometry();
+		let offset = 0;
 
-		// based on http://www.terathon.com/code/tangent.html
-		// (per vertex tangents)
+		for ( let i = 0; i < geometries.length; ++ i ) {
 
-		if ( index === null ||
-			 attributes.position === undefined ||
-			 attributes.normal === undefined ||
-			 attributes.uv === undefined ) {
+			const geometry = geometries[ i ];
+			let attributesCount = 0; // ensure that all geometries are indexed, or none
 
-			console.warn( 'THREE.BufferGeometry: Missing required attributes (index, position, normal or uv) in BufferGeometry.computeTangents()' );
-			return;
+			if ( isIndexed !== ( geometry.index !== null ) ) {
 
-		}
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '. All geometries must have compatible attributes; make sure index attribute exists among all geometries, or in none of them.' );
+				return null;
 
-		var indices = index.array;
-		var positions = attributes.position.array;
-		var normals = attributes.normal.array;
-		var uvs = attributes.uv.array;
+			} // gather attributes, exit early if they're different
 
-		var nVertices = positions.length / 3;
 
-		if ( attributes.tangent === undefined ) {
+			for ( const name in geometry.attributes ) {
 
-			geometry.setAttribute( 'tangent', new THREE.BufferAttribute( new Float32Array( 4 * nVertices ), 4 ) );
+				if ( ! attributesUsed.has( name ) ) {
 
-		}
+					console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '. All geometries must have compatible attributes; make sure "' + name + '" attribute exists among all geometries, or in none of them.' );
+					return null;
 
-		var tangents = attributes.tangent.array;
-
-		var tan1 = [], tan2 = [];
-
-		for ( var i = 0; i < nVertices; i ++ ) {
-
-			tan1[ i ] = new THREE.Vector3();
-			tan2[ i ] = new THREE.Vector3();
-
-		}
-
-		var vA = new THREE.Vector3(),
-			vB = new THREE.Vector3(),
-			vC = new THREE.Vector3(),
-
-			uvA = new THREE.Vector2(),
-			uvB = new THREE.Vector2(),
-			uvC = new THREE.Vector2(),
-
-			sdir = new THREE.Vector3(),
-			tdir = new THREE.Vector3();
-
-		function handleTriangle( a, b, c ) {
-
-			vA.fromArray( positions, a * 3 );
-			vB.fromArray( positions, b * 3 );
-			vC.fromArray( positions, c * 3 );
-
-			uvA.fromArray( uvs, a * 2 );
-			uvB.fromArray( uvs, b * 2 );
-			uvC.fromArray( uvs, c * 2 );
-
-			var x1 = vB.x - vA.x;
-			var x2 = vC.x - vA.x;
-
-			var y1 = vB.y - vA.y;
-			var y2 = vC.y - vA.y;
-
-			var z1 = vB.z - vA.z;
-			var z2 = vC.z - vA.z;
-
-			var s1 = uvB.x - uvA.x;
-			var s2 = uvC.x - uvA.x;
-
-			var t1 = uvB.y - uvA.y;
-			var t2 = uvC.y - uvA.y;
-
-			var r = 1.0 / ( s1 * t2 - s2 * t1 );
-
-			sdir.set(
-				( t2 * x1 - t1 * x2 ) * r,
-				( t2 * y1 - t1 * y2 ) * r,
-				( t2 * z1 - t1 * z2 ) * r
-			);
-
-			tdir.set(
-				( s1 * x2 - s2 * x1 ) * r,
-				( s1 * y2 - s2 * y1 ) * r,
-				( s1 * z2 - s2 * z1 ) * r
-			);
-
-			tan1[ a ].add( sdir );
-			tan1[ b ].add( sdir );
-			tan1[ c ].add( sdir );
-
-			tan2[ a ].add( tdir );
-			tan2[ b ].add( tdir );
-			tan2[ c ].add( tdir );
-
-		}
-
-		var groups = geometry.groups;
-
-		if ( groups.length === 0 ) {
-
-			groups = [ {
-				start: 0,
-				count: indices.length
-			} ];
-
-		}
-
-		for ( var i = 0, il = groups.length; i < il; ++ i ) {
-
-			var group = groups[ i ];
-
-			var start = group.start;
-			var count = group.count;
-
-			for ( var j = start, jl = start + count; j < jl; j += 3 ) {
-
-				handleTriangle(
-					indices[ j + 0 ],
-					indices[ j + 1 ],
-					indices[ j + 2 ]
-				);
-
-			}
-
-		}
-
-		var tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
-		var n = new THREE.Vector3(), n2 = new THREE.Vector3();
-		var w, t, test;
-
-		function handleVertex( v ) {
-
-			n.fromArray( normals, v * 3 );
-			n2.copy( n );
-
-			t = tan1[ v ];
-
-			// Gram-Schmidt orthogonalize
-
-			tmp.copy( t );
-			tmp.sub( n.multiplyScalar( n.dot( t ) ) ).normalize();
-
-			// Calculate handedness
-
-			tmp2.crossVectors( n2, t );
-			test = tmp2.dot( tan2[ v ] );
-			w = ( test < 0.0 ) ? - 1.0 : 1.0;
-
-			tangents[ v * 4 ] = tmp.x;
-			tangents[ v * 4 + 1 ] = tmp.y;
-			tangents[ v * 4 + 2 ] = tmp.z;
-			tangents[ v * 4 + 3 ] = w;
-
-		}
-
-		for ( var i = 0, il = groups.length; i < il; ++ i ) {
-
-			var group = groups[ i ];
-
-			var start = group.start;
-			var count = group.count;
-
-			for ( var j = start, jl = start + count; j < jl; j += 3 ) {
-
-				handleVertex( indices[ j + 0 ] );
-				handleVertex( indices[ j + 1 ] );
-				handleVertex( indices[ j + 2 ] );
-
-			}
-
-		}
-
-	},
-
-	/**
-	 * @param  {Array<THREE.BufferGeometry>} geometries
-	 * @param  {Boolean} useGroups
-	 * @return {THREE.BufferGeometry}
-	 */
-	mergeBufferGeometries: function ( geometries, useGroups ) {
-
-		var isIndexed = geometries[ 0 ].index !== null;
-
-		var attributesUsed = new Set( Object.keys( geometries[ 0 ].attributes ) );
-		var morphAttributesUsed = new Set( Object.keys( geometries[ 0 ].morphAttributes ) );
-
-		var attributes = {};
-		var morphAttributes = {};
-
-		var mergedGeometry = new THREE.BufferGeometry();
-
-		var offset = 0;
-
-		for ( var i = 0; i < geometries.length; ++ i ) {
-
-			var geometry = geometries[ i ];
-
-			// ensure that all geometries are indexed, or none
-
-			if ( isIndexed !== ( geometry.index !== null ) ) return null;
-
-			// gather attributes, exit early if they're different
-
-			for ( var name in geometry.attributes ) {
-
-				if ( ! attributesUsed.has( name ) ) return null;
+				}
 
 				if ( attributes[ name ] === undefined ) attributes[ name ] = [];
-
 				attributes[ name ].push( geometry.attributes[ name ] );
+				attributesCount ++;
+
+			} // ensure geometries have the same number of attributes
+
+
+			if ( attributesCount !== attributesUsed.size ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '. Make sure all geometries have the same number of attributes.' );
+				return null;
+
+			} // gather morph attributes, exit early if they're different
+
+
+			if ( morphTargetsRelative !== geometry.morphTargetsRelative ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '. .morphTargetsRelative must be consistent throughout all geometries.' );
+				return null;
 
 			}
 
-			// gather morph attributes, exit early if they're different
+			for ( const name in geometry.morphAttributes ) {
 
-			for ( var name in geometry.morphAttributes ) {
+				if ( ! morphAttributesUsed.has( name ) ) {
 
-				if ( ! morphAttributesUsed.has( name ) ) return null;
+					console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '.  .morphAttributes must be consistent throughout all geometries.' );
+					return null;
+
+				}
 
 				if ( morphAttributes[ name ] === undefined ) morphAttributes[ name ] = [];
-
 				morphAttributes[ name ].push( geometry.morphAttributes[ name ] );
 
-			}
+			} // gather .userData
 
-			// gather .userData
 
 			mergedGeometry.userData.mergedUserData = mergedGeometry.userData.mergedUserData || [];
 			mergedGeometry.userData.mergedUserData.push( geometry.userData );
 
 			if ( useGroups ) {
 
-				var count;
+				let count;
 
 				if ( isIndexed ) {
 
@@ -254,30 +177,29 @@ THREE.BufferGeometryUtils = {
 
 				} else {
 
+					console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed with geometry at index ' + i + '. The geometry must have either an index or a position attribute' );
 					return null;
 
 				}
 
 				mergedGeometry.addGroup( offset, count, i );
-
 				offset += count;
 
 			}
 
-		}
+		} // merge indices
 
-		// merge indices
 
 		if ( isIndexed ) {
 
-			var indexOffset = 0;
-			var mergedIndex = [];
+			let indexOffset = 0;
+			const mergedIndex = [];
 
-			for ( var i = 0; i < geometries.length; ++ i ) {
+			for ( let i = 0; i < geometries.length; ++ i ) {
 
-				var index = geometries[ i ].index;
+				const index = geometries[ i ].index;
 
-				for ( var j = 0; j < index.count; ++ j ) {
+				for ( let j = 0; j < index.count; ++ j ) {
 
 					mergedIndex.push( index.getX( j ) + indexOffset );
 
@@ -289,44 +211,50 @@ THREE.BufferGeometryUtils = {
 
 			mergedGeometry.setIndex( mergedIndex );
 
-		}
+		} // merge attributes
 
-		// merge attributes
 
-		for ( var name in attributes ) {
+		for ( const name in attributes ) {
 
-			var mergedAttribute = this.mergeBufferAttributes( attributes[ name ] );
+			const mergedAttribute = mergeBufferAttributes( attributes[ name ] );
 
-			if ( ! mergedAttribute ) return null;
+			if ( ! mergedAttribute ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed while trying to merge the ' + name + ' attribute.' );
+				return null;
+
+			}
 
 			mergedGeometry.setAttribute( name, mergedAttribute );
 
-		}
+		} // merge morph attributes
 
-		// merge morph attributes
 
-		for ( var name in morphAttributes ) {
+		for ( const name in morphAttributes ) {
 
-			var numMorphTargets = morphAttributes[ name ][ 0 ].length;
-
+			const numMorphTargets = morphAttributes[ name ][ 0 ].length;
 			if ( numMorphTargets === 0 ) break;
-
 			mergedGeometry.morphAttributes = mergedGeometry.morphAttributes || {};
 			mergedGeometry.morphAttributes[ name ] = [];
 
-			for ( var i = 0; i < numMorphTargets; ++ i ) {
+			for ( let i = 0; i < numMorphTargets; ++ i ) {
 
-				var morphAttributesToMerge = [];
+				const morphAttributesToMerge = [];
 
-				for ( var j = 0; j < morphAttributes[ name ].length; ++ j ) {
+				for ( let j = 0; j < morphAttributes[ name ].length; ++ j ) {
 
 					morphAttributesToMerge.push( morphAttributes[ name ][ j ][ i ] );
 
 				}
 
-				var mergedMorphAttribute = this.mergeBufferAttributes( morphAttributesToMerge );
+				const mergedMorphAttribute = mergeBufferAttributes( morphAttributesToMerge );
 
-				if ( ! mergedMorphAttribute ) return null;
+				if ( ! mergedMorphAttribute ) {
+
+					console.error( 'THREE.BufferGeometryUtils: .mergeBufferGeometries() failed while trying to merge the ' + name + ' morphAttribute.' );
+					return null;
+
+				}
 
 				mergedGeometry.morphAttributes[ name ].push( mergedMorphAttribute );
 
@@ -336,74 +264,97 @@ THREE.BufferGeometryUtils = {
 
 		return mergedGeometry;
 
-	},
-
+	}
 	/**
-	 * @param {Array<THREE.BufferAttribute>} attributes
-	 * @return {THREE.BufferAttribute}
-	 */
-	mergeBufferAttributes: function ( attributes ) {
+ * @param {Array<BufferAttribute>} attributes
+ * @return {BufferAttribute}
+ */
 
-		var TypedArray;
-		var itemSize;
-		var normalized;
-		var arrayLength = 0;
 
-		for ( var i = 0; i < attributes.length; ++ i ) {
+	function mergeBufferAttributes( attributes ) {
 
-			var attribute = attributes[ i ];
+		let TypedArray;
+		let itemSize;
+		let normalized;
+		let arrayLength = 0;
 
-			if ( attribute.isInterleavedBufferAttribute ) return null;
+		for ( let i = 0; i < attributes.length; ++ i ) {
+
+			const attribute = attributes[ i ];
+
+			if ( attribute.isInterleavedBufferAttribute ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferAttributes() failed. InterleavedBufferAttributes are not supported.' );
+				return null;
+
+			}
 
 			if ( TypedArray === undefined ) TypedArray = attribute.array.constructor;
-			if ( TypedArray !== attribute.array.constructor ) return null;
+
+			if ( TypedArray !== attribute.array.constructor ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferAttributes() failed. THREE.BufferAttribute.array must be of consistent array types across matching attributes.' );
+				return null;
+
+			}
 
 			if ( itemSize === undefined ) itemSize = attribute.itemSize;
-			if ( itemSize !== attribute.itemSize ) return null;
+
+			if ( itemSize !== attribute.itemSize ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferAttributes() failed. THREE.BufferAttribute.itemSize must be consistent across matching attributes.' );
+				return null;
+
+			}
 
 			if ( normalized === undefined ) normalized = attribute.normalized;
-			if ( normalized !== attribute.normalized ) return null;
+
+			if ( normalized !== attribute.normalized ) {
+
+				console.error( 'THREE.BufferGeometryUtils: .mergeBufferAttributes() failed. THREE.BufferAttribute.normalized must be consistent across matching attributes.' );
+				return null;
+
+			}
 
 			arrayLength += attribute.array.length;
 
 		}
 
-		var array = new TypedArray( arrayLength );
-		var offset = 0;
+		const array = new TypedArray( arrayLength );
+		let offset = 0;
 
-		for ( var i = 0; i < attributes.length; ++ i ) {
+		for ( let i = 0; i < attributes.length; ++ i ) {
 
 			array.set( attributes[ i ].array, offset );
-
 			offset += attributes[ i ].array.length;
 
 		}
 
 		return new THREE.BufferAttribute( array, itemSize, normalized );
 
-	},
-
+	}
 	/**
-	 * @param {Array<THREE.BufferAttribute>} attributes
-	 * @return {Array<THREE.InterleavedBufferAttribute>}
-	 */
-	interleaveAttributes: function ( attributes ) {
+ * @param {Array<BufferAttribute>} attributes
+ * @return {Array<InterleavedBufferAttribute>}
+ */
 
-		// Interleaves the provided attributes into an InterleavedBuffer and returns
+
+	function interleaveAttributes( attributes ) {
+
+		// Interleaves the provided attributes into an THREE.InterleavedBuffer and returns
 		// a set of InterleavedBufferAttributes for each attribute
-		var TypedArray;
-		var arrayLength = 0;
-		var stride = 0;
+		let TypedArray;
+		let arrayLength = 0;
+		let stride = 0; // calculate the the length and type of the interleavedBuffer
 
-		// calculate the the length and type of the interleavedBuffer
-		for ( var i = 0, l = attributes.length; i < l; ++ i ) {
+		for ( let i = 0, l = attributes.length; i < l; ++ i ) {
 
-			var attribute = attributes[ i ];
-
+			const attribute = attributes[ i ];
 			if ( TypedArray === undefined ) TypedArray = attribute.array.constructor;
+
 			if ( TypedArray !== attribute.array.constructor ) {
 
-				console.warn( 'AttributeBuffers of different types cannot be interleaved' );
+				console.error( 'AttributeBuffers of different types cannot be interleaved' );
 				return null;
 
 			}
@@ -411,30 +362,28 @@ THREE.BufferGeometryUtils = {
 			arrayLength += attribute.array.length;
 			stride += attribute.itemSize;
 
-		}
+		} // Create the set of buffer attributes
 
-		// Create the set of buffer attributes
-		var interleavedBuffer = new THREE.InterleavedBuffer( new TypedArray( arrayLength ), stride );
-		var offset = 0;
-		var res = [];
-		var getters = [ 'getX', 'getY', 'getZ', 'getW' ];
-		var setters = [ 'setX', 'setY', 'setZ', 'setW' ];
 
-		for ( var j = 0, l = attributes.length; j < l; j ++ ) {
+		const interleavedBuffer = new THREE.InterleavedBuffer( new TypedArray( arrayLength ), stride );
+		let offset = 0;
+		const res = [];
+		const getters = [ 'getX', 'getY', 'getZ', 'getW' ];
+		const setters = [ 'setX', 'setY', 'setZ', 'setW' ];
 
-			var attribute = attributes[ j ];
-			var itemSize = attribute.itemSize;
-			var count = attribute.count;
-			var iba = new THREE.InterleavedBufferAttribute( interleavedBuffer, itemSize, offset, attribute.normalized );
+		for ( let j = 0, l = attributes.length; j < l; j ++ ) {
+
+			const attribute = attributes[ j ];
+			const itemSize = attribute.itemSize;
+			const count = attribute.count;
+			const iba = new THREE.InterleavedBufferAttribute( interleavedBuffer, itemSize, offset, attribute.normalized );
 			res.push( iba );
-
-			offset += itemSize;
-
-			// Move the data for each attribute into the new interleavedBuffer
+			offset += itemSize; // Move the data for each attribute into the new interleavedBuffer
 			// at the appropriate offset
-			for ( var c = 0; c < count; c ++ ) {
 
-				for ( var k = 0; k < itemSize; k ++ ) {
+			for ( let c = 0; c < count; c ++ ) {
+
+				for ( let k = 0; k < itemSize; k ++ ) {
 
 					iba[ setters[ k ] ]( c, attribute[ getters[ k ] ]( c ) );
 
@@ -446,99 +395,189 @@ THREE.BufferGeometryUtils = {
 
 		return res;
 
-	},
+	} // returns a new, non-interleaved version of the provided attribute
 
+
+	function deinterleaveAttribute( attribute ) {
+
+		const cons = attribute.data.array.constructor;
+		const count = attribute.count;
+		const itemSize = attribute.itemSize;
+		const normalized = attribute.normalized;
+		const array = new cons( count * itemSize );
+		let newAttribute;
+
+		if ( attribute.isInstancedInterleavedBufferAttribute ) {
+
+			newAttribute = new InstancedBufferAttribute( array, itemSize, normalized, attribute.meshPerAttribute );
+
+		} else {
+
+			newAttribute = new THREE.BufferAttribute( array, itemSize, normalized );
+
+		}
+
+		for ( let i = 0; i < count; i ++ ) {
+
+			newAttribute.setX( i, attribute.getX( i ) );
+
+			if ( itemSize >= 2 ) {
+
+				newAttribute.setY( i, attribute.getY( i ) );
+
+			}
+
+			if ( itemSize >= 3 ) {
+
+				newAttribute.setZ( i, attribute.getZ( i ) );
+
+			}
+
+			if ( itemSize >= 4 ) {
+
+				newAttribute.setW( i, attribute.getW( i ) );
+
+			}
+
+		}
+
+		return newAttribute;
+
+	} // deinterleaves all attributes on the geometry
+
+	function deinterleaveGeometry( geometry ) {
+
+		const attributes = geometry.attributes;
+		const morphTargets = geometry.morphTargets;
+		const attrMap = new Map();
+
+		for ( const key in attributes ) {
+
+			const attr = attributes[ key ];
+
+			if ( attr.isInterleavedBufferAttribute ) {
+
+				if ( ! attrMap.has( attr ) ) {
+
+					attrMap.set( attr, deinterleaveAttribute( attr ) );
+
+				}
+
+				attributes[ key ] = attrMap.get( attr );
+
+			}
+
+		}
+
+		for ( const key in morphTargets ) {
+
+			const attr = morphTargets[ key ];
+
+			if ( attr.isInterleavedBufferAttribute ) {
+
+				if ( ! attrMap.has( attr ) ) {
+
+					attrMap.set( attr, deinterleaveAttribute( attr ) );
+
+				}
+
+				morphTargets[ key ] = attrMap.get( attr );
+
+			}
+
+		}
+
+	}
 	/**
-	 * @param {Array<THREE.BufferGeometry>} geometry
-	 * @return {number}
-	 */
-	estimateBytesUsed: function ( geometry ) {
+ * @param {Array<BufferGeometry>} geometry
+ * @return {number}
+ */
+
+	function estimateBytesUsed( geometry ) {
 
 		// Return the estimated memory used by this geometry in bytes
 		// Calculate using itemSize, count, and BYTES_PER_ELEMENT to account
 		// for InterleavedBufferAttributes.
-		var mem = 0;
-		for ( var name in geometry.attributes ) {
+		let mem = 0;
 
-			var attr = geometry.getAttribute( name );
+		for ( const name in geometry.attributes ) {
+
+			const attr = geometry.getAttribute( name );
 			mem += attr.count * attr.itemSize * attr.array.BYTES_PER_ELEMENT;
 
 		}
 
-		var indices = geometry.getIndex();
+		const indices = geometry.getIndex();
 		mem += indices ? indices.count * indices.itemSize * indices.array.BYTES_PER_ELEMENT : 0;
 		return mem;
 
-	},
-
+	}
 	/**
-	 * @param {THREE.BufferGeometry} geometry
-	 * @param {number} tolerance
-	 * @return {THREE.BufferGeometry>}
-	 */
-	mergeVertices: function ( geometry, tolerance = 1e-4 ) {
+ * @param {BufferGeometry} geometry
+ * @param {number} tolerance
+ * @return {BufferGeometry>}
+ */
 
-		tolerance = Math.max( tolerance, Number.EPSILON );
 
-		// Generate an index buffer if the geometry doesn't have one, or optimize it
+	function mergeVertices( geometry, tolerance = 1e-4 ) {
+
+		tolerance = Math.max( tolerance, Number.EPSILON ); // Generate an index buffer if the geometry doesn't have one, or optimize it
 		// if it's already available.
-		var hashToIndex = {};
-		var indices = geometry.getIndex();
-		var positions = geometry.getAttribute( 'position' );
-		var vertexCount = indices ? indices.count : positions.count;
 
-		// next value for triangle indices
-		var nextIndex = 0;
+		const hashToIndex = {};
+		const indices = geometry.getIndex();
+		const positions = geometry.getAttribute( 'position' );
+		const vertexCount = indices ? indices.count : positions.count; // next value for triangle indices
 
-		// attributes and new attribute arrays
-		var attributeNames = Object.keys( geometry.attributes );
-		var attrArrays = {};
-		var morphAttrsArrays = {};
-		var newIndices = [];
-		var getters = [ 'getX', 'getY', 'getZ', 'getW' ];
+		let nextIndex = 0; // attributes and new attribute arrays
 
-		// initialize the arrays
-		for ( var i = 0, l = attributeNames.length; i < l; i ++ ) {
+		const attributeNames = Object.keys( geometry.attributes );
+		const attrArrays = {};
+		const morphAttrsArrays = {};
+		const newIndices = [];
+		const getters = [ 'getX', 'getY', 'getZ', 'getW' ]; // initialize the arrays
 
-			var name = attributeNames[ i ];
+		for ( let i = 0, l = attributeNames.length; i < l; i ++ ) {
 
+			const name = attributeNames[ i ];
 			attrArrays[ name ] = [];
+			const morphAttr = geometry.morphAttributes[ name ];
 
-			var morphAttr = geometry.morphAttributes[ name ];
 			if ( morphAttr ) {
 
 				morphAttrsArrays[ name ] = new Array( morphAttr.length ).fill().map( () => [] );
 
 			}
 
-		}
+		} // convert the error tolerance to an amount of decimal places to truncate to
 
-		// convert the error tolerance to an amount of decimal places to truncate to
-		var decimalShift = Math.log10( 1 / tolerance );
-		var shiftMultiplier = Math.pow( 10, decimalShift );
-		for ( var i = 0; i < vertexCount; i ++ ) {
 
-			var index = indices ? indices.getX( i ) : i;
+		const decimalShift = Math.log10( 1 / tolerance );
+		const shiftMultiplier = Math.pow( 10, decimalShift );
 
-			// Generate a hash for the vertex attributes at the current index 'i'
-			var hash = '';
-			for ( var j = 0, l = attributeNames.length; j < l; j ++ ) {
+		for ( let i = 0; i < vertexCount; i ++ ) {
 
-				var name = attributeNames[ j ];
-				var attribute = geometry.getAttribute( name );
-				var itemSize = attribute.itemSize;
+			const index = indices ? indices.getX( i ) : i; // Generate a hash for the vertex attributes at the current index 'i'
 
-				for ( var k = 0; k < itemSize; k ++ ) {
+			let hash = '';
+
+			for ( let j = 0, l = attributeNames.length; j < l; j ++ ) {
+
+				const name = attributeNames[ j ];
+				const attribute = geometry.getAttribute( name );
+				const itemSize = attribute.itemSize;
+
+				for ( let k = 0; k < itemSize; k ++ ) {
 
 					// double tilde truncates the decimal value
-					hash += `${ ~ ~ ( attribute[ getters[ k ] ]( index ) * shiftMultiplier ) },`;
+					hash += `${~ ~ ( attribute[ getters[ k ] ]( index ) * shiftMultiplier )},`;
 
 				}
 
-			}
-
-			// Add another reference to the vertex if it's already
+			} // Add another reference to the vertex if it's already
 			// used by another index
+
+
 			if ( hash in hashToIndex ) {
 
 				newIndices.push( hashToIndex[ hash ] );
@@ -546,23 +585,23 @@ THREE.BufferGeometryUtils = {
 			} else {
 
 				// copy data to the new index in the attribute arrays
-				for ( var j = 0, l = attributeNames.length; j < l; j ++ ) {
+				for ( let j = 0, l = attributeNames.length; j < l; j ++ ) {
 
-					var name = attributeNames[ j ];
-					var attribute = geometry.getAttribute( name );
-					var morphAttr = geometry.morphAttributes[ name ];
-					var itemSize = attribute.itemSize;
-					var newarray = attrArrays[ name ];
-					var newMorphArrays = morphAttrsArrays[ name ];
+					const name = attributeNames[ j ];
+					const attribute = geometry.getAttribute( name );
+					const morphAttr = geometry.morphAttributes[ name ];
+					const itemSize = attribute.itemSize;
+					const newarray = attrArrays[ name ];
+					const newMorphArrays = morphAttrsArrays[ name ];
 
-					for ( var k = 0; k < itemSize; k ++ ) {
+					for ( let k = 0; k < itemSize; k ++ ) {
 
-						var getterFunc = getters[ k ];
+						const getterFunc = getters[ k ];
 						newarray.push( attribute[ getterFunc ]( index ) );
 
 						if ( morphAttr ) {
 
-							for ( var m = 0, ml = morphAttr.length; m < ml; m ++ ) {
+							for ( let m = 0, ml = morphAttr.length; m < ml; m ++ ) {
 
 								newMorphArrays[ m ].push( morphAttr[ m ][ getterFunc ]( index ) );
 
@@ -580,39 +619,356 @@ THREE.BufferGeometryUtils = {
 
 			}
 
-		}
-
-		// Generate typed arrays from new attribute arrays and update
+		} // Generate typed arrays from new attribute arrays and update
 		// the attributeBuffers
+
+
 		const result = geometry.clone();
-		for ( var i = 0, l = attributeNames.length; i < l; i ++ ) {
 
-			var name = attributeNames[ i ];
-			var oldAttribute = geometry.getAttribute( name );
-			var attribute;
+		for ( let i = 0, l = attributeNames.length; i < l; i ++ ) {
 
-			var buffer = new oldAttribute.array.constructor( attrArrays[ name ] );
-			if ( oldAttribute.isInterleavedBufferAttribute ) {
+			const name = attributeNames[ i ];
+			const oldAttribute = geometry.getAttribute( name );
+			const buffer = new oldAttribute.array.constructor( attrArrays[ name ] );
+			const attribute = new THREE.BufferAttribute( buffer, oldAttribute.itemSize, oldAttribute.normalized );
+			result.setAttribute( name, attribute ); // Update the attribute arrays
 
-				attribute = new THREE.BufferAttribute( buffer, oldAttribute.itemSize, oldAttribute.itemSize );
+			if ( name in morphAttrsArrays ) {
 
-			} else {
+				for ( let j = 0; j < morphAttrsArrays[ name ].length; j ++ ) {
 
-				attribute = geometry.getAttribute( name ).clone();
-				attribute.setArray( buffer );
+					const oldMorphAttribute = geometry.morphAttributes[ name ][ j ];
+					const buffer = new oldMorphAttribute.array.constructor( morphAttrsArrays[ name ][ j ] );
+					const morphAttribute = new THREE.BufferAttribute( buffer, oldMorphAttribute.itemSize, oldMorphAttribute.normalized );
+					result.morphAttributes[ name ][ j ] = morphAttribute;
+
+				}
 
 			}
 
-			result.setAttribute( name, attribute );
+		} // indices
 
-			// Update the attribute arrays
-			if ( name in morphAttrsArrays ) {
 
-				for ( var j = 0; j < morphAttrsArrays[ name ].length; j ++ ) {
+		result.setIndex( newIndices );
+		return result;
 
-					var morphAttribute = geometry.morphAttributes[ name ][ j ].clone();
-					morphAttribute.setArray( new morphAttribute.array.constructor( morphAttrsArrays[ name ][ j ] ) );
-					result.morphAttributes[ name ][ j ] = morphAttribute;
+	}
+	/**
+ * @param {BufferGeometry} geometry
+ * @param {number} drawMode
+ * @return {BufferGeometry>}
+ */
+
+
+	function toTrianglesDrawMode( geometry, drawMode ) {
+
+		if ( drawMode === THREE.TrianglesDrawMode ) {
+
+			console.warn( 'THREE.BufferGeometryUtils.toTrianglesDrawMode(): Geometry already defined as triangles.' );
+			return geometry;
+
+		}
+
+		if ( drawMode === THREE.TriangleFanDrawMode || drawMode === THREE.TriangleStripDrawMode ) {
+
+			let index = geometry.getIndex(); // generate index if not present
+
+			if ( index === null ) {
+
+				const indices = [];
+				const position = geometry.getAttribute( 'position' );
+
+				if ( position !== undefined ) {
+
+					for ( let i = 0; i < position.count; i ++ ) {
+
+						indices.push( i );
+
+					}
+
+					geometry.setIndex( indices );
+					index = geometry.getIndex();
+
+				} else {
+
+					console.error( 'THREE.BufferGeometryUtils.toTrianglesDrawMode(): Undefined position attribute. Processing not possible.' );
+					return geometry;
+
+				}
+
+			} //
+
+
+			const numberOfTriangles = index.count - 2;
+			const newIndices = [];
+
+			if ( drawMode === THREE.TriangleFanDrawMode ) {
+
+				// gl.TRIANGLE_FAN
+				for ( let i = 1; i <= numberOfTriangles; i ++ ) {
+
+					newIndices.push( index.getX( 0 ) );
+					newIndices.push( index.getX( i ) );
+					newIndices.push( index.getX( i + 1 ) );
+
+				}
+
+			} else {
+
+				// gl.TRIANGLE_STRIP
+				for ( let i = 0; i < numberOfTriangles; i ++ ) {
+
+					if ( i % 2 === 0 ) {
+
+						newIndices.push( index.getX( i ) );
+						newIndices.push( index.getX( i + 1 ) );
+						newIndices.push( index.getX( i + 2 ) );
+
+					} else {
+
+						newIndices.push( index.getX( i + 2 ) );
+						newIndices.push( index.getX( i + 1 ) );
+						newIndices.push( index.getX( i ) );
+
+					}
+
+				}
+
+			}
+
+			if ( newIndices.length / 3 !== numberOfTriangles ) {
+
+				console.error( 'THREE.BufferGeometryUtils.toTrianglesDrawMode(): Unable to generate correct amount of triangles.' );
+
+			} // build final geometry
+
+
+			const newGeometry = geometry.clone();
+			newGeometry.setIndex( newIndices );
+			newGeometry.clearGroups();
+			return newGeometry;
+
+		} else {
+
+			console.error( 'THREE.BufferGeometryUtils.toTrianglesDrawMode(): Unknown draw mode:', drawMode );
+			return geometry;
+
+		}
+
+	}
+	/**
+ * Calculates the morphed attributes of a morphed/skinned THREE.BufferGeometry.
+ * Helpful for Raytracing or Decals.
+ * @param {Mesh | Line | Points} object An instance of Mesh, Line or Points.
+ * @return {Object} An Object with original position/normal attributes and morphed ones.
+ */
+
+
+	function computeMorphedAttributes( object ) {
+
+		if ( object.geometry.isBufferGeometry !== true ) {
+
+			console.error( 'THREE.BufferGeometryUtils: Geometry is not of type THREE.BufferGeometry.' );
+			return null;
+
+		}
+
+		const _vA = new THREE.Vector3();
+
+		const _vB = new THREE.Vector3();
+
+		const _vC = new THREE.Vector3();
+
+		const _tempA = new THREE.Vector3();
+
+		const _tempB = new THREE.Vector3();
+
+		const _tempC = new THREE.Vector3();
+
+		const _morphA = new THREE.Vector3();
+
+		const _morphB = new THREE.Vector3();
+
+		const _morphC = new THREE.Vector3();
+
+		function _calculateMorphedAttributeData( object, attribute, morphAttribute, morphTargetsRelative, a, b, c, modifiedAttributeArray ) {
+
+			_vA.fromBufferAttribute( attribute, a );
+
+			_vB.fromBufferAttribute( attribute, b );
+
+			_vC.fromBufferAttribute( attribute, c );
+
+			const morphInfluences = object.morphTargetInfluences;
+
+			if ( morphAttribute && morphInfluences ) {
+
+				_morphA.set( 0, 0, 0 );
+
+				_morphB.set( 0, 0, 0 );
+
+				_morphC.set( 0, 0, 0 );
+
+				for ( let i = 0, il = morphAttribute.length; i < il; i ++ ) {
+
+					const influence = morphInfluences[ i ];
+					const morph = morphAttribute[ i ];
+					if ( influence === 0 ) continue;
+
+					_tempA.fromBufferAttribute( morph, a );
+
+					_tempB.fromBufferAttribute( morph, b );
+
+					_tempC.fromBufferAttribute( morph, c );
+
+					if ( morphTargetsRelative ) {
+
+						_morphA.addScaledVector( _tempA, influence );
+
+						_morphB.addScaledVector( _tempB, influence );
+
+						_morphC.addScaledVector( _tempC, influence );
+
+					} else {
+
+						_morphA.addScaledVector( _tempA.sub( _vA ), influence );
+
+						_morphB.addScaledVector( _tempB.sub( _vB ), influence );
+
+						_morphC.addScaledVector( _tempC.sub( _vC ), influence );
+
+					}
+
+				}
+
+				_vA.add( _morphA );
+
+				_vB.add( _morphB );
+
+				_vC.add( _morphC );
+
+			}
+
+			if ( object.isSkinnedMesh ) {
+
+				object.boneTransform( a, _vA );
+				object.boneTransform( b, _vB );
+				object.boneTransform( c, _vC );
+
+			}
+
+			modifiedAttributeArray[ a * 3 + 0 ] = _vA.x;
+			modifiedAttributeArray[ a * 3 + 1 ] = _vA.y;
+			modifiedAttributeArray[ a * 3 + 2 ] = _vA.z;
+			modifiedAttributeArray[ b * 3 + 0 ] = _vB.x;
+			modifiedAttributeArray[ b * 3 + 1 ] = _vB.y;
+			modifiedAttributeArray[ b * 3 + 2 ] = _vB.z;
+			modifiedAttributeArray[ c * 3 + 0 ] = _vC.x;
+			modifiedAttributeArray[ c * 3 + 1 ] = _vC.y;
+			modifiedAttributeArray[ c * 3 + 2 ] = _vC.z;
+
+		}
+
+		const geometry = object.geometry;
+		const material = object.material;
+		let a, b, c;
+		const index = geometry.index;
+		const positionAttribute = geometry.attributes.position;
+		const morphPosition = geometry.morphAttributes.position;
+		const morphTargetsRelative = geometry.morphTargetsRelative;
+		const normalAttribute = geometry.attributes.normal;
+		const morphNormal = geometry.morphAttributes.position;
+		const groups = geometry.groups;
+		const drawRange = geometry.drawRange;
+		let i, j, il, jl;
+		let group;
+		let start, end;
+		const modifiedPosition = new Float32Array( positionAttribute.count * positionAttribute.itemSize );
+		const modifiedNormal = new Float32Array( normalAttribute.count * normalAttribute.itemSize );
+
+		if ( index !== null ) {
+
+			// indexed buffer geometry
+			if ( Array.isArray( material ) ) {
+
+				for ( i = 0, il = groups.length; i < il; i ++ ) {
+
+					group = groups[ i ];
+					start = Math.max( group.start, drawRange.start );
+					end = Math.min( group.start + group.count, drawRange.start + drawRange.count );
+
+					for ( j = start, jl = end; j < jl; j += 3 ) {
+
+						a = index.getX( j );
+						b = index.getX( j + 1 );
+						c = index.getX( j + 2 );
+
+						_calculateMorphedAttributeData( object, positionAttribute, morphPosition, morphTargetsRelative, a, b, c, modifiedPosition );
+
+						_calculateMorphedAttributeData( object, normalAttribute, morphNormal, morphTargetsRelative, a, b, c, modifiedNormal );
+
+					}
+
+				}
+
+			} else {
+
+				start = Math.max( 0, drawRange.start );
+				end = Math.min( index.count, drawRange.start + drawRange.count );
+
+				for ( i = start, il = end; i < il; i += 3 ) {
+
+					a = index.getX( i );
+					b = index.getX( i + 1 );
+					c = index.getX( i + 2 );
+
+					_calculateMorphedAttributeData( object, positionAttribute, morphPosition, morphTargetsRelative, a, b, c, modifiedPosition );
+
+					_calculateMorphedAttributeData( object, normalAttribute, morphNormal, morphTargetsRelative, a, b, c, modifiedNormal );
+
+				}
+
+			}
+
+		} else {
+
+			// non-indexed buffer geometry
+			if ( Array.isArray( material ) ) {
+
+				for ( i = 0, il = groups.length; i < il; i ++ ) {
+
+					group = groups[ i ];
+					start = Math.max( group.start, drawRange.start );
+					end = Math.min( group.start + group.count, drawRange.start + drawRange.count );
+
+					for ( j = start, jl = end; j < jl; j += 3 ) {
+
+						a = j;
+						b = j + 1;
+						c = j + 2;
+
+						_calculateMorphedAttributeData( object, positionAttribute, morphPosition, morphTargetsRelative, a, b, c, modifiedPosition );
+
+						_calculateMorphedAttributeData( object, normalAttribute, morphNormal, morphTargetsRelative, a, b, c, modifiedNormal );
+
+					}
+
+				}
+
+			} else {
+
+				start = Math.max( 0, drawRange.start );
+				end = Math.min( positionAttribute.count, drawRange.start + drawRange.count );
+
+				for ( i = start, il = end; i < il; i += 3 ) {
+
+					a = i;
+					b = i + 1;
+					c = i + 2;
+
+					_calculateMorphedAttributeData( object, positionAttribute, morphPosition, morphTargetsRelative, a, b, c, modifiedPosition );
+
+					_calculateMorphedAttributeData( object, normalAttribute, morphNormal, morphTargetsRelative, a, b, c, modifiedNormal );
 
 				}
 
@@ -620,31 +976,122 @@ THREE.BufferGeometryUtils = {
 
 		}
 
-		// Generate an index buffer typed array
-		var cons = Uint8Array;
-		if ( newIndices.length >= Math.pow( 2, 8 ) ) cons = Uint16Array;
-		if ( newIndices.length >= Math.pow( 2, 16 ) ) cons = Uint32Array;
-
-		var newIndexBuffer = new cons( newIndices );
-		var newIndices = null;
-		if ( indices === null ) {
-
-			newIndices = new THREE.BufferAttribute( newIndexBuffer, 1 );
-
-		} else {
-
-			newIndices = geometry.getIndex().clone();
-			newIndices.setArray( newIndexBuffer );
-
-		}
-
-		result.setIndex( newIndices );
-
-		return result;
+		const morphedPositionAttribute = new THREE.Float32BufferAttribute( modifiedPosition, 3 );
+		const morphedNormalAttribute = new THREE.Float32BufferAttribute( modifiedNormal, 3 );
+		return {
+			positionAttribute: positionAttribute,
+			normalAttribute: normalAttribute,
+			morphedPositionAttribute: morphedPositionAttribute,
+			morphedNormalAttribute: morphedNormalAttribute
+		};
 
 	}
 
-};
+	function mergeGroups( geometry ) {
+
+		if ( geometry.groups.length === 0 ) {
+
+			console.warn( 'THREE.BufferGeometryUtils.mergeGroups(): No groups are defined. Nothing to merge.' );
+			return geometry;
+
+		}
+
+		let groups = geometry.groups; // sort groups by material index
+
+		groups = groups.sort( ( a, b ) => {
+
+			if ( a.materialIndex !== b.materialIndex ) return a.materialIndex - b.materialIndex;
+			return a.start - b.start;
+
+		} ); // create index for non-indexed geometries
+
+		if ( geometry.getIndex() === null ) {
+
+			const positionAttribute = geometry.getAttribute( 'position' );
+			const indices = [];
+
+			for ( let i = 0; i < positionAttribute.count; i += 3 ) {
+
+				indices.push( i, i + 1, i + 2 );
+
+			}
+
+			geometry.setIndex( indices );
+
+		} // sort index
+
+
+		const index = geometry.getIndex();
+		const newIndices = [];
+
+		for ( let i = 0; i < groups.length; i ++ ) {
+
+			const group = groups[ i ];
+			const groupStart = group.start;
+			const groupLength = groupStart + group.count;
+
+			for ( let j = groupStart; j < groupLength; j ++ ) {
+
+				newIndices.push( index.getX( j ) );
+
+			}
+
+		}
+
+		geometry.dispose(); // Required to force buffer recreation
+
+		geometry.setIndex( newIndices ); // update groups indices
+
+		let start = 0;
+
+		for ( let i = 0; i < groups.length; i ++ ) {
+
+			const group = groups[ i ];
+			group.start = start;
+			start += group.count;
+
+		} // merge groups
+
+
+		let currentGroup = groups[ 0 ];
+		geometry.groups = [ currentGroup ];
+
+		for ( let i = 1; i < groups.length; i ++ ) {
+
+			const group = groups[ i ];
+
+			if ( currentGroup.materialIndex === group.materialIndex ) {
+
+				currentGroup.count += group.count;
+
+			} else {
+
+				currentGroup = group;
+				geometry.groups.push( currentGroup );
+
+			}
+
+		}
+
+		return geometry;
+
+	}
+
+	THREE.BufferGeometryUtils = {};
+	THREE.BufferGeometryUtils.computeMikkTSpaceTangents = computeMikkTSpaceTangents;
+	THREE.BufferGeometryUtils.computeMorphedAttributes = computeMorphedAttributes;
+	THREE.BufferGeometryUtils.computeTangents = computeTangents;
+	THREE.BufferGeometryUtils.deinterleaveAttribute = deinterleaveAttribute;
+	THREE.BufferGeometryUtils.deinterleaveGeometry = deinterleaveGeometry;
+	THREE.BufferGeometryUtils.estimateBytesUsed = estimateBytesUsed;
+	THREE.BufferGeometryUtils.interleaveAttributes = interleaveAttributes;
+	THREE.BufferGeometryUtils.mergeBufferAttributes = mergeBufferAttributes;
+	THREE.BufferGeometryUtils.mergeBufferGeometries = mergeBufferGeometries;
+	THREE.BufferGeometryUtils.mergeGroups = mergeGroups;
+	THREE.BufferGeometryUtils.mergeVertices = mergeVertices;
+	THREE.BufferGeometryUtils.toTrianglesDrawMode = toTrianglesDrawMode;
+
+} )();
 
 /**
  * @author fernandojsg / http://fernandojsg.com
@@ -6661,3 +7108,602 @@ THREE.SimplexNoise.prototype.noise4d = function ( x, y, z, w ) {
 	THREE.WorkerPool = WorkerPool;
 
 } )();
+( function () {
+
+	// http://en.wikipedia.org/wiki/RGBE_image_format
+
+	class RGBELoader extends THREE.DataTextureLoader {
+
+		constructor( manager ) {
+
+			super( manager );
+			this.type = THREE.HalfFloatType;
+
+		} // adapted from http://www.graphics.cornell.edu/~bjw/rgbe.html
+
+
+		parse( buffer ) {
+
+			const
+				/* return codes for rgbe routines */
+				//RGBE_RETURN_SUCCESS = 0,
+				RGBE_RETURN_FAILURE = - 1,
+
+				/* default error routine.  change this to change error handling */
+				rgbe_read_error = 1,
+				rgbe_write_error = 2,
+				rgbe_format_error = 3,
+				rgbe_memory_error = 4,
+				rgbe_error = function ( rgbe_error_code, msg ) {
+
+					switch ( rgbe_error_code ) {
+
+						case rgbe_read_error:
+							console.error( 'THREE.RGBELoader Read Error: ' + ( msg || '' ) );
+							break;
+
+						case rgbe_write_error:
+							console.error( 'THREE.RGBELoader Write Error: ' + ( msg || '' ) );
+							break;
+
+						case rgbe_format_error:
+							console.error( 'THREE.RGBELoader Bad File Format: ' + ( msg || '' ) );
+							break;
+
+						default:
+						case rgbe_memory_error:
+							console.error( 'THREE.RGBELoader: Error: ' + ( msg || '' ) );
+
+					}
+
+					return RGBE_RETURN_FAILURE;
+
+				},
+
+				/* offsets to red, green, and blue components in a data (float) pixel */
+				//RGBE_DATA_RED = 0,
+				//RGBE_DATA_GREEN = 1,
+				//RGBE_DATA_BLUE = 2,
+
+				/* number of floats per pixel, use 4 since stored in rgba image format */
+				//RGBE_DATA_SIZE = 4,
+
+				/* flags indicating which fields in an rgbe_header_info are valid */
+				RGBE_VALID_PROGRAMTYPE = 1,
+				RGBE_VALID_FORMAT = 2,
+				RGBE_VALID_DIMENSIONS = 4,
+				NEWLINE = '\n',
+				fgets = function ( buffer, lineLimit, consume ) {
+
+					const chunkSize = 128;
+					lineLimit = ! lineLimit ? 1024 : lineLimit;
+					let p = buffer.pos,
+						i = - 1,
+						len = 0,
+						s = '',
+						chunk = String.fromCharCode.apply( null, new Uint16Array( buffer.subarray( p, p + chunkSize ) ) );
+
+					while ( 0 > ( i = chunk.indexOf( NEWLINE ) ) && len < lineLimit && p < buffer.byteLength ) {
+
+						s += chunk;
+						len += chunk.length;
+						p += chunkSize;
+						chunk += String.fromCharCode.apply( null, new Uint16Array( buffer.subarray( p, p + chunkSize ) ) );
+
+					}
+
+					if ( - 1 < i ) {
+
+						/*for (i=l-1; i>=0; i--) {
+        	byteCode = m.charCodeAt(i);
+        	if (byteCode > 0x7f && byteCode <= 0x7ff) byteLen++;
+        	else if (byteCode > 0x7ff && byteCode <= 0xffff) byteLen += 2;
+        	if (byteCode >= 0xDC00 && byteCode <= 0xDFFF) i--; //trail surrogate
+        }*/
+						if ( false !== consume ) buffer.pos += len + i + 1;
+						return s + chunk.slice( 0, i );
+
+					}
+
+					return false;
+
+				},
+
+				/* minimal header reading.  modify if you want to parse more information */
+				RGBE_ReadHeader = function ( buffer ) {
+
+					// regexes to parse header info fields
+					const magic_token_re = /^#\?(\S+)/,
+						gamma_re = /^\s*GAMMA\s*=\s*(\d+(\.\d+)?)\s*$/,
+						exposure_re = /^\s*EXPOSURE\s*=\s*(\d+(\.\d+)?)\s*$/,
+						format_re = /^\s*FORMAT=(\S+)\s*$/,
+						dimensions_re = /^\s*\-Y\s+(\d+)\s+\+X\s+(\d+)\s*$/,
+						// RGBE format header struct
+						header = {
+							valid: 0,
+
+							/* indicate which fields are valid */
+							string: '',
+
+							/* the actual header string */
+							comments: '',
+
+							/* comments found in header */
+							programtype: 'RGBE',
+
+							/* listed at beginning of file to identify it after "#?". defaults to "RGBE" */
+							format: '',
+
+							/* RGBE format, default 32-bit_rle_rgbe */
+							gamma: 1.0,
+
+							/* image has already been gamma corrected with given gamma. defaults to 1.0 (no correction) */
+							exposure: 1.0,
+
+							/* a value of 1.0 in an image corresponds to <exposure> watts/steradian/m^2. defaults to 1.0 */
+							width: 0,
+							height: 0
+							/* image dimensions, width/height */
+
+						};
+					let line, match;
+
+					if ( buffer.pos >= buffer.byteLength || ! ( line = fgets( buffer ) ) ) {
+
+						return rgbe_error( rgbe_read_error, 'no header found' );
+
+					}
+					/* if you want to require the magic token then uncomment the next line */
+
+
+					if ( ! ( match = line.match( magic_token_re ) ) ) {
+
+						return rgbe_error( rgbe_format_error, 'bad initial token' );
+
+					}
+
+					header.valid |= RGBE_VALID_PROGRAMTYPE;
+					header.programtype = match[ 1 ];
+					header.string += line + '\n';
+
+					while ( true ) {
+
+						line = fgets( buffer );
+						if ( false === line ) break;
+						header.string += line + '\n';
+
+						if ( '#' === line.charAt( 0 ) ) {
+
+							header.comments += line + '\n';
+							continue; // comment line
+
+						}
+
+						if ( match = line.match( gamma_re ) ) {
+
+							header.gamma = parseFloat( match[ 1 ] );
+
+						}
+
+						if ( match = line.match( exposure_re ) ) {
+
+							header.exposure = parseFloat( match[ 1 ] );
+
+						}
+
+						if ( match = line.match( format_re ) ) {
+
+							header.valid |= RGBE_VALID_FORMAT;
+							header.format = match[ 1 ]; //'32-bit_rle_rgbe';
+
+						}
+
+						if ( match = line.match( dimensions_re ) ) {
+
+							header.valid |= RGBE_VALID_DIMENSIONS;
+							header.height = parseInt( match[ 1 ], 10 );
+							header.width = parseInt( match[ 2 ], 10 );
+
+						}
+
+						if ( header.valid & RGBE_VALID_FORMAT && header.valid & RGBE_VALID_DIMENSIONS ) break;
+
+					}
+
+					if ( ! ( header.valid & RGBE_VALID_FORMAT ) ) {
+
+						return rgbe_error( rgbe_format_error, 'missing format specifier' );
+
+					}
+
+					if ( ! ( header.valid & RGBE_VALID_DIMENSIONS ) ) {
+
+						return rgbe_error( rgbe_format_error, 'missing image size specifier' );
+
+					}
+
+					return header;
+
+				},
+				RGBE_ReadPixels_RLE = function ( buffer, w, h ) {
+
+					const scanline_width = w;
+
+					if ( // run length encoding is not allowed so read flat
+						scanline_width < 8 || scanline_width > 0x7fff || // this file is not run length encoded
+      2 !== buffer[ 0 ] || 2 !== buffer[ 1 ] || buffer[ 2 ] & 0x80 ) {
+
+						// return the flat buffer
+						return new Uint8Array( buffer );
+
+					}
+
+					if ( scanline_width !== ( buffer[ 2 ] << 8 | buffer[ 3 ] ) ) {
+
+						return rgbe_error( rgbe_format_error, 'wrong scanline width' );
+
+					}
+
+					const data_rgba = new Uint8Array( 4 * w * h );
+
+					if ( ! data_rgba.length ) {
+
+						return rgbe_error( rgbe_memory_error, 'unable to allocate buffer space' );
+
+					}
+
+					let offset = 0,
+						pos = 0;
+					const ptr_end = 4 * scanline_width;
+					const rgbeStart = new Uint8Array( 4 );
+					const scanline_buffer = new Uint8Array( ptr_end );
+					let num_scanlines = h; // read in each successive scanline
+
+					while ( num_scanlines > 0 && pos < buffer.byteLength ) {
+
+						if ( pos + 4 > buffer.byteLength ) {
+
+							return rgbe_error( rgbe_read_error );
+
+						}
+
+						rgbeStart[ 0 ] = buffer[ pos ++ ];
+						rgbeStart[ 1 ] = buffer[ pos ++ ];
+						rgbeStart[ 2 ] = buffer[ pos ++ ];
+						rgbeStart[ 3 ] = buffer[ pos ++ ];
+
+						if ( 2 != rgbeStart[ 0 ] || 2 != rgbeStart[ 1 ] || ( rgbeStart[ 2 ] << 8 | rgbeStart[ 3 ] ) != scanline_width ) {
+
+							return rgbe_error( rgbe_format_error, 'bad rgbe scanline format' );
+
+						} // read each of the four channels for the scanline into the buffer
+						// first red, then green, then blue, then exponent
+
+
+						let ptr = 0,
+							count;
+
+						while ( ptr < ptr_end && pos < buffer.byteLength ) {
+
+							count = buffer[ pos ++ ];
+							const isEncodedRun = count > 128;
+							if ( isEncodedRun ) count -= 128;
+
+							if ( 0 === count || ptr + count > ptr_end ) {
+
+								return rgbe_error( rgbe_format_error, 'bad scanline data' );
+
+							}
+
+							if ( isEncodedRun ) {
+
+								// a (encoded) run of the same value
+								const byteValue = buffer[ pos ++ ];
+
+								for ( let i = 0; i < count; i ++ ) {
+
+									scanline_buffer[ ptr ++ ] = byteValue;
+
+								} //ptr += count;
+
+							} else {
+
+								// a literal-run
+								scanline_buffer.set( buffer.subarray( pos, pos + count ), ptr );
+								ptr += count;
+								pos += count;
+
+							}
+
+						} // now convert data from buffer into rgba
+						// first red, then green, then blue, then exponent (alpha)
+
+
+						const l = scanline_width; //scanline_buffer.byteLength;
+
+						for ( let i = 0; i < l; i ++ ) {
+
+							let off = 0;
+							data_rgba[ offset ] = scanline_buffer[ i + off ];
+							off += scanline_width; //1;
+
+							data_rgba[ offset + 1 ] = scanline_buffer[ i + off ];
+							off += scanline_width; //1;
+
+							data_rgba[ offset + 2 ] = scanline_buffer[ i + off ];
+							off += scanline_width; //1;
+
+							data_rgba[ offset + 3 ] = scanline_buffer[ i + off ];
+							offset += 4;
+
+						}
+
+						num_scanlines --;
+
+					}
+
+					return data_rgba;
+
+				};
+
+			const RGBEByteToRGBFloat = function ( sourceArray, sourceOffset, destArray, destOffset ) {
+
+				const e = sourceArray[ sourceOffset + 3 ];
+				const scale = Math.pow( 2.0, e - 128.0 ) / 255.0;
+				destArray[ destOffset + 0 ] = sourceArray[ sourceOffset + 0 ] * scale;
+				destArray[ destOffset + 1 ] = sourceArray[ sourceOffset + 1 ] * scale;
+				destArray[ destOffset + 2 ] = sourceArray[ sourceOffset + 2 ] * scale;
+				destArray[ destOffset + 3 ] = 1;
+
+			};
+
+			const RGBEByteToRGBHalf = function ( sourceArray, sourceOffset, destArray, destOffset ) {
+
+				const e = sourceArray[ sourceOffset + 3 ];
+				const scale = Math.pow( 2.0, e - 128.0 ) / 255.0; // clamping to 65504, the maximum representable value in float16
+
+				destArray[ destOffset + 0 ] = THREE.DataUtils.toHalfFloat( Math.min( sourceArray[ sourceOffset + 0 ] * scale, 65504 ) );
+				destArray[ destOffset + 1 ] = THREE.DataUtils.toHalfFloat( Math.min( sourceArray[ sourceOffset + 1 ] * scale, 65504 ) );
+				destArray[ destOffset + 2 ] = THREE.DataUtils.toHalfFloat( Math.min( sourceArray[ sourceOffset + 2 ] * scale, 65504 ) );
+				destArray[ destOffset + 3 ] = THREE.DataUtils.toHalfFloat( 1 );
+
+			};
+
+			const byteArray = new Uint8Array( buffer );
+			byteArray.pos = 0;
+			const rgbe_header_info = RGBE_ReadHeader( byteArray );
+
+			if ( RGBE_RETURN_FAILURE !== rgbe_header_info ) {
+
+				const w = rgbe_header_info.width,
+					h = rgbe_header_info.height,
+					image_rgba_data = RGBE_ReadPixels_RLE( byteArray.subarray( byteArray.pos ), w, h );
+
+				if ( RGBE_RETURN_FAILURE !== image_rgba_data ) {
+
+					let data, format, type;
+					let numElements;
+
+					switch ( this.type ) {
+
+						case THREE.FloatType:
+							numElements = image_rgba_data.length / 4;
+							const floatArray = new Float32Array( numElements * 4 );
+
+							for ( let j = 0; j < numElements; j ++ ) {
+
+								RGBEByteToRGBFloat( image_rgba_data, j * 4, floatArray, j * 4 );
+
+							}
+
+							data = floatArray;
+							type = THREE.FloatType;
+							break;
+
+						case THREE.HalfFloatType:
+							numElements = image_rgba_data.length / 4;
+							const halfArray = new Uint16Array( numElements * 4 );
+
+							for ( let j = 0; j < numElements; j ++ ) {
+
+								RGBEByteToRGBHalf( image_rgba_data, j * 4, halfArray, j * 4 );
+
+							}
+
+							data = halfArray;
+							type = THREE.HalfFloatType;
+							break;
+
+						default:
+							console.error( 'THREE.RGBELoader: unsupported type: ', this.type );
+							break;
+
+					}
+
+					return {
+						width: w,
+						height: h,
+						data: data,
+						header: rgbe_header_info.string,
+						gamma: rgbe_header_info.gamma,
+						exposure: rgbe_header_info.exposure,
+						format: format,
+						type: type
+					};
+
+				}
+
+			}
+
+			return null;
+
+		}
+
+		setDataType( value ) {
+
+			this.type = value;
+			return this;
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			function onLoadCallback( texture, texData ) {
+
+				switch ( texture.type ) {
+
+					case THREE.FloatType:
+						texture.encoding = THREE.LinearEncoding;
+						texture.minFilter = THREE.LinearFilter;
+						texture.magFilter = THREE.LinearFilter;
+						texture.generateMipmaps = false;
+						texture.flipY = true;
+						break;
+
+					case THREE.HalfFloatType:
+						texture.encoding = THREE.LinearEncoding;
+						texture.minFilter = THREE.LinearFilter;
+						texture.magFilter = THREE.LinearFilter;
+						texture.generateMipmaps = false;
+						texture.flipY = true;
+						break;
+
+				}
+
+				if ( onLoad ) onLoad( texture, texData );
+
+			}
+
+			return super.load( url, onLoadCallback, onProgress, onError );
+
+		}
+
+	}
+
+	THREE.RGBELoader = RGBELoader;
+
+} )();
+// This file is part of meshoptimizer library and is distributed under the terms of MIT License.
+// Copyright (C) 2016-2020, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
+(function() {
+var MeshoptDecoder = (function() {
+	"use strict";
+
+	// Built with clang version 11.0.0 (https://github.com/llvm/llvm-project.git 0160ad802e899c2922bc9b29564080c22eb0908c)
+	// Built from meshoptimizer 0.14
+	var wasm_base = "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";
+	var wasm_simd = "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";
+
+	// Uses bulk-memory and simd extensions
+	var detector = new Uint8Array([0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,3,2,0,0,5,3,1,0,1,12,1,0,10,22,2,12,0,65,0,65,0,65,0,252,10,0,0,11,7,0,65,0,253,15,26,11]);
+
+	// Used to unpack wasm
+	var wasmpack = new Uint8Array([32,0,65,253,3,1,2,34,4,106,6,5,11,8,7,20,13,33,12,16,128,9,116,64,19,113,127,15,10,21,22,14,255,66,24,54,136,107,18,23,192,26,114,118,132,17,77,101,130,144,27,87,131,44,45,74,156,154,70,167]);
+
+	if (typeof WebAssembly !== 'object') {
+		// This module requires WebAssembly to function
+		return {
+			supported: false,
+		};
+	}
+
+	var wasm = wasm_base;
+
+	if (WebAssembly.validate(detector)) {
+		wasm = wasm_simd;
+		console.log("Warning: meshopt_decoder is using experimental SIMD support");
+	}
+
+	var instance;
+
+	var promise =
+		WebAssembly.instantiate(unpack(wasm), {})
+		.then(function(result) {
+			instance = result.instance;
+			instance.exports.__wasm_call_ctors();
+		});
+
+	function unpack(data) {
+		var result = new Uint8Array(data.length);
+		for (var i = 0; i < data.length; ++i) {
+			var ch = data.charCodeAt(i);
+			result[i] = ch > 96 ? ch - 71 : ch > 64 ? ch - 65 : ch > 47 ? ch + 4 : ch > 46 ? 63 : 62;
+		}
+		var write = 0;
+		for (var i = 0; i < data.length; ++i) {
+			result[write++] = (result[i] < 60) ? wasmpack[result[i]] : (result[i] - 60) * 64 + result[++i];
+		}
+		return result.buffer.slice(0, write);
+	}
+
+	function decode(fun, target, count, size, source, filter) {
+		var sbrk = instance.exports.sbrk;
+		var count4 = (count + 3) & ~3; // pad for SIMD filter
+		var tp = sbrk(count4 * size);
+		var sp = sbrk(source.length);
+		var heap = new Uint8Array(instance.exports.memory.buffer);
+		heap.set(source, sp);
+		var res = fun(tp, count, size, sp, source.length);
+		if (res == 0 && filter) {
+			filter(tp, count4, size);
+		}
+		target.set(heap.subarray(tp, tp + count * size));
+		sbrk(tp - sbrk(0));
+		if (res != 0) {
+			throw new Error("Malformed buffer data: " + res);
+		}
+	};
+
+	var filters = {
+		// legacy index-based enums for glTF
+		0: "",
+		1: "meshopt_decodeFilterOct",
+		2: "meshopt_decodeFilterQuat",
+		3: "meshopt_decodeFilterExp",
+		// string-based enums for glTF
+		NONE: "",
+		OCTAHEDRAL: "meshopt_decodeFilterOct",
+		QUATERNION: "meshopt_decodeFilterQuat",
+		EXPONENTIAL: "meshopt_decodeFilterExp",
+	};
+
+	var decoders = {
+		// legacy index-based enums for glTF
+		0: "meshopt_decodeVertexBuffer",
+		1: "meshopt_decodeIndexBuffer",
+		2: "meshopt_decodeIndexSequence",
+		// string-based enums for glTF
+		ATTRIBUTES: "meshopt_decodeVertexBuffer",
+		TRIANGLES: "meshopt_decodeIndexBuffer",
+		INDICES: "meshopt_decodeIndexSequence",
+	};
+
+	return {
+		ready: promise,
+		supported: true,
+		decodeVertexBuffer: function(target, count, size, source, filter) {
+			decode(instance.exports.meshopt_decodeVertexBuffer, target, count, size, source, instance.exports[filters[filter]]);
+		},
+		decodeIndexBuffer: function(target, count, size, source) {
+			decode(instance.exports.meshopt_decodeIndexBuffer, target, count, size, source);
+		},
+		decodeIndexSequence: function(target, count, size, source) {
+			decode(instance.exports.meshopt_decodeIndexSequence, target, count, size, source);
+		},
+		decodeGltfBuffer: function(target, count, size, source, mode, filter) {
+			decode(instance.exports[decoders[mode]], target, count, size, source, instance.exports[filters[filter]]);
+		}
+	};
+})();
+
+if (typeof exports === 'object' && typeof module === 'object')
+	module.exports = MeshoptDecoder;
+else if (typeof define === 'function' && define['amd'])
+	define([], function() {
+		return MeshoptDecoder;
+	});
+else if (typeof exports === 'object')
+	exports["MeshoptDecoder"] = MeshoptDecoder;
+else
+	(typeof self !== 'undefined' ? self : this).MeshoptDecoder = MeshoptDecoder;
+})();
