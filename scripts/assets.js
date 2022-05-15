@@ -598,6 +598,14 @@ if (!ENV_IS_BROWSER) return;
                 blob.arrayBuffer()
                   .then(buffer => loader._createTexture(buffer))
                   .then(texture => this.handleLoadBasis(texture))
+              } else if (imagetype == 'hdr') {
+                let loader = new THREE.RGBELoader();
+                loader.load(fullurl, texture => {
+                  this._texture = texture;
+                  this.loaded = true;
+                  this.uploaded = false;
+                  this.sendLoadEvents();
+                });
               } else if (imagetype == 'exr') {
                 // TODO - this should probably done off-thread if possible, it currently locks rendering for a noticable amount of time
                 let loader = new THREE.EXRLoader();
