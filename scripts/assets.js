@@ -1443,7 +1443,9 @@ if (!ENV_IS_BROWSER) return;
       return isGLB;
     },
     loadglTF: function(jobdata) {
-      let proxypath = this.getProxiedURL(jobdata.src);
+      let dirpathparts = jobdata.src.split('/');
+      dirpathparts[dirpathparts.length-1] = '';
+      let proxypath = this.getProxiedURL(dirpathparts.join('/'));
       var loader = new THREE.GLTFLoader();
       if (elation.engine.assets.dracopath) {
         loader.setDRACOLoader(new THREE.DRACOLoader().setDecoderPath(elation.engine.assets.dracopath));
@@ -1578,6 +1580,7 @@ if (!ENV_IS_BROWSER) return;
               if (tex) { // && tex.image instanceof HTMLImageElement) {
                 var img = tex.image;
                 var src = img.originalSrc || img.src;
+                if (!src) return;
                 if (!textures[src]) {
                   //elation.engine.assets.loadJSON([{"assettype": "image", name: src, "src": src}], this.baseurl); 
                   //tex = elation.engine.assets.find('image', src);
