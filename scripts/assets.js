@@ -1456,6 +1456,7 @@ if (!ENV_IS_BROWSER) return;
       if (elation.engine.assets.icosapath) {
         loader.register(parser => new THREE.GLTFGoogleTiltBrushMaterialExtension(parser, elation.engine.assets.icosapath));
       }
+      loader.setMeshoptDecoder(MeshoptDecoder);
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
       loader.parse(jobdata.srcdata, proxypath, elation.bind(this, function(modeldata) {
