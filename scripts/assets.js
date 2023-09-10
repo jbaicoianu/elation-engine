@@ -855,6 +855,8 @@ if (!ENV_IS_BROWSER) return;
               lastframe = frametex;
             }
             elation.events.fire({element: texture, type: 'asset_update', data: frametex});
+            elation.events.fire({element: texture, type: 'update', data: frametex});
+            elation.events.fire({element: this, type: 'asset_update', data: frametex});
           }
 
           if (!isstatic) {
