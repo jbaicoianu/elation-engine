@@ -205,27 +205,28 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.createBodyParts = function() {
       this.torso = this.spawn('generic', this.properties.player_id + '_torso', {
-        'position': [0,1,0]
+        'position': [0,0,0]
       });
       this.shoulders = this.torso.spawn('generic', this.properties.player_id + '_shoulders', {
         'position': [0,0.3,-0.2]
       });
       this.neck = this.torso.spawn('generic', this.properties.player_id + '_neck', {
-        'position': [0,0.6,0]
+        'position': [0,1.45,0]
       });
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
-        'position': [0,0,0],
+        'position': [0,.3,0],
         'mass': 1
       });
 
-      this.placeholder_body = new THREE.Mesh(new THREE.CylinderBufferGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc, transparent: true, opacity: .5}));
+/*
+      this.placeholder_body = new THREE.Mesh(new THREE.CylinderGeometry(this.fatness, this.fatness, this.height), new THREE.MeshPhongMaterial({color: 0xcccccc, transparent: true, opacity: .5}));
       this.placeholder_body.position.y = this.height / 2;
       this.placeholder_body.layers.set(10);
       this.objects['3d'].add(this.placeholder_body);
 
       this.vrcalibrate = new THREE.Object3D();
       this.vrposetarget = new THREE.Object3D();
-      let vrposedebug = new THREE.Mesh(new THREE.CylinderBufferGeometry(0, 1, 2), new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .5}));
+      let vrposedebug = new THREE.Mesh(new THREE.CylinderGeometry(0, 1, 2), new THREE.MeshPhongMaterial({color: 0xffcccc, transparent: true, opacity: .5}));
       vrposedebug.position.z = -1;
       vrposedebug.rotation.x = Math.PI/2;
       this.vrcalibrate.add(this.vrposetarget);
