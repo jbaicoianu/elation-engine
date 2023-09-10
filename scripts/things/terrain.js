@@ -20,7 +20,7 @@ elation.require('engine.things.generic', function() {
       });
     }
     this.createObject3D = function() {
-      var geo = new THREE.PlaneBufferGeometry(this.properties.size, this.properties.size, this.properties.resolution, this.properties.resolution);
+      var geo = new THREE.PlaneGeometry(this.properties.size, this.properties.size, this.properties.resolution, this.properties.resolution);
 
       var mat = elation.engine.materials.getShaderMaterial('terrain', {
         color: this.properties.color,

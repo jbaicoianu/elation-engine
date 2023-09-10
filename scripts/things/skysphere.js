@@ -7,7 +7,7 @@ elation.require(['engine.things.generic'], function() {
       });
     }
     this.createObject3D = function() {
-      var geo = new THREE.SphereBufferGeometry(1000, 64, 32);
+      var geo = new THREE.SphereGeometry(1000, 64, 32);
 
       // Flip UVs on x axis so that the texture isn't reversed when viewed from inside the sphere
       for (var i = 0; i < geo.attributes.uv.length; i += 2) {

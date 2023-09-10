@@ -12,7 +12,7 @@ elation.require(['engine.things.generic'], function() {
       });
     }
     this.createObject3D = function() {
-      var geo = new THREE.PlaneBufferGeometry(this.properties.width, this.properties.height);
+      var geo = new THREE.PlaneGeometry(this.properties.width, this.properties.height);
       var tex = elation.engine.materials.getTextureLabel(this.properties.text, this.properties.fontsize, this.properties.color, this.properties.font);
       var mat = new THREE.MeshBasicMaterial({map: tex, transparent: true});
       return new THREE.Mesh(geo, mat);
