@@ -142,7 +142,7 @@ elation.require([
     }
     this.textureSampleMipmapLevel = (function() {
       let scene = new THREE.Scene();
-      let plane = new THREE.PlaneBufferGeometry(2, 2);
+      let plane = new THREE.PlaneGeometry(2, 2);
       let material = new THREE.MeshBasicMaterial({color: 0xffffff});
       let mesh = new THREE.Mesh(plane, material);
       mesh.position.set(0,0,-1);
@@ -181,7 +181,7 @@ elation.require([
     })();
     this.textureHasAlpha = (function() {
       let scene = new THREE.Scene();
-      let plane = new THREE.PlaneBufferGeometry(2, 2);
+      let plane = new THREE.PlaneGeometry(2, 2);
       let material = new THREE.MeshBasicMaterial({color: 0xff0000});
       let mesh = new THREE.Mesh(plane, material);
       mesh.position.set(0,0,-1);
@@ -662,7 +662,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.xrscenetexture.magFilter = THREE.NearestFilter;
 
         // Set up the plane to render only one eye, centered in the middle of the screen
-        this.xrsceneplane = new THREE.Mesh(new THREE.PlaneBufferGeometry(w, h), new THREE.MeshBasicMaterial({map: this.xrscenetexture, side: THREE.DoubleSide, color: 0xffffff}));
+        this.xrsceneplane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map: this.xrscenetexture, side: THREE.DoubleSide, color: 0xffffff}));
         this.xrsceneplane.position.set(w / 4, 0, -10);
         //this.xrsceneplane.rotation.set(Math.PI/4, 0, 0);
         this.xrscene.add(this.xrsceneplane);
