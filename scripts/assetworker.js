@@ -26,7 +26,7 @@ elation.require([
 
         var uuid = srcmap[url];
         if (!uuid) {
-          srcmap[url] = uuid = THREE.Math.generateUUID();
+          srcmap[url] = uuid = THREE.MathUtils.generateUUID();
         }
         var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
         scope.manager.itemStart( url );
