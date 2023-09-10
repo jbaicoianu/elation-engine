@@ -596,7 +596,7 @@ if (!ENV_IS_BROWSER) return;
                 // FIXME - we switched loader to request Blob responses, make sure Basis textures still load
                 let blob = events[0].target.response;
                 blob.arrayBuffer()
-                  .then(buffer => loader._createTexture(buffer))
+                  .then(buffer => loader._createTexture([buffer]))
                   .then(texture => this.handleLoadBasis(texture))
               } else if (imagetype == 'hdr') {
                 let loader = new THREE.RGBELoader();
