@@ -842,7 +842,7 @@ elation.require([
         if (properties[k] instanceof THREE.Vector2) {
           root[k]['value'] = properties[k].x.toFixed(4) + ' ' + properties[k].y.toFixed(4);
         } else if (properties[k] instanceof THREE.Vector3 || properties[k] instanceof THREE.Euler) {
-          root[k]['value'] = (properties[k].x * THREE.Math.RAD2DEG).toFixed(2) + ' ' + (properties[k].y * THREE.Math.RAD2DEG).toFixed(2) + ' ' + (properties[k].z * THREE.Math.RAD2DEG).toFixed(2);
+          root[k]['value'] = (properties[k].x * THREE.MathUtils.RAD2DEG).toFixed(2) + ' ' + (properties[k].y * THREE.MathUtils.RAD2DEG).toFixed(2) + ' ' + (properties[k].z * THREE.MathUtils.RAD2DEG).toFixed(2);
         } else if (properties[k] instanceof THREE.Vector4 || properties[k] instanceof THREE.Quaternion) {
           root[k]['value'] = properties[k].x.toFixed(4) + ' ' + properties[k].y.toFixed(4) + ' ' + properties[k].z.toFixed(4) + ' ' + properties[k].w.toFixed(4);
         } else if (properties[k] instanceof THREE.Texture) {
