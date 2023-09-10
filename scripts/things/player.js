@@ -693,8 +693,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.calibrateVR = function() {
       //this.vrcalibrate.position.copy(this.vrposetarget.position).multiplyScalar(-1);
       //this.vrcalibrate.quaternion.copy(this.vrposetarget.quaternion).conjugate();
-      this.vrcalibrate.matrix.getInverse(this.vrposetarget.matrix);
-      this.vrcalibrate.matrix.decompose(this.vrcalibrate.position, this.vrcalibrate.rotation, this.vrcalibrate.scale);
+      //this.vrcalibrate.matrix.getInverse(this.vrposetarget.matrix);
+      //this.vrcalibrate.matrix.decompose(this.vrcalibrate.position, this.vrcalibrate.rotation, this.vrcalibrate.scale);
     }
     this.getViewFrustum = (function() {
       let frustum = new THREE.Frustum(),
