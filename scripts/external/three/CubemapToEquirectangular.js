@@ -72,7 +72,7 @@ function CubemapToEquirectangular( renderer, provideCubeCamera ) {
 
 	this.scene = new THREE.Scene();
 	this.quad = new THREE.Mesh(
-		new THREE.PlaneBufferGeometry( 1, 1 ),
+		new THREE.PlaneGeometry( 1, 1 ),
 		this.material
 	);
 	this.scene.add( this.quad );

@@ -3106,7 +3106,7 @@
          * @param offset Offest of the new collider mesh
          */
         _createColliderMesh(radius, offset) {
-            const colliderMesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius, 8, 4), _colliderMaterial);
+            const colliderMesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 8, 4), _colliderMaterial);
             colliderMesh.position.copy(offset);
             // the name have to be this in order to exclude colliders from bounding box
             // (See Viewer.ts, search for child.name === 'vrmColliderSphere')
@@ -3267,7 +3267,7 @@
     const _v2A = new THREE.Vector2();
     const _camera = new THREE.OrthographicCamera(-1, 1, -1, 1, -1, 1);
     const _material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-    const _plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), _material);
+    const _plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), _material);
     const _scene = new THREE.Scene();
     _scene.add(_plane);
     /**

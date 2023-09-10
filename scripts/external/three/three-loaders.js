@@ -10407,7 +10407,7 @@ if (typeof THREE == 'undefined') var THREE = {};
 
 				}
 
-				if ( encoding !== undefined ) {
+				if ( texture && encoding !== undefined ) {
 
 					texture.encoding = encoding;
 
