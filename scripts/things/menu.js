@@ -161,7 +161,7 @@ elation.require(['engine.things.generic', 'engine.things.label'], function() {
       var emissive = (this.properties.disabled ? this.properties.disabledemissive : this.properties.emissive);
 
       // background plane
-      //var boxgeo = new THREE.PlaneBufferGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
+      //var boxgeo = new THREE.PlaneGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight);
       var boxgeo = new THREE.BoxGeometry(this.properties.size * 10, this.properties.size * this.properties.lineheight, .001);
       var mat = new THREE.MeshPhongMaterial({color: this.properties.backgroundcolor, emissive: emissive, opacity: .8, transparent: true, depthTest: false});
       var mesh = new THREE.Mesh(boxgeo, mat);
