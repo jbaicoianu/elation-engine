@@ -22,7 +22,7 @@ elation.require(['engine.things.label'], function() {
       var label = labelgen.getLabel(text);
       var height = this.height;
       var width = height * aspect;
-      var geometry = new THREE.PlaneBufferGeometry(width, height);
+      var geometry = new THREE.PlaneGeometry(width, height);
       geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, height/2, .02));
       return geometry;
     }
