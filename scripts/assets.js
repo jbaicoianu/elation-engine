@@ -401,7 +401,7 @@ if (!ENV_IS_BROWSER) return;
       var texture = new THREE.Texture();
       var uuid = this.uuidmap[url];
       if (!uuid) {
-        uuid = this.uuidmap[url] = THREE.Math.generateUUID();
+        uuid = this.uuidmap[url] = THREE.MathUtils.generateUUID();
       }
       var img = { uuid: uuid, src: url, toDataURL: function() { return url; } };
       texture.image = img;
@@ -969,7 +969,7 @@ if (!ENV_IS_BROWSER) return;
     preload: false,
     hls: null,
     type: THREE.UnsignedByteType,
-    format: THREE.RGBFormat,
+    format: THREE.RGBAFormat,
 
     load: function() {
       var video = this.video;
@@ -989,7 +989,7 @@ if (!ENV_IS_BROWSER) return;
         }
       }
       this._video = video;
-      let textureFormat = (this.format == THREE.RGBFormat && this.hasalpha ? THREE.RGBAFormat : this.format);
+      let textureFormat = this.format;
       if (false && this.sbs3d) {
         this._texture = new THREE.SBSVideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
         this._texture.reverse = this.reverse3d;
