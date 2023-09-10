@@ -99,14 +99,14 @@ elation.require([], function() {
             phiLength = params.phiLength || Math.PI * 2,
             thetaStart = params.thetaStart || 0,
             thetaLength = params.thetaLength || Math.PI;
-        var geo = new THREE.SphereBufferGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
+        var geo = new THREE.SphereGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
         return geo;
       },
       'box': function(params) {
         var size = params.size || new THREE.Vector3(1,1,1),
             offset = params.offset;
 
-        var geo = new THREE.BoxBufferGeometry(size.x, size.y, size.z, 1, 1, 1);
+        var geo = new THREE.BoxGeometry(size.x, size.y, size.z, 1, 1, 1);
         
         if (offset) {
           geo.applyMatrix4(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
