@@ -448,18 +448,18 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
               if (this.state[bindname_x] != values[0]) {
                 this.changes.push(bindname_x);
                 this.state[bindname_x] = values[0];
-                this.state[bindname_x + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
+                this.state[bindname_x + '_full'] = THREE.MathUtils.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
                 this.changes.push(bindname_any_x);
                 this.state[bindname_any_x] = values[0];
-                this.state[bindname_any_x + '_full'] = THREE.Math.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
+                this.state[bindname_any_x + '_full'] = THREE.MathUtils.mapLinear(gamepad.axes[a], -1, 1, 0, 1);
               }
               if (this.state[bindname_y] != values[1]) {
                 this.changes.push(bindname_y);
                 this.state[bindname_y] = values[1];
-                this.state[bindname_y + '_full'] = THREE.Math.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
+                this.state[bindname_y + '_full'] = THREE.MathUtils.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
                 this.changes.push(bindname_any_y);
                 this.state[bindname_any_y] = values[1];
-                this.state[bindname_any_y + '_full'] = THREE.Math.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
+                this.state[bindname_any_y + '_full'] = THREE.MathUtils.mapLinear(gamepad.axes[a+1], -1, 1, 0, 1);
               }
             }
             for (var b = 0; b < gamepad.buttons.length; b++) {
@@ -845,6 +845,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
 
     this.touchstart = function(ev) {
+return;
       var newev = {
         button: 0,
         type: 'mousedown',
@@ -862,6 +863,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       //ev.preventDefault();
     }
     this.touchmove = function(ev) {
+return;
       //if (ev.touches.length == 1) {
         var newev = {
           type: 'mousemove',
