@@ -15,20 +15,20 @@ Object.defineProperties(EulerDegrees.prototype, {
   x: {
     enumerable: true,
     configurable: true,
-    set: function(x) { this.radians.x = x * THREE.Math.DEG2RAD; },
-    get: function() { return this.radians.x * THREE.Math.RAD2DEG; }
+    set: function(x) { this.radians.x = x * THREE.MathUtils.DEG2RAD; },
+    get: function() { return this.radians.x * THREE.MathUtils.RAD2DEG; }
   },
   y: {
     enumerable: true,
     configurable: true,
-    set: function(y) { this.radians.y = y * THREE.Math.DEG2RAD; },
-    get: function() { return this.radians.y * THREE.Math.RAD2DEG; }
+    set: function(y) { this.radians.y = y * THREE.MathUtils.DEG2RAD; },
+    get: function() { return this.radians.y * THREE.MathUtils.RAD2DEG; }
   },
   z: {
     enumerable: true,
     configurable: true,
-    set: function(z) { this.radians.z = z * THREE.Math.DEG2RAD; },
-    get: function() { return this.radians.z * THREE.Math.RAD2DEG; }
+    set: function(z) { this.radians.z = z * THREE.MathUtils.DEG2RAD; },
+    get: function() { return this.radians.z * THREE.MathUtils.RAD2DEG; }
   },
   order: {
     enumerable: true,
