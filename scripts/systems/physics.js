@@ -390,7 +390,7 @@ elation.require(["physics.cyclone"], function() {
       }
 */
       //var boxgeo = new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z);
-      let boxgeo = new THREE.BoxBufferGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10);
+      let boxgeo = new THREE.BoxGeometry(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z, 10, 10, 10);
       var boxmat = new THREE.LineBasicMaterial({color: 0x0000ff, transparent: true, depthWrite: false, depthTest: false, opacity: .2, blending: THREE.AdditiveBlending});
       var outline = new THREE.LineSegments(boxgeo, boxmat, THREE.LinePieces);
 
@@ -416,7 +416,7 @@ elation.require(["physics.cyclone"], function() {
       return outline;
     }
     this.createBoundingSphere = function(collider) {
-      var spheregeo = new THREE.SphereBufferGeometry(collider.radius, 18, 9);
+      var spheregeo = new THREE.SphereGeometry(collider.radius, 18, 9);
       //var spheregeo = new THREE.IcosahedronGeometry(collider.radius, 2);
       var spheremat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending});
       var spherewiremat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
@@ -426,7 +426,7 @@ elation.require(["physics.cyclone"], function() {
       return outline;
     }
     this.createBoundingPlane = function(collider) {
-      var plane = new THREE.PlaneBufferGeometry(1000, 1000);
+      var plane = new THREE.PlaneGeometry(1000, 1000);
       var planemat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .04, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending });
   // FIXME - this only really works for horizontal planes
   var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
@@ -435,7 +435,7 @@ elation.require(["physics.cyclone"], function() {
       return mesh;
     }
     this.createBoundingCylinder = function(collider) {
-      var cyl = new THREE.CylinderBufferGeometry(collider.radius, collider.radius, collider.height, 32, 1);
+      var cyl = new THREE.CylinderGeometry(collider.radius, collider.radius, collider.height, 32, 1);
       //var cylmat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
       var cylmat = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: .1, depthWrite: false, depthTest: false, wireframe: true, blending: THREE.AdditiveBlending});
       var mesh = new THREE.Mesh(cyl, cylmat);
@@ -487,7 +487,7 @@ console.log('my offset', collider.offset, collider);
       tex.minFilter = tex.maxFilter = THREE.LinearFilter;
       tex.needsUpdate = true; 
 
-      var cg = new THREE.Mesh(new THREE.SphereBufferGeometry(.05), new THREE.MeshPhongMaterial({emissive: 0x666600, map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 1}));
+      var cg = new THREE.Mesh(new THREE.SphereGeometry(.05), new THREE.MeshPhongMaterial({emissive: 0x666600, map: tex, transparent: true, depthWrite: false, depthTest: false, opacity: 1}));
       return cg;
     }
     /*
@@ -557,7 +557,7 @@ console.log('my offset', collider.offset, collider);
     this.createObject3D = function() {
       this.materials = [];
       var collision = this.properties.collision;
-      var planegeo = new THREE.PlaneBufferGeometry(1, 1);
+      var planegeo = new THREE.PlaneGeometry(1, 1);
       var planemat = new THREE.MeshBasicMaterial({
         map: this.texture, 
         wireframe: false, 
@@ -813,7 +813,7 @@ console.log('ffff', collision.impulses[i], len);
       var bbox = this.properties.boundingbox;
       var size = [bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z];
       var offset = [(bbox.max.x + bbox.min.x) / 2, (bbox.max.y - bbox.min.y) / 2, (bbox.max.z + bbox.min.z) / 2];
-      var insidegeo = new THREE.BoxBufferGeometry(size[0], size[1], size[2]);
+      var insidegeo = new THREE.BoxGeometry(size[0], size[1], size[2]);
       insidegeo.applyMatrix(new THREE.Matrix4().makeTranslation(offset[0], size[1]/2 + offset[1], offset[2]));
       var insidemat_side = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.8, transparent: true, depthWrite: false, depthTest: false});
       var insidemat_top = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.5, transparent: true, depthWrite: false, depthTest: false});
