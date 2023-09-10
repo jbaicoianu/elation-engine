@@ -998,8 +998,8 @@ if (!ENV_IS_BROWSER) return;
       } else {
         this._texture = new THREE.VideoTexture(video, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, null, null, textureFormat, this.type);
       }
-      this._texture.minFilter = THREE.LinearFilter;
-      this._texture.magFilter = THREE.LinearFilter;
+      //this._texture.minFilter = THREE.LinearFilter;
+      //this._texture.magFilter = THREE.LinearFilter;
       this._texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
 
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
