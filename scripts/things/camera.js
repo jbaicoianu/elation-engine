@@ -2,7 +2,7 @@ elation.require(['engine.things.generic'], function() {
   elation.component.add('engine.things.camera', function() {
     this.postinit = function() {
       this.defineProperties({
-        fov: { type: 'float', default: 75 },
+        fov: { type: 'float', default: 75, set: this.updateFOV },
         near: { type: 'float', default: .01 },
         far: { type: 'float', default: 1000 },
         aspect: { type: 'float', default: 4/3 },
@@ -22,6 +22,11 @@ elation.require(['engine.things.generic'], function() {
       }
 */
       //scene.add(camhelper);
+    }
+    this.updateFOV = function() {
+      if (this.camera) {
+        this.camera.fov = this.fov;
+      }
     }
   }, elation.engine.things.generic);
 });
