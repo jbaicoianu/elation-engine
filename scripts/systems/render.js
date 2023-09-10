@@ -70,17 +70,19 @@ elation.require([
       this.renderer.xr.enabled = false;
       //this.renderer.xr.manageCameraPosition = true;
       this.lastframetime = performance.now();
+
       this.renderer.setAnimationLoop((time, frame) => {
         this.render(time - this.lastframetime, frame);
         this.lastframetime = time;
       });
+
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
       //this.renderer.gammaInput = true;
       //this.renderer.gammaOutput = false;
       //this.renderer.outputEncoding = THREE.LinearEncoding;
       //this.renderer.outputEncoding = THREE.sRGBEncoding;
-      this.renderer.outputEncoding = THREE.LinearEncoding;
+      this.renderer.outputEncoding = THREE.sRGBEncoding;
       this.renderer.gammaFactor = 1.3;
 
 /*
@@ -690,7 +692,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.enabled = false;
       elation.html.removeclass(this, 'webxr_session_active');
       this.xrsession = false;
-      this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
+      this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
       setTimeout(() => {
         elation.events.fire({type: 'resize', element: window, data: true });
       }, 100);
@@ -823,7 +825,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
                   renderer.setRenderTarget( renderer.getRenderTarget() );
 
                   let oldOutputEncoding = renderer.outputEncoding;
-                  renderer.outputEncoding = THREE.LinearEncoding;
+                  renderer.outputEncoding = THREE.sRGBEncoding;
                   renderer.setViewport(0, 0, layer.framebufferWidth, layer.framebufferHeight);
                   renderer.render(this.xrscene, this.xrscenecam);
                   renderer.xr.enabled = true;
