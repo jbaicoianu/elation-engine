@@ -788,11 +788,10 @@ elation.component.add("engine.things.generic", function() {
       // Determine appropriate collider for the geometry associated with this thing
       var dyn = this.objects['dynamics'];
       if (geom && dyn) {
-        if (geom instanceof THREE.SphereGeometry ||
-            geom instanceof THREE.SphereBufferGeometry) {
+        if (geom instanceof THREE.SphereGeometry) {
           if (!geom.boundingSphere) geom.computeBoundingSphere();
           this.setCollider('sphere', {radius: geom.boundingSphere.radius});
-        } else if (geom instanceof THREE.PlaneGeometry || geom instanceof THREE.PlaneBufferGeometry) {
+        } else if (geom instanceof THREE.PlaneGeometry) {
           if (!geom.boundingBox) geom.computeBoundingBox();
           var size = new THREE.Vector3().subVectors(geom.boundingBox.max, geom.boundingBox.min);
 
