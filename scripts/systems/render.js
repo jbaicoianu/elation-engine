@@ -53,7 +53,9 @@ elation.require([
         alpha: true,
         preserveDrawingBuffer: true,
         enableWebXR: false,
-        stencil: false
+        stencil: false,
+        powerPreference: 'high-performance',
+        //precision: 'lowp',
       };
       if (webglmode == 'webgl2') {
         rendererargs.canvas = document.createElement( 'canvas' );
