@@ -24,6 +24,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         flying: { type: 'boolean', default: false, set: function(key, value) { this.properties.flying = value; this.toggle_flying(value); }},
         dynamicfriction:{ type: 'float', default: 2.0, comment: 'Dynamic friction inherent to this object' },
         staticfriction: { type: 'float', default: 1.9, comment: 'Static friction inherent to this object' },
+        fov: { type: 'float', default: 75, set: this.updateCamera },
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
@@ -706,5 +707,11 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         return frustum;
       }
     })();
+    this.updateCamera = function() {
+      if (this.camera) {
+        this.camera.fov = this.fov;
+      }
+    }
+
   }, elation.engine.things.generic);
 });
