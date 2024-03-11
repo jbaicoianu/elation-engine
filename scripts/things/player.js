@@ -189,8 +189,14 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.gravityForce = this.objects.dynamics.addForce("gravity", this.gravityVector);
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.jumpForce = this.objects.dynamics.addForce("static", {});
-      this.objects.dynamics.restitution = 0.1;
-      //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness, offset: new THREE.Vector3(0, this.fatness, 0)});
+      this.objects.dynamics.restitution = 0;
+/*
+      this.objects.dynamics.linearDamping = 1.5;
+      this.objects.dynamics.angularDamping = .1;
+      this.objects.dynamics.material.staticfriction = 1.1;
+      this.objects.dynamics.material.dynamicfriction = 1;
+*/
+      //this.objects.dynamics.setCollider('sphere', {radius: this.properties.fatness, length: this.height, /*offset: new THREE.Vector3(0, this.fatness, 0) */});
       this.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0) });
       // FIXME - should be in createChildren
       this.createBodyParts();
