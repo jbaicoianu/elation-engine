@@ -11,6 +11,7 @@ elation.require([
   "engine.external.three.three-extras",
   "engine.external.three.CSS3DRenderer",
   "engine.external.three.CubemapToEquirectangular",
+  "engine.external.holoplay",
 
   "engine.external.webxr-polyfill",
 
@@ -63,6 +64,13 @@ elation.require([
       }
       this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
+      /*
+      this.holorenderer = new HoloPlay.Renderer(rendererargs);
+      this.holorenderer.quiltResolution = 3360;
+      this.holorenderer.tileCount.set(8, 6);
+      document.body.appendChild(this.holorenderer.domElement);
+      */
+
       //this.renderer.autoClear = true;
       this.renderer.setClearColor(0x000000, 1);
       this.renderer.shadowMap.enabled = true;
@@ -91,7 +99,7 @@ elation.require([
       this.renderer.toneMappingWhitePoint = 1;
 */
 
-      this.renderer.debug.checkShaderErrors = false;
+      this.renderer.debug.checkShaderErrors = true;
 
       this.lastframetime = 0;
 
@@ -102,6 +110,7 @@ elation.require([
 
       // Hide the canvas from accessibility API
       this.renderer.domElement.setAttribute('aria-hidden', true);
+
     }
     this.setclearcolor = function(color, opacity) {
       if (typeof color == 'undefined') color = 0xffffff;
@@ -348,7 +357,7 @@ elation.require([
       //console.log(this.engine.systems.world.scene['world-3d']);
 
       // Depth shader, used for SSAO, god rays, etc
-      if (!this.depthTarget) {
+      if (false && !this.depthTarget) {
         var depthShader = THREE.ShaderLib[ "depth" ];
         var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
 
@@ -375,7 +384,7 @@ elation.require([
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', /*'fxaa',*/ 'gamma'], this.rendertarget);
+      this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', 'fxaa', 'gamma'], this.rendertarget);
       //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
       //this.effects['msaa'].enabled = false;
       //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -427,7 +436,7 @@ elation.require([
             }
           })
         });
-        this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
+        //this.engine.systems.controls.addBindings('view', {'keyboard_f7': 'picking_debug'});
         this.engine.systems.controls.addBindings('view', {'gamepad_any_button_0': 'picking_select'});
         this.engine.systems.controls.activateContext('view');
       }
@@ -547,6 +556,14 @@ elation.require([
           break;
         case 'unrealbloom':
           pass = new THREE.UnrealBloomPass(this.size, 0, 0, 0);
+
+          pass.renderTargetsHorizontal.forEach(element => {
+              element.texture.type = THREE.FloatType;
+          });
+          pass.renderTargetsVertical.forEach(element => {
+              element.texture.type = THREE.FloatType;
+          });
+
           break;
         case 'fxaa':
           pass = new THREE.ShaderPass( THREE.FXAAShader );
@@ -776,12 +793,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             this.updatePickingTarget();
           //}
         }
-        /*
-        this.scene.overrideMaterial = this.depthMaterial;
+        //this.scene.overrideMaterial = this.depthMaterial;
         //this.rendersystem.renderer.render(this.scene, this.actualcamera, this.depthTarget, true);
 
-        this.scene.overrideMaterial = null;
-        */
+        //this.scene.overrideMaterial = null;
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
         this.effects[this.rendermode].camera = this.actualcamera;
@@ -852,6 +867,12 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             //this.rendersystem.renderer.state.bindXRFramebuffer(null);
             //this.rendersystem.renderer.setRenderTarget( renderer.getRenderTarget() );
             this.rendersystem.renderer.render(this.scene, this.camera);
+            //this.holocamera.position.setFromMatrixPosition(this.camera.matrixWorld);
+            //this.holocamera.quaternion.setFromRotationMatrix(this.camera.matrixWorld);
+
+            //this.holocamera.position.set(0, 10, 10).applyMatrix4(this.camera.matrixWorld);
+            //this.holocamera.target.set(0, 0, 0).applyMatrix4(this.camera.matrixWorld);
+            //this.rendersystem.holorenderer.render(this.scene, this.holocamera);
           }
         }
 
@@ -909,6 +930,15 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         camera = camera.objects['3d'];
       }
       this.camera = camera;
+      /*
+      this.holocamera = new HoloPlay.Camera();
+      this.holocamera.fov = 90;
+      console.log('my holocamera', this.holocamera, this.holocamera.fov);
+      //camera.add(this.holocamera);
+      this.holocamera.position.set(0,0,0);
+      this.holocamera.target.set(0,0,1);
+      this.holocamera.quaternion.set(0,0,0,1);
+      */
       this.setscene(this.getscene(camera));
       this.updateCameras();
       if (this.size[0] > 0 && this.size[1] > 0) {
@@ -950,7 +980,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         var frustum = new THREE.Frustum();
         var frustmat = new THREE.Matrix4().makePerspective( this.camera.fov, this.camera.aspect, 0.00001, 9e99).multiply(this.camera.matrixWorldInverse);
         //frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( this.camera.projectionMatrix, this.camera.matrixWorldInverse ) );
-        frustum.setFromMatrix(frustmat);
+        frustum.setFromProjectionMatrix(frustmat);
         var within = [], nearnode = null, farnode = null;
 
         this.scene.traverse(elation.bind(this, function(node) {
@@ -978,9 +1008,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         if (within.length > 0) {
           var vpos = new THREE.Vector3();
           for (var n = 0; n < within.length; n++) {
-            if (within[n].geometry instanceof THREE.Geometry) {
-              for (var i = 0; i < within[n].geometry.vertices.length; i++) {
-                vpos.copy(within[n].geometry.vertices[i]);
+            if (within[n].geometry instanceof THREE.BufferGeometry) {
+              let positions = within[n].geometry.attributes.position;
+              for (var i = 0; i < positions.count; i++) {
+                vpos.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
                 within[n].localToWorld(vpos);
                 if (true) { //frustum.containsPoint(vpos)) {
                   var dsq = vpos.distanceToSquared(campos);
@@ -1084,6 +1115,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       //this.composer.setSize(scaledwidth, scaledheight);
       if (this.pickingcomposer) {
         this.pickingcomposer.setSize(scaledwidth, scaledheight);
+      }
+      if (this.depthTarget) {
+        this.depthTarget.setSize(scaledwidth, scaledheight);
       }
       if (this.effects['SSAO']) {
         this.effects['SSAO'].uniforms[ 'size' ].value.set( width, height);
@@ -1961,7 +1995,7 @@ console.log('dun it', msaafilter);
         while (intersects.length > 0) {
           hit = intersects.shift();
           let thing = this.view.getParentThing(hit.object);
-          if (thing.pickable && !(hit.object instanceof THREE.EdgesHelper)) {
+          if (thing.pickable) { // && !(hit.object instanceof THREE.EdgesHelper)) {
             if (hit !== this.lasthit) {
               this.lasthit = hit; // FIXME - hack for demo
             }
