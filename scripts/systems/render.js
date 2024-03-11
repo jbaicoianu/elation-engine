@@ -191,7 +191,39 @@ elation.require([
     this.textureHasAlpha = (function() {
       let scene = new THREE.Scene();
       let plane = new THREE.PlaneGeometry(2, 2);
-      let material = new THREE.MeshBasicMaterial({color: 0xff0000});
+      //let material = new THREE.MeshBasicMaterial({color: 0xff0000});
+      let material = new THREE.ShaderMaterial({
+        vertexShader: `
+            uniform sampler2D map;
+            varying vec2 vUv;
+            void main() {
+                mat4 modelViewProjectionMatrix = projectionMatrix * modelViewMatrix;
+
+                vec3 transformed = vec3( position );
+
+                // Transform our new vertex position into clip space
+                vec4 pos = modelViewProjectionMatrix * vec4(transformed, 1.0);
+
+                gl_Position = pos;
+                vUv = uv;
+            }
+        `,
+
+        fragmentShader: `
+            uniform sampler2D map;
+            varying vec2 vUv;
+            void main(){
+                vec4 sampledDiffuseColor = texture2D( map, vUv );
+                gl_FragColor = vec4(sampledDiffuseColor.rgb, floor(sampledDiffuseColor.a));
+                //gl_FragColor = vec4(sampledDiffuseColor.rgb, 0.0);
+            }
+        `,
+
+        uniforms: {
+          map: { type: 't' },
+        },
+      });
+
       let mesh = new THREE.Mesh(plane, material);
       mesh.position.set(0,0,-1);
       scene.add(mesh);
@@ -202,8 +234,8 @@ elation.require([
       let viewport = new THREE.Vector4(0, 0, 1, 1);
 
       return function(texture) {
-        material.map = texture;
-        material.map.needsUpdate = true;
+        material.uniforms.map.value = texture;
+        texture.needsUpdate = true;
         let renderer = this.renderer;
         let pixeldata = new Uint8Array(4);
         let oldrendertarget = renderer.getRenderTarget();
