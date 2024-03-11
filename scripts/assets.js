@@ -602,6 +602,8 @@ if (!ENV_IS_BROWSER) return;
                 let loader = new THREE.RGBELoader();
                 loader.load(fullurl, texture => {
                   this._texture = texture;
+                  //const envMap = elation.engine.assets.pmremGenerator.fromEquirectangular( texture );
+                  //this._texture = envMap.texture;
                   this.loaded = true;
                   this.uploaded = false;
                   this.sendLoadEvents();
@@ -820,8 +822,17 @@ if (!ENV_IS_BROWSER) return;
       var framedelays = [];
       var framenum = -1;
       var lastframe = texture;
+//console.log('load gif?', image);
       gif.load(function() {
         var canvas = gif.get_canvas();
+/*
+console.log('gif loaded!', canvas);
+document.body.appendChild(newcanvas);
+newcanvas.style.position = 'absolute';
+newcanvas.style.zIndex = 1000;
+newcanvas.style.top = 0;
+newcanvas.style.left = 0;
+*/
 
         var doGIFFrame = function(isstatic) {
           framenum = (framenum + 1) % gif.get_length();
@@ -845,6 +856,7 @@ if (!ENV_IS_BROWSER) return;
             }
           }
           if (frame && frame.image) {
+//console.log('gifframe', frame);
             /*
             texture.image = frame.image;
             texture.needsUpdate = true;
@@ -969,12 +981,13 @@ if (!ENV_IS_BROWSER) return;
     srgb: true,
     tex_linear: true,
     preload: false,
+    extratracks: false,
     hls: null,
     type: THREE.UnsignedByteType,
     format: THREE.RGBAFormat,
 
     load: function() {
-      var video = this.video;
+      var video = this.video || this._video;
       if (!video && this.src) {
         var url = this.getProxiedURL(this.src);
         var video = document.createElement('video');
@@ -988,6 +1001,16 @@ if (!ENV_IS_BROWSER) return;
         }
         if ('requestVideoFrameCallback' in video) {
           video.requestVideoFrameCallback((time, metadata) => this.updateVideoFrame(time, metadata));
+        }
+        if (this.extratracks) {
+          this.extratracks.forEach(t => {
+            let track = document.createElement('track');
+            for (let k in t) {
+              track[k] = t[k];
+            }
+            video.appendChild(track);
+            console.log('- add track to video', track);
+          });
         }
       }
       this._video = video;
@@ -1031,8 +1054,8 @@ if (!ENV_IS_BROWSER) return;
           // If autoplay failed, retry with muted video
           var strerr = err.toString();
           if (strerr.indexOf('NotAllowedError') == 0) {
-            video.muted = true;
-            video.play().catch(elation.bind(this, this.handleAutoplayError));
+            //video.muted = true;
+            //video.play().catch((e) => console.log('huh what', e));
           } else if (strerr.indexOf('NotSupportedError') == 0 && this.hls !== false) {
             this.initHLS();
           }
@@ -1055,7 +1078,7 @@ if (!ENV_IS_BROWSER) return;
       elation.events.fire({element: this, type: 'asset_load_progress', data: progress});
     },
     handleError: function(ev) {
-      //console.log('video uh oh!', ev);
+      console.log('video error!', ev);
       //this._texture = false;
       //console.log('Video failed to load, try HLS', this._video.error, ev);
       /*
@@ -1093,23 +1116,47 @@ if (!ENV_IS_BROWSER) return;
     initHLS: function() {
       if (typeof Hls != 'function') {
         elation.file.get('js', 'https://cdn.jsdelivr.net/npm/hls.js@latest', elation.bind(this, this.initHLS));
+        //elation.file.get('js', 'https://baicoianu.com/~bai/janusweb/test/hls-modified.js', elation.bind(this, this.initHLS));
         return;
       }
       let hlsConfig = {
         debug: false,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 60,
+        //maxBufferLength: 10,
+        maxBufferLength: 30,
+        //capLevelOnFPSDrop: true,
+        //fpsDroppedMonitoringThreshold: .05,
+        maxBufferSize: 500 * 1024 * 1024,
+/*
         xhrSetup: function (xhr,url) {
             //xhr.withCredentials = true; // do send cookie
             xhr.setRequestHeader("Access-Control-Allow-Headers","Content-Type, Accept, X-Requested-With");
             xhr.setRequestHeader("Access-Control-Allow-Origin",document.location.origin);
             xhr.setRequestHeader("Access-Control-Allow-Credentials","true");
         },
+*/
+        xhrSetup: undefined,
+        progressive: false,
+        fetchSetup: function(context, initParams) {
+          //initParams.credentials = 'include';
+          return new Request(context.url, initParams);
+
+        },
       };
+console.log('set up hls', hlsConfig);
       var hls = new Hls(hlsConfig);
 
+      let mediaErrorCount = 0,
+          lastErrorTime = null,
+          errorTimer = setInterval(() => {
+            if (lastErrorTime) {
+              let timeSinceError = Date.now() - lastErrorTime;
+              if (mediaErrorCount > 0 && timeSinceError >= 10000) {
+                mediaErrorCount--;
+              }
+            }
+          }, 10000);
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.log('HLS.Events.ERROR: ', event, data);
+        console.log('HLS.Events.ERROR: ', event, data, mediaErrorCount);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -1126,8 +1173,17 @@ if (!ENV_IS_BROWSER) return;
           }
         //} else if (data.details === 'internalException' && data.type === 'otherError' && isMobile()) {
         //  this.hlsDropHighestLevel();
-        } else if (data.details == 'bufferStalledError') {
+        } else if (data.type == Hls.ErrorTypes.MEDIA_ERROR) {
           //hls.recoverMediaError();
+          lastErrorTime = Date.now();
+          mediaErrorCount++;
+          if (mediaErrorCount > 4 && hls.currentLevel > 0) {
+            // after 4 media errors, try stepping down to the next lowest level
+            let newlevel = hls.currentLevel - 1;
+            console.warn(`Stepping HLS level down from ${hls.currentLevel} to ${newlevel}`, hls);
+            hls.currentLevel = newlevel;
+            mediaErrorCount = 0;
+          }
         }
       });
 
@@ -1312,6 +1368,7 @@ if (!ENV_IS_BROWSER) return;
       return m;
     },
     assignTextures: function(group, args) {
+    return;
       var minFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearMipMapLinearFilter : THREE.NearestFilter);
       var magFilter = (this.tex_linear && this.tex_linear != 'false' ? THREE.LinearFilter : THREE.NearestFilter);
 
@@ -1504,7 +1561,7 @@ if (!ENV_IS_BROWSER) return;
     complete: function(object) {
       this.removePlaceholders();
       this._model.userData.loaded = true;
-      //this._model.add(scene);
+      //this._model.add(object);
       this.fillGroup(this._model, object, false);
 
       this.extractTextures(object);
@@ -1582,7 +1639,7 @@ if (!ENV_IS_BROWSER) return;
               var tex = material[texname];
               if (tex) { // && tex.image instanceof HTMLImageElement) {
                 var img = tex.image;
-                var src = img.originalSrc || img.src;
+                var src = img.originalSrc || img.src || img.data;
                 if (!src) return;
                 if (!textures[src]) {
                   //elation.engine.assets.loadJSON([{"assettype": "image", name: src, "src": src}], this.baseurl); 
@@ -1807,7 +1864,7 @@ if (!ENV_IS_BROWSER) return;
         }),
       });
     },
-    loadJSON: function(json) {
+    loadJSON: function(json, replaceExisting=false) {
       //this.json = json;
       elation.events.fire({element: this, type: 'asset_load_processing'});
       var baseurl = (this.baseurl && this.baseurl.length > 0 ? this.baseurl : this.getBaseURL());
@@ -1817,7 +1874,7 @@ if (!ENV_IS_BROWSER) return;
         assetdef.baseurl = baseurl;
         assetdef.assetpack = this;
         var existing = elation.utils.arrayget(this.assetmap, assetdef.assettype + '.' + assetdef.name); //elation.engine.assets.find(assetdef.assettype, assetdef.name, true);
-        if (!existing) {
+        if (!existing || replaceExisting) {
           var asset = elation.engine.assets.get(assetdef);
           this.assets.push(asset);
           if (!this.assetmap[asset.assettype]) this.assetmap[asset.assettype] = {};
@@ -2143,6 +2200,7 @@ if (!ENV_IS_BROWSER) return;
 
         let starttime = new Date().getTime();
             lasttime = starttime;
+
         setInterval(() => {
           let d = new Date();
           let now = d.getTime();
@@ -2160,6 +2218,7 @@ if (!ENV_IS_BROWSER) return;
             lasttime = now;
           }
         }, 16);
+
       }
       //this.load();
     },
