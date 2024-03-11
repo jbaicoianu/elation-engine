@@ -6,8 +6,8 @@ elation.require(["physics.cyclone"], function() {
     this.debugwindows = {};
     this.debugvis = {};
     this.debugthings = {};
-    this.async = false;
-    this.asyncframerate = 60;
+    this.async = true;
+    this.asyncframerate = 120;
 
     this.system_attach = function(ev) {
       console.log('INIT: physics');
@@ -20,7 +20,7 @@ elation.require(["physics.cyclone"], function() {
     }
     this.engine_start = function(ev) {
       //console.log("PHYSICS: starting");
-      this.system.start();
+      this.system.start({subprocessor: 'cpu', processorargs: { path: 'https://baicoianu.com/~bai/janusweb/build/1.5.32/media/lib/physx/'}});
       this.lasttime = new Date().getTime();
       if (this.interval) {
         clearInterval(this.interval);
