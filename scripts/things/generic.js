@@ -1257,7 +1257,7 @@ elation.component.add("engine.things.generic", function() {
       meshes[i].updateMatrix();
       meshes[i].updateMatrixWorld();
       //meshes[i].material = new THREE.MeshPhongMaterial({color: 0x999900, emissive: 0x666666, opacity: .5, transparent: true});
-      this.colliders.add(meshes[i]);
+      //this.colliders.add(meshes[i]);
       let collidercolor = 0x999999;
       if (rigid.mass === 0) {
         collidercolor = 0x990000;
