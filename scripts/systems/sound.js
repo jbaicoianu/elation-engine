@@ -78,6 +78,9 @@ elation.require([ ], function() {
         elation.events.fire({type: 'mute', element: this});
       }
     }
+    this.unmute = function() {
+      this.mute(false);
+    }
     this.toggleMute = function() {
       this.mute(this.enabled);
     }
