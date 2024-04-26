@@ -58,3 +58,9 @@ EulerDegrees.prototype.clone = function () {
 EulerDegrees.prototype.toArray = function() {
   return [this.x, this.y, this.z, this.radians.order];
 };
+EulerDegrees.prototype.equals = function(other) {
+  return ( this.epsilonEquals(other.x, this.x) ) && ( this.epsilonEquals(other.y, this.y) ) && ( this.epsilonEquals(other.z, this.z) ) && ( other.order == this.order );
+};
+EulerDegrees.prototype.epsilonEquals = function(v1, v2, epsilon=1e-5) {
+  return Math.abs(v1 - v2) < epsilon;
+};
