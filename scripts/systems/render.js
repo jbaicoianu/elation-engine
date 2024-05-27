@@ -698,7 +698,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       await this.rendersystem.renderer.xr.setSession(session);
       this.rendersystem.renderer.xr.enabled = true;
 
-      this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
       this.xrlayer = this.getXRBaseLayer(session);
       if (false && !this.xrscene) {
         // Set up a scene with an ortho camera to clone our XR framebuffer to, for display on the main screen
