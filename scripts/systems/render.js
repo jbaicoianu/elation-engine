@@ -337,6 +337,7 @@ elation.require([
         this.canvas.style.height = '100%';
       }
       elation.events.add(window, "resize", this);
+      elation.events.add(window, "orientationchange", ev => this.resize(true));
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
@@ -1113,6 +1114,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.size = [s.w, s.h];
         this.setrendersize(this.size[0], this.size[1]);
       }
+      this.actualcamera.zoom = (Math.abs(window.orientation) == 90 ? 2 : 1);
+      this.actualcamera.updateProjectionMatrix();
       this.rendersystem.setdirty();
 
       return this.size;
