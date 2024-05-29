@@ -15405,6 +15405,7 @@
 	const _flatCamera = /*@__PURE__*/ new OrthographicCamera();
 	const _clearColor = /*@__PURE__*/ new Color();
 	let _oldTarget = null;
+	let _oldXrEnabled = false;
 
 	// Golden Ratio
 	const PHI = ( 1 + Math.sqrt( 5 ) ) / 2;
@@ -15470,6 +15471,9 @@
 		fromScene( scene, sigma = 0, near = 0.1, far = 100 ) {
 
 			_oldTarget = this._renderer.getRenderTarget();
+			_oldXrEnabled = this._renderer.xr.enabled;
+
+			this._renderer.xr.enabled = false;
 
 			this._setSize( 256 );
 
@@ -15583,6 +15587,8 @@
 		_cleanup( outputTarget ) {
 
 			this._renderer.setRenderTarget( _oldTarget );
+			this._renderer.xr.enabled = _oldXrEnabled;
+
 			outputTarget.scissorTest = false;
 			_setViewport( outputTarget, 0, 0, outputTarget.width, outputTarget.height );
 
@@ -15601,6 +15607,9 @@
 			}
 
 			_oldTarget = this._renderer.getRenderTarget();
+			_oldXrEnabled = this._renderer.xr.enabled;
+
+			this._renderer.xr.enabled = false;
 
 			const cubeUVRenderTarget = renderTarget || this._allocateTargets();
 			this._textureToCubeUV( texture, cubeUVRenderTarget );

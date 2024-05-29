@@ -99,7 +99,7 @@ elation.require([
       this.renderer.toneMappingWhitePoint = 1;
 */
 
-      this.renderer.debug.checkShaderErrors = true;
+      this.renderer.debug.checkShaderErrors = false;
 
       this.lastframetime = 0;
 
@@ -337,6 +337,7 @@ elation.require([
         this.canvas.style.height = '100%';
       }
       elation.events.add(window, "resize", this);
+      elation.events.add(window, "orientationchange", ev => this.resize(true));
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
@@ -416,13 +417,15 @@ elation.require([
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
-      this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', 'fxaa', 'gamma'], this.rendertarget);
-      //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
-      //this.effects['msaa'].enabled = false;
-      //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
-      if (this.showstats) {
-        // FIXME - not smart!
-        elation.events.add(this.composer.passes[3], 'render', elation.bind(this, this.updateRenderStats));
+      if (this.enablepostprocessing) {
+        this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', 'fxaa', 'gamma'], this.rendertarget);
+        //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
+        //this.effects['msaa'].enabled = false;
+        //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
+        if (this.showstats) {
+          // FIXME - not smart!
+          elation.events.add(this.composer.passes[3], 'render', elation.bind(this, this.updateRenderStats));
+        }
       }
 
       this.getsize();
@@ -695,7 +698,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       await this.rendersystem.renderer.xr.setSession(session);
       this.rendersystem.renderer.xr.enabled = true;
 
-      this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
       this.xrlayer = this.getXRBaseLayer(session);
       if (false && !this.xrscene) {
         // Set up a scene with an ortho camera to clone our XR framebuffer to, for display on the main screen
@@ -831,7 +834,6 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         //this.scene.overrideMaterial = null;
         //this.rendersystem.renderer.render(this.scene, this.actualcamera);
 
-        this.effects[this.rendermode].camera = this.actualcamera;
 
         let colliderscene = this.engine.systems.world.scene['colliders'],
             worldscene = this.engine.systems.world.scene['world-3d'];
@@ -843,6 +845,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           worldscene.remove(colliderscene);
         }
         if (this.enablepostprocessing) {
+          this.effects[this.rendermode].camera = this.actualcamera;
           this.composer.render(delta);
         } else {
           if (this.xrsession) {
@@ -1113,6 +1116,8 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.size = [s.w, s.h];
         this.setrendersize(this.size[0], this.size[1]);
       }
+      this.actualcamera.zoom = (Math.abs(window.orientation) == 90 ? 2 : 1);
+      this.actualcamera.updateProjectionMatrix();
       this.rendersystem.setdirty();
 
       return this.size;

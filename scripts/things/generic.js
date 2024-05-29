@@ -1475,10 +1475,18 @@ elation.component.add("engine.things.generic", function() {
     elation.events.fire({type: 'thing_change_queued', element: this});
   }
   this.applyChanges = function() {
-    var s = this.scale;
-    if (s && this.objects['3d']) {
-      this.objects['3d'].visible = this.visible && !(s.x == 0 || s.y == 0 || s.z == 0);
+
+    const s = this.scale, o = this.objects['3d'], ov = o.visible, v = this.visible;
+    if (s && o) {
+      //this.objects['3d'].visible = this.visible && !(s.x == 0 || s.y == 0 || s.z == 0);
+      let scaleMult = s.x * s.y * s.z;
+      if (ov && (!this.visible || scaleMult == 0)) {
+        o.visible = false;
+      } else if (!ov && (this.visible && scaleMult != 0)) {
+        o.visible = true;
+      }
     }
+
     if (this.colliders) {
       this.colliders.position.copy(this.properties.position);
       this.colliders.quaternion.copy(this.properties.orientation);
