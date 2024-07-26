@@ -357,7 +357,7 @@ elation.require([
     this.spawn = function(type, name, spawnargs, parent, autoload) {
       if (elation.utils.isNull(name)) name = type + Math.floor(Math.random() * 1000000);
       if (!spawnargs) spawnargs = {};
-      if (!parent) parent = this.children['default'] || this;
+      //if (!parent) parent = this.children['default'] || this;
       if (typeof autoload == 'undefined') autoload = true;
 
       var logprefix = "";
@@ -388,8 +388,10 @@ elation.require([
           } else {
             currentobj = elation.engine.things[type]({type: realtype, container: elation.html.create(), name: name, engine: this.engine, client: this.client, properties: spawnargs});
           }
-          parent.add(currentobj);
-          //currentobj.reparent(parent);
+          if (parent) {
+            parent.add(currentobj);
+            //currentobj.reparent(parent);
+          }
 
           //console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
         }
