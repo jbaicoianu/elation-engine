@@ -238,6 +238,7 @@ elation.require(["physics.cyclone"], function() {
       let material1 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: false, opacity: .05, blending: THREE.AdditiveBlending, linewidth: 4});
       let material2 = new THREE.LineBasicMaterial({color: 0x00ffff, transparent: true, depthWrite: false, depthTest: true, opacity: .2, blending: THREE.AdditiveBlending, linewidth: 4});
       this.geometry = geo;
+      geo.computeBoundingSphere();
       let obj = new THREE.Object3D();
       obj.add(new THREE.LineSegments(geo, material1));
       obj.add(new THREE.LineSegments(geo, material2));
@@ -428,9 +429,9 @@ elation.require(["physics.cyclone"], function() {
     this.createBoundingPlane = function(collider) {
       var plane = new THREE.PlaneGeometry(1000, 1000);
       var planemat = new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: .04, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: 1, wireframe: false, blending: THREE.AdditiveBlending });
-  // FIXME - this only really works for horizontal planes
-  var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
-  plane.applyMatrix(mat);
+      // FIXME - this only really works for horizontal planes
+      var mat = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2));
+      plane.applyMatrix4(mat);
       var mesh = new THREE.Mesh(plane, planemat);
       return mesh;
     }
@@ -441,7 +442,7 @@ elation.require(["physics.cyclone"], function() {
       var mesh = new THREE.Mesh(cyl, cylmat);
 console.log('my offset', collider.offset, collider);
       let offset = collider.offset.clone();//.multiply(collider.body.scale);
-      cyl.applyMatrix(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
+      cyl.applyMatrix4(new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z));
       return mesh;
     }
     this.createBoundingMesh = function(collider) {
@@ -814,7 +815,7 @@ console.log('ffff', collision.impulses[i], len);
       var size = [bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z];
       var offset = [(bbox.max.x + bbox.min.x) / 2, (bbox.max.y - bbox.min.y) / 2, (bbox.max.z + bbox.min.z) / 2];
       var insidegeo = new THREE.BoxGeometry(size[0], size[1], size[2]);
-      insidegeo.applyMatrix(new THREE.Matrix4().makeTranslation(offset[0], size[1]/2 + offset[1], offset[2]));
+      insidegeo.applyMatrix4(new THREE.Matrix4().makeTranslation(offset[0], size[1]/2 + offset[1], offset[2]));
       var insidemat_side = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.8, transparent: true, depthWrite: false, depthTest: false});
       var insidemat_top = new THREE.MeshPhongMaterial({emissive: 0x006666, color: 0x00ffff, opacity: 0.5, transparent: true, depthWrite: false, depthTest: false});
 
