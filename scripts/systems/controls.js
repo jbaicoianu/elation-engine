@@ -210,7 +210,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       if (!this.container) this.container = (this.engine.systems.render ? this.engine.systems.render.renderer.domElement : window);
       elation.events.add(this.container, "mousedown,mousemove,mouseup,mousewheel,click,DOMMouseScroll,gesturestart,gesturechange,gestureend", this);
       //elation.events.add(this.container, "touchstart,touchmove,touchend, this);
-      elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected", this);
+      elation.events.add(window, "keydown,keyup,webkitGamepadConnected,webkitgamepaddisconnected,MozGamepadConnected,MozGamepadDisconnected,gamepadconnected,gamepaddisconnected,focus", this);
       //elation.events.add(window, "deviceorientation,devicemotion", this);
       elation.events.add(document, "pointerlockchange,webkitpointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerLockChange));
       elation.events.add(document, "pointerlockerror,webkitpointerlockerror,mozpointerlockerror", elation.bind(this, this.pointerLockError));
@@ -999,6 +999,9 @@ return;
       if (idx == -1) {
         this.capturekeys.splice(idx, 1);
       }
+    }
+    this.focus = function(ev) {
+      if (this.state['keyboard_alt']) this.state['keyboard_alt'] = 0; // fix sticky alt key on alt tab
     }
   });
 if (0) {
