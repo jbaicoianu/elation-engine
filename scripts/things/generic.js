@@ -242,6 +242,9 @@ elation.component.add("engine.things.generic", function() {
       configurable: true,
       enumerable: true,
       get: function() { 
+        if ('get' in prop) {
+          return prop.get.call(this);
+        }
         var proxy = this._proxies[propname]; 
         if (proxy) {
           return proxy;
