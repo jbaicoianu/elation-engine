@@ -25,6 +25,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         dynamicfriction:{ type: 'float', default: 2.0, comment: 'Dynamic friction inherent to this object' },
         staticfriction: { type: 'float', default: 1.9, comment: 'Static friction inherent to this object' },
         fov: { type: 'float', default: 75, set: this.updateCamera },
+        turnhead: { type: 'boolean', default: false, set: this.updateHeadLock },
       });
       this.controlstate = this.engine.systems.controls.addContext('player', {
         'move_forward': ['keyboard_w', elation.bind(this, this.updateControls)],
@@ -182,6 +183,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     this.createChildren = function() {
       // place camera at head height
       this.headconstraint = this.head.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(1,0,0), min: -Math.PI/2, max: Math.PI/2 });
+      this.neckconstraint = this.neck.objects.dynamics.addConstraint('axis', { axis: new THREE.Vector3(0,1,0), min: 3/4 * -Math.PI/2, max: 3/4 * Math.PI/2 });
       this.reset_position();
     }
     this.createForces = function() {
@@ -491,7 +493,12 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
             var theta = angular.length();
             angular.divideScalar(theta);
             tmpquat.setFromAxisAngle(angular, theta);
-            this.properties.orientation.multiply(tmpquat);
+            if (this.turnhead) {
+              this.neck.properties.orientation.multiply(tmpquat);
+            } else {
+              this.properties.orientation.multiply(tmpquat);
+              this.neck.properties.orientation.set(0,0,0,1);
+            }
             ev.data.mouse_turn = 0;
             ev.data.mouse_look[0] = 0;
             changed = true;
@@ -720,6 +727,17 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         this.camera.fov = this.fov;
       }
     }
-
+    this.updateHeadLock = function() {
+      if (this.headconstraint && this.neckconstraint) {
+        if (this.turnhead) {
+          //this.headconstraint.enabled = false;
+          this.neckconstraint.min = 3/4 * -Math.PI/2;
+          this.neckconstraint.max = 3/4 * Math.PI/2;
+        } else {
+          this.neckconstraint.min = 0;
+          this.neckconstraint.max = 0;
+        }
+      }
+    }
   }, elation.engine.things.generic);
 });
