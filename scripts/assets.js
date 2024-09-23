@@ -1528,6 +1528,9 @@ console.log('set up hls', hlsConfig);
             if (n.geometry && !n.geometry.attributes.normal) {
               n.geometry.computeVertexNormals();
             }
+            if (n.name.match(/^mixamorig:/)) {
+              n.name = n.name.replace('mixamorig:', '');
+            }
           });
 
           if (modeldata.userData && modeldata.userData.gltfExtensions && modeldata.userData.gltfExtensions.VRM) {
