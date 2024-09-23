@@ -45194,7 +45194,7 @@
 	}
 
 	// Characters [].:/ are reserved for track binding syntax.
-	const _RESERVED_CHARS_RE = '\\[\\]\\.:\\/';
+	const _RESERVED_CHARS_RE = '\\[\\]\\.\\/';
 	const _reservedRe = new RegExp( '[' + _RESERVED_CHARS_RE + ']', 'g' );
 
 	// Attempts to allow node names from any language. ES5's `\w` regexp matches
