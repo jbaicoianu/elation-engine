@@ -21,13 +21,13 @@ elation.require(["physics.cyclone"], function() {
     this.engine_start = function(ev) {
       //console.log("PHYSICS: starting");
       this.system.start({subprocessor: 'cpu', processorargs: { path: 'https://baicoianu.com/~bai/janusweb/build/1.5.32/media/lib/physx/'}});
-      this.lasttime = new Date().getTime();
+      this.lasttime = performance.now();
       if (this.interval) {
         clearInterval(this.interval);
       }
       if (this.async) {
         this.interval = setInterval(elation.bind(this, function() {
-          var now = new Date().getTime();
+          var now = performance.now();
             //this.system.step(this.timescale * (now - this.lasttime) / 1000);
             //if (this.stats) this.stats.update();
           this.step((now - this.lasttime) / 1000);
