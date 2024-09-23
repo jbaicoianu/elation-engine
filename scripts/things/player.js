@@ -222,7 +222,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         'position': [0,1.45,0]
       });
       this.head = this.neck.spawn('generic', this.properties.player_id + '_head', {
-        'position': [0,.3,0],
+        'position': [0,.2,0],
         'mass': 1
       });
 
