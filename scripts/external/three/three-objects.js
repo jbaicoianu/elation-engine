@@ -739,6 +739,13 @@ console.log('skelly data', boneDatas);
 
                 //console.log('found a part to clone!', oldname, parts[0], src, dst, track.name);
                 found = true;
+              } else if (parts[0].indexOf(':') > -1) {
+                let parts2 = parts[0].split(':');
+                if (parts2[1] == src.name || parts[1] == src.uuid) {
+                  parts[0] = dst.name || dst.uuid;
+                  track.name = parts.join('.');
+                  found = true;
+                }
               }
             });
             if (!found) {
