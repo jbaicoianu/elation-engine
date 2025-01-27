@@ -206,7 +206,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       //          The hardcoded offset is also specific to my own personal set-up, and helps to keep leap motion and tracked controllers in sync
       this.tracker = this.head.spawn('objecttracker', null, {player: this, position: [0, -.05, -.185]});
       this.camera = this.head.spawn('camera', this.name + '_camera', { position: [0,0,0], mass: 0.1, player_id: this.properties.player_id } );
-      this.camera.objects['3d'].add(this.ears);
+      this.head.objects['3d'].add(this.ears);
 
       //var camhelper = new THREE.CameraHelper(this.camera.camera);
       //this.engine.systems.world.scene['world-3d'].add(camhelper);
