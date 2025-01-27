@@ -178,10 +178,13 @@ elation.require([
         renderer.getViewport(oldviewport);
         renderer.setViewport(viewport);
         renderer.setRenderTarget(rendertarget);
+        let isXR = renderer.xr.enabled;
+        renderer.xr.enabled = false;
         renderer.render(scene, camera);
         renderer.readRenderTargetPixels(rendertarget, 0, 0, size, size, pixeldata);
         renderer.setRenderTarget(oldrendertarget);
         renderer.setViewport(oldviewport);
+        renderer.xr.enabled = isXR;
 
         texture.encoding = oldencoding;
 
