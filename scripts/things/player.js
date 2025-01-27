@@ -77,6 +77,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
       this.viewmatrix = new THREE.Matrix4();
 
       this.gravityVector = new THREE.Vector3();
+      this.lastjumptime = 0;
 
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.engine_frame));
       elation.events.add(this.engine, 'engine_frame', elation.bind(this, this.handleTargeting));
@@ -332,7 +333,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
               this.frictionForce.update(this.properties.movefriction);
               if (this.controlstate['jump']) {
                 this.jumpForce.update(new THREE.Vector3(0, this.jumpstrength, 0));
-                console.log('jump up!', this.jumpForce.force.toArray());
+                //console.log('jump up!', this.jumpForce.force.toArray());
                 setTimeout(elation.bind(this, function() {
                   this.jumpForce.update(new THREE.Vector3(0, 0, 0));
                 }), this.jumptime);
@@ -640,7 +641,13 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.handleJump = function(ev) {
       var keydown = ev.value;
-      if (!keydown) {
+      if (keydown) {
+        if (ev.timeStamp - this.lastjumptime < 250) {
+          console.log('toggle flying');
+          this.toggle_flying();
+        }
+        this.lastjumptime = ev.timeStamp;
+      } else {
         this.jumpForce.update(new THREE.Vector3(0, 0, 0));
       }
     }
