@@ -1479,7 +1479,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           img = resized.toDataURL('image/jpeg');
         } else if (format == 'png') {
           img = resized.toDataURL('image/png');
-        };
+        } else if (format == 'rgba') {
+          let pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          img = pixels.data;
+        }
         if (img) {
           resolve(img);
         } else {
