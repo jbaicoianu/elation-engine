@@ -80,11 +80,14 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
       }
     },
     initTextureLoaders: function(rendersystem, libpath) {
+      this.rendersystem = rendersystem;
       let renderer = rendersystem.renderer;
+/*
       let basisloader = new THREE.BasisTextureLoader();
       basisloader.setTranscoderPath(libpath);
       basisloader.detectSupport(renderer);
       this.basisloader = basisloader;
+*/
 
       this.ktx2loader = new THREE.KTX2Loader();
       this.ktx2loader.setTranscoderPath(libpath);
@@ -94,7 +97,6 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
       pmremGenerator.compileEquirectangularShader();
       this.pmremGenerator = pmremGenerator;
 
-      this.rendersystem = rendersystem;
     },
     loadAssetPack: function(url, baseurl) {
       this.assetroot = new elation.engine.assets.pack({name: url, src: url, baseurl: baseurl});
