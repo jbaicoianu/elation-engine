@@ -1529,7 +1529,9 @@ elation.component.add("engine.things.generic", function() {
     }
     return orient;
   }
-  this.worldToLocalOrientation = function(orient) {
+  this.worldToLocalOrientation = (function() {
+    const worldorient = new THREE.Quaternion();
+    return function(orient) {
     if (!orient) orient = new THREE.Quaternion();
 /*
     var n = this.parent;
@@ -1541,10 +1543,21 @@ elation.component.add("engine.things.generic", function() {
     return orient.multiply(worldorient);
 */
     // FIXME - this is cheating!
-    var tmpquat = new THREE.Quaternion();
-    return orient.multiply(tmpquat.copy(this.objects.dynamics.orientationWorld).inverse());
-    
-  }
+    //var tmpquat = new THREE.Quaternion();
+    //return orient.multiply(tmpquat.copy(this.objects.dynamics.orientationWorld).invert());
+        if (!orient) orient = new THREE.Quaternion();
+
+        var n = this.parent;
+        worldorient.copy(this.orientation);
+
+        while (n && n.orientation) {
+            worldorient.premultiply(n.orientation);
+            n = n.parent;
+        }
+
+        return orient.multiply(worldorient.invert());
+    }
+  })();
   this.getWorldPosition = function(target) {
     if (!target) target = new THREE.Vector3();
     if (this.objects['3d'].matrixWorldNeedsUpdate) {
