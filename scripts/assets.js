@@ -2185,6 +2185,7 @@ console.log('set up hls', hlsConfig);
 
     _construct: function(args) {
       elation.class.call(this, args);
+      this.instances = [];
       if (this.shadertype == 'shadertoy') {
         this.uniforms = [
           { name: 'iResolution', value: new THREE.Vector3(512, 512, 0, 0) },
@@ -2220,6 +2221,14 @@ console.log('set up hls', hlsConfig);
             this._material.uniforms.iTimeDelta.value = this.uniformsMap.iTimeDelta.value;
             this._material.uniforms.iFrame.value = this.uniformsMap.iFrame.value;
             this._material.uniforms.iDate.value = this.uniformsMap.iDate.value;
+
+            this.instances.forEach(mat => {
+              mat.uniforms.iTime.value = this.uniformsMap.iTime.value;
+              mat.uniforms.iTimeDelta.value = this.uniformsMap.iTimeDelta.value;
+              mat.uniforms.iFrame.value = this.uniformsMap.iFrame.value;
+              mat.uniforms.iDate.value = this.uniformsMap.iDate.value;
+            });
+
             lasttime = now;
           }
         }, 16);
@@ -2251,6 +2260,8 @@ console.log('set up hls', hlsConfig);
               this._material.fragmentShader = `
                 #include <common>
                 #include <uv_pars_fragment>
+                #include <color_pars_fragment>
+                #include <map_pars_fragment>
 
                 uniform vec3      iResolution;           // viewport resolution (in pixels)
                 uniform float     iTime;                 // shader playback time (in seconds)
@@ -2266,10 +2277,15 @@ console.log('set up hls', hlsConfig);
                 uniform vec4      iDate;                 // (year, month, day, time in seconds)
                 uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
 
+                uniform vec3 diffuse;
+                uniform float opacity;
+
                 ${shadercode}
 
                 void main() {
+                  vec4 diffuseColor = vec4(diffuse, opacity);
                   #include <map_fragment>
+                  #include <color_fragment>
 
                   mainImage(gl_FragColor, vUv * iResolution.xy);
                 }
@@ -2277,6 +2293,12 @@ console.log('set up hls', hlsConfig);
             }
             this._material.defines['USE_UV'] = 1;
             this._material.needsUpdate = true;
+            this.instances.forEach(mat => {
+              mat.vertexShader = this._material.vertexShader;
+              mat.fragmentShader = this._material.fragmentShader;
+              mat.defines = this._material.defines;
+              mat.needsUpdate = true;
+            });
           });
         } else {
           this._material.fragmentShader = THREE.ShaderLib.basic.fragmentShader;
@@ -2294,6 +2316,12 @@ console.log('set up hls', hlsConfig);
       if (this.uniforms) {
         this._material.uniforms = this.uniformsMap;
       }
+      this.instances.forEach(mat => {
+        mat.vertexShader = this._material.vertexShader;
+        mat.fragmentShader = this._material.fragmentShader;
+        mat.defines = this._material.defines;
+        mat.needsUpdate = true;
+      });
       this.complete();
     },
     complete: function(data) {
@@ -2317,7 +2345,9 @@ console.log('set up hls', hlsConfig);
       if (!this._material) {
         this.load();
       }
-      return this._material;
+      let mat = this._material.clone();
+      this.instances.push(mat);
+      return mat;
     }
   }, elation.engine.assets.base);
 });
