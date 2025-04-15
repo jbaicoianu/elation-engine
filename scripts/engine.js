@@ -267,7 +267,7 @@ elation.require(deps, function() {
       this.defineAttributes({
         name: { type: 'string', default: 'default' },
         resolution: { type: 'string' },
-        fullsize: { type: 'boolean', default: true },
+        fullsize: { type: 'boolean', default: false },
         crosshair: { type: 'boolean', default: false },
         picking: { type: 'boolean', default: false },
         stats: { type: 'boolean', default: false },
@@ -276,6 +276,10 @@ elation.require(deps, function() {
       });
       if (this.fullsize == 'false') this.fullsize = false; // FIXME - the type coersion should be doing this for us
       //this.name = this.args.name || 'default';
+      //this.setEngineConfig(this.args);
+    }
+    create() {
+      super.create();
       this.enginecfg = {
         systems: [
           "physics",
@@ -290,14 +294,10 @@ elation.require(deps, function() {
         stats: false,
         picking: true,
         fullsize: this.fullsize && this.fullsize != 'false',
-        resolution: null,
+        resolution: this.resolution.split('x'),
         useWebVRPolyfill: true,
         enablePostprocessing: true
       };
-      //this.setEngineConfig(this.args);
-    }
-    create() {
-      super.create();
       this.initEngine();
       this.loadEngine();
     }
