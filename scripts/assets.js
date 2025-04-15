@@ -629,6 +629,15 @@ if (!ENV_IS_BROWSER) return;
 
                   });
                 }
+              } else if (imagetype == 'dds') {
+                let loader = new THREE.DDSLoader();
+                loader.load(this.getProxiedURL(this.src), data => {
+                  data.encoding = THREE.sRGBEncoding;
+                  this._texture = data;
+                  this.loaded = true;
+                  this.uploaded = false;
+                  this.sendLoadEvents();
+                });
               } else {
                 let blob = xhr.response;
                 if (typeof createImageBitmap == 'function' && type != 'image/gif') {
