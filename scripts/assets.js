@@ -973,6 +973,20 @@ newcanvas.style.left = 0;
         this._texture.dispose();
       }
       this.loaded = false;
+    },
+    toCubemap(texture) {
+      let pmremGenerator = new THREE.PMREMGenerator( elation.engine.assets.rendersystem.renderer );
+      pmremGenerator.compileEquirectangularShader();
+      if (!texture) texture = this._texture;
+
+      let cubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
+      let cubemap = cubeRenderTarget.texture;
+
+      //texture.dispose();
+
+      this._texture = cubemap;
+      this.loaded = true;
+      this.uploaded = false;
     }
   }, elation.engine.assets.base);
 
