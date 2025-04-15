@@ -1327,7 +1327,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         fakeev.stopPropagation = ev.stopPropagation.bind(ev);
         this.mousedown(fakeev);
 //      }
-        ev.preventDefault();
+        //ev.preventDefault();
     }
     touchmove(ev) {
       this.mousepos = [ev.touches[0].clientX, ev.touches[0].clientY, document.body.scrollTop];
