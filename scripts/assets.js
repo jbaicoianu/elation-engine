@@ -1455,7 +1455,7 @@ console.log('set up hls', hlsConfig);
       if (this.object) {
         this.loading = false;
         this.loaded = true;
-        this.state = 'complete';
+        this.state = 'processing';
         this._model = new THREE.Group();
         setTimeout(() => this.complete(this.object), 0);
       } else if (this.src) {
