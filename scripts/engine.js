@@ -294,7 +294,7 @@ elation.require(deps, function() {
         stats: false,
         picking: true,
         fullsize: this.fullsize && this.fullsize != 'false',
-        resolution: this.resolution.split('x'),
+        resolution: (this.resolution ? this.resolution.split('x') : []),
         useWebVRPolyfill: true,
         enablePostprocessing: true
       };
