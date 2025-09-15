@@ -9,6 +9,7 @@ elation.require(['engine.things.generic'], function() {
     this.setTexture = function(texture) {
       var scene = this.engine.systems.world.scene['world-3d'];
       scene.background = texture;
+      elation.events.fire({element: this, type: 'skybox_update', bubbles: true});
     }
   }, elation.engine.things.generic);
 });
