@@ -2204,13 +2204,14 @@ console.log('set up hls', hlsConfig);
     fragment_src: false,
     vertex_src: false,
     hasalpha: false,
-    uniforms: {},
+    uniforms: [],
 
     _construct: function(args) {
       elation.class.call(this, args);
       this.instances = [];
+      if (!this.uniforms) this.uniforms = [];
       if (this.shadertype == 'shadertoy') {
-        this.uniforms = [
+        this.uniforms.push.apply(this.uniforms, [
           { name: 'iResolution', value: new THREE.Vector3(512, 512, 0, 0) },
           { name: 'iTime', value: 0 },
           { name: 'iTimeDelta', value: 0 },
@@ -2221,7 +2222,7 @@ console.log('set up hls', hlsConfig);
           { name: 'iChannel1', value: new THREE.Texture() },
           { name: 'iChannel2', value: new THREE.Texture() },
           { name: 'iChannel3', value: new THREE.Texture() },
-        ];
+        ]);
         this.uniformsMap = this.parseUniforms(this.uniforms);
         // FIXME - this hack is used to update the Shadertoy uniforms at 60fps, but it should be abstracted out and driven by the object that's using the shader
         // As a general shader harness, this will give us the means to update uniforms based on custom functions, so we can pass in things like mouse position,
