@@ -13,7 +13,7 @@ elation.require([
     };
     this.persistdelay = 1000;
     this.lastpersist = 0;
-    this.framechanges = [];
+    this.framechanges = new Set();
     this.eventMappedObjects = new Set();
 
     //this.scene['world-3d'].fog = new THREE.FogExp2(0x000000, 0.0000008);
@@ -52,6 +52,7 @@ elation.require([
         }
       }
       var uniques = this.uniques;
+/*
       while (this.framechanges.length > 0) {
         var changed = this.framechanges.pop();
         if (!uniques[changed.id]) {
@@ -59,6 +60,14 @@ elation.require([
           changed.applyChanges();
         }
       }
+*/
+      this.framechanges.forEach(changed => {
+        if (!uniques[changed.id]) {
+          uniques[changed.id] = true;
+          changed.applyChanges();
+        }
+      });
+      this.framechanges.clear();
     }
     this.engine_stop = function(ev) {
       console.log('SHUTDOWN: world');
@@ -127,7 +136,8 @@ elation.require([
     this.thing_change_queued = function(ev) {
       var thing = ev.target;
       if (thing) {
-        this.framechanges.push(thing);
+        //this.framechanges.push(thing);
+        this.framechanges.add(thing);
         this.engine.systems.render.setdirty();
       }
     }
