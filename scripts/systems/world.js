@@ -406,7 +406,7 @@ elation.require([
           //console.log(logprefix + "\t- added new " + type + ": " + name, currentobj);
         }
       } catch (e) {
-        console.error(e.stack);
+        console.error(e);
       }
       return currentobj;
     }
