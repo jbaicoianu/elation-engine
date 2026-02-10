@@ -15,6 +15,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         jumpstrength: { type: 'float', default: 300.0 },
         jumptime: { type: 'float', default: 150 },
         movefriction: { type: 'float', default: 4.0 },
+        drag: { type: 'float', default: 0 },
         defaultplayer: { type: 'boolean', default: true },
         startposition: { type: 'vector3', default: new THREE.Vector3() },
         startorientation: { type: 'quaternion', default: new THREE.Quaternion() },
@@ -22,7 +23,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
         walking: { type: 'boolean', default: true },
         running: { type: 'boolean', default: false },
         flying: { type: 'boolean', default: false, set: function(key, value) { this.properties.flying = value; this.toggle_flying(value); }},
-        dynamicfriction:{ type: 'float', default: 2.0, comment: 'Dynamic friction inherent to this object' },
+        dynamicfriction:{ type: 'float', default: 4.0, comment: 'Dynamic friction inherent to this object' },
         staticfriction: { type: 'float', default: 1.9, comment: 'Static friction inherent to this object' },
         fov: { type: 'float', default: 75, set: this.updateCamera },
         turnhead: { type: 'boolean', default: false, set: this.updateHeadLock },
@@ -189,6 +190,7 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
     }
     this.createForces = function() {
       this.frictionForce = this.objects.dynamics.addForce("friction", this.properties.movefriction);
+      this.dragForce = this.objects.dynamics.addForce("drag", this.properties.drag);
       this.gravityForce = this.objects.dynamics.addForce("gravity", this.gravityVector);
       this.moveForce = this.objects.dynamics.addForce("static", {});
       this.jumpForce = this.objects.dynamics.addForce("static", {});
@@ -333,7 +335,6 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
               this.frictionForce.update(this.properties.movefriction);
               if (this.controlstate['jump']) {
                 this.jumpForce.update(new THREE.Vector3(0, this.jumpstrength, 0));
-                //console.log('jump up!', this.jumpForce.force.toArray());
                 setTimeout(elation.bind(this, function() {
                   this.jumpForce.update(new THREE.Vector3(0, 0, 0));
                 }), this.jumptime);
@@ -686,7 +687,8 @@ elation.require(['engine.things.generic', 'engine.things.camera', 'engine.things
           var intersects = _caster.intersectObjects(objects, true);
           if (intersects.length > 0) {
             for (var i = 0; i < intersects.length; i++) {
-              if (intersects[i].distance <= 1 + this.fatness/* && (intersects[i].object.userData.thing && intersects[i].object.userData.thing !== this) */) {
+              let thing = intersects[i].object.userData.thing;
+              if (thing && thing !== this && intersects[i].distance <= 1 + this.fatness) {
                 return intersects[i];
               }
             }
