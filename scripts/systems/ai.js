@@ -15,7 +15,7 @@ elation.require("engine.things.controller", function() {
           try {
             this.performThink(this.thinkers[i], ev.data);
           } catch (e) {
-            console.log(e.stack);
+            console.log(e);
           }
         }
       }
