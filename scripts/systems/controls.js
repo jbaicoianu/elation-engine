@@ -220,15 +220,16 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
       this.initialized = true;
     }
-    this.addCommands = function(context, commands) {
-      this.contexts[context] = commands;
+    this.addCommands = function(context, commands, target=null) {
+      if (!this.contexts[context]) this.contexts[context] = new Map();
+      this.contexts[context].set(target, commands);
     }
     this.addContexts = function(contexts) {
       for (var k in contexts) {
         this.addContext(k, contexts[k]);
       }
     }
-    this.addContext = function(context, contextargs) {
+    this.addContext = function(context, contextargs, target=null) {
       var commands = {};
       var bindings = {};
       var states = {};
@@ -240,10 +241,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         commands[k] = contextargs[k][1];
         states[k] = 0;
       }
-      this.addCommands(context, commands);
+      this.addCommands(context, commands, target);
       this.addBindings(context, bindings);
-      this.contextstates[context] = states;
-      console.log("[controls] added control context: " + context);
+      if (!this.contextstates[context]) this.contextstates[context] = new Map();
+      this.contextstates[context].set(target, states);
+      console.log("[controls] added control context: " + context, target, states);
 
       // FIXME - context state object should be a JS class, with reset() as a member function
       states._reset = function() {
@@ -257,8 +259,13 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       return states;
     }
     this.activateContext = function(context, target) {
-      if (this.activecontexts.indexOf(context) == -1) {
+      let idx = this.activecontexts.indexOf(context);
+      if (idx == -1) {
         console.log('[controls] activate control context ' + context);
+        this.activecontexts.unshift(context);
+      } else {
+        // Move context to top of the context stack if it's already active
+        this.activecontexts.splice(idx, 1);
         this.activecontexts.unshift(context);
       }
       if (target) {
@@ -307,19 +314,37 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
 //console.log('fired!', firedev);
           for (var j = 0; j < this.activecontexts.length; j++) {
             var context = this.activecontexts[j];
-            var contextstate = this.contextstates[context] || {};
+            let target = this.contexttargets[context] || null;
+            var contextstate;
+            if (this.contextstates[context]) {
+              if (target && this.contextstates[context].has(target)) {
+                contextstate = this.contextstates[context].get(target);
+              } else {
+                contextstate = this.contextstates[context].get(target);
+              }
+            }
+            if (!contextstate) contextstate = {};
             if (this.bindings[context] && this.bindings[context][this.changes[i]]) {
               var action = this.bindings[context][this.changes[i]];
-              if (this.contexts[context][action]) {
+              let contextdef;
+              if (this.contexts[context]) {
+                if (this.contexts[context].has(target)) {
+                  contextdef = this.contexts[context].get(target);
+                } else {
+                  contextdef = this.contexts[context].get(null);
+                }
+              }
+              if (!contextdef) contextdef = {};
+              if (contextdef[action]) {
                 contextstate[action] = this.state[this.changes[i]];
                 //var ev = {timeStamp: now, type: this.changes[i], value: this.state[this.changes[i]], data: contextstate};
                 var ev = {timeStamp: now, type: action, value: this.state[this.changes[i]], data: contextstate};
                 //console.log('call it', this.changes[i], this.bindings[context][this.changes[i]], this.state[this.changes[i]]);
                 if (this.contexttargets[context]) {
                   ev.target = this.contexttargets[context];
-                  this.contexts[context][action].call(ev.data, ev);
+                  contextdef[action].call(ev.data, ev);
                 } else {
-                  this.contexts[context][action](ev);
+                  contextdef[action](ev);
                 }
                 break; // Event was handled, no need to check other active contexts
               } else {
