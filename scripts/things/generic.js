@@ -54,14 +54,16 @@ elation.component.add("engine.things.generic", function() {
       'acceleration':   { type: 'vector3', default: [0, 0, 0], comment: 'Object acceleration (m/s^2)' },
       'angular':        { type: 'vector3', default: [0, 0, 0], comment: 'Object angular velocity (radians/sec)' },
       'angularacceleration': { type: 'vector3', default: [0, 0, 0], comment: 'Object angular acceleration (radians/sec^2)' },
-      'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)' },
+      'mass':           { type: 'float', default: 0.0, comment: 'Object mass (kg)', set: this.updatePhysics },
       'exists':         { type: 'bool', default: true, comment: 'Exists' },
       'visible':        { type: 'bool', default: true, comment: 'Is visible' },
       'physical':       { type: 'bool', default: true, comment: 'Simulate physically' },
       'collidable':     { type: 'bool', default: true, comment: 'Can crash into other things' },
-      'restitution':    { type: 'float', default: 0.5, comment: 'Amount of energy preserved after each bounce', set: this.updatePhysics },
-      'dynamicfriction':{ type: 'float', default: 0.0, comment: 'Dynamic friction inherent to this object', set: this.updatePhysics },
-      'staticfriction': { type: 'float', default: 0.0, comment: 'Static friction inherent to this object', set: this.updatePhysics },
+      'restitution':    { type: 'float', default: 0.8, comment: 'Amount of energy preserved after each bounce', set: this.updatePhysics },
+      'dynamicfriction':{ type: 'float', default: 0.2, comment: 'Dynamic friction inherent to this object', set: this.updatePhysics },
+      'staticfriction': { type: 'float', default: 0.2, comment: 'Static friction inherent to this object', set: this.updatePhysics },
+      'rollingfriction': { type: 'float', default: 0.5, comment: 'Rolling friction inherent to this object', set: this.updatePhysics },
+
       //'fog':            { type: 'bool', default: true, comment: 'Affected by fog' },
       'shadow':         { type: 'bool', default: true, refreshMaterial: true, comment: 'Casts and receives shadows' },
       'wireframe':      { type: 'bool', default: false, refreshMaterial: true, comment: 'Render this object as a wireframe' },
@@ -754,6 +756,7 @@ elation.component.add("engine.things.generic", function() {
         material: {
           dynamicfriction: this.properties.dynamicfriction,
           staticfriction: this.properties.staticfriction,
+          rollingfriction: this.properties.rollingfriction,
         },
         object: this
       });
@@ -1919,9 +1922,11 @@ elation.component.add("engine.things.generic", function() {
   }
   this.updatePhysics = function() {
     if (this.objects.dynamics) {
+      this.objects.dynamics.mass = this.properties.mass;
       this.objects.dynamics.restitution = this.restitution;
       this.objects.dynamics.material.dynamicfriction = this.dynamicfriction;
       this.objects.dynamics.material.staticfriction = this.staticfriction;
+      this.objects.dynamics.material.rollingfriction = this.rollingfriction;
     }
   }
 });
