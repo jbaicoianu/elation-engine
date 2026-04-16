@@ -1387,7 +1387,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
           }
         }
 
-        if (bubble) {
+        if (bubble && element) {
           //console.log('bubble it!', event, element);
           var ptr = element;
           while (ptr = ptr.parent) {
