@@ -150,6 +150,13 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.idx = (this.idx + 1) % this.frames;
         //this.average();
       }
+      this.reset = function() {
+        this.x = 0;
+        this.y = 0;
+        this.history.x = [];
+        this.history.y = [];
+        this.idx = 0;
+      }
       this.average = function() {
         var x = 0,
             y = 0;
@@ -656,6 +663,11 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
         this.state['pointerlock'] = this.pointerLockActive;
         this.changes.push('pointerlock');
       }
+      // Entering OR exiting pointer lock, the browser delivers a mousemove
+      // whose movementX/Y is the discontinuity between the virtual locked
+      // position and the restored real cursor (huge on ESC -> view snaps to
+      // sky/ground). Drop the next look delta and flush the smoothing buffer.
+      this._skipMouseDelta = true;
     }
     this.pointerLockError = function(ev) {
       console.error('[controls] Pointer lock error');
@@ -673,6 +685,20 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       return ret;
     }
     this.getMouseDelta = function(ev) {
+      // #2: swallow the first mousemove after any pointer-lock transition and
+      // flush the smoothing history so the unlock spike can't leak in.
+      if (this._skipMouseDelta) {
+        this._skipMouseDelta = false;
+        this.mousesmooth.reset();
+        return [0, 0];
+      }
+      // #1: movementX/Y look deltas only make sense while pointer-locked.
+      // Outside of lock, ignore them (drag-look still works because it holds
+      // mouse button 0) so a stray post-unlock delta can't rotate the view.
+      if (!this.pointerLockActive && !this.state['mouse_button_0']) {
+        return [0, 0];
+      }
+
       var width = this.container.offsetWidth || this.container.innerWidth,
           height = this.container.offsetHeight || this.container.innerHeight;
       var scaleX = this.settings.mouse.sensitivity * (this.settings.mouse.invertX ? -1 : 1),
