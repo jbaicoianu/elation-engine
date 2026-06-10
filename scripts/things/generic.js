@@ -1133,7 +1133,9 @@ elation.component.add("engine.things.generic", function() {
         node.receiveShadow = this.properties.shadow;
       }
       if (node.material) {
-        node.material.fog = this.properties.fog;
+        if (!(node.material instanceof THREE.ShaderMaterial)) {
+          node.material.fog = this.properties.fog;
+        }
         node.material.wireframe = this.properties.wireframe;
       }
     }));
