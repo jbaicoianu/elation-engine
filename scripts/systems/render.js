@@ -338,6 +338,13 @@ elation.require([
         this.style.height = '100%';
         this.canvas.style.width = '100%';
         this.canvas.style.height = '100%';
+      } else {
+        // Take the canvas out of flow so it doesn't drive the view element's content
+        // height; the buffer is sized by setrendersize (attributes + transform), and the
+        // element can then collapse so getsize measures the real containing block.
+        this.canvas.style.position = 'absolute';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
       }
       elation.events.add(window, "resize", this);
       elation.events.add(window, "orientationchange", ev => this.resize(true));
@@ -1099,12 +1106,27 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       return false;
     }
+    findFillSize() {
+      // fullsize means "fill whatever area we're given": climb toward the root and use
+      // the first ancestor that has a laid-out height, so we measure the actual
+      // containing block. Fall back to the window only if nothing in the chain has a
+      // non-zero height (e.g. before layout, or an unconstrained document).
+      var node = this;
+      while (node) {
+        if (node.offsetHeight > 0) return {w: node.offsetWidth, h: node.offsetHeight};
+        node = node.parentElement;
+      }
+      return {w: window.innerWidth, h: window.innerHeight};
+    }
     getsize(force) {
-      //this.size = [this.offsetWidth, this.offsetHeight];
-      var s = (this.fullsize ? {w: window.innerWidth, h: window.innerHeight, bar: 2} :
-              (this.resolution ? {w: this.resolution[0], h: this.resolution[1], foo: 1} :
-               elation.html.dimensions(this)
-              ));
+      var s;
+      if (this.fullsize) {
+        s = this.findFillSize();
+      } else if (this.resolution) {
+        s = {w: this.resolution[0], h: this.resolution[1]};
+      } else {
+        s = elation.html.dimensions(this);
+      }
       if (this.xrsession) {
         let xrlayer = this.getXRBaseLayer(this.xrsession);
         if (xrlayer) {
@@ -1237,9 +1259,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     mousemove(ev, ignorePointerLock) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
       if (el && !ignorePointerLock) {
-        var dims = elation.html.dimensions(el);
-        this.mousepos[0] = Math.round(dims.w / 2);
-        this.mousepos[1] = Math.round(dims.h / 2);
+        // No cursor while locked: point at the canvas center in viewport coordinates,
+        // so the picker's canvas-offset subtraction lands at the center (NDC 0,0).
+        var rect = el.getBoundingClientRect();
+        this.mousepos[0] = rect.left + rect.width / 2;
+        this.mousepos[1] = rect.top + rect.height / 2;
         this.mousepos[2] = document.body.scrollTop;
 
         if (this.rendermode == 'oculus') {
@@ -1444,9 +1468,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
     pointerlockchange(ev) {
       var el = document.pointerLockElement || document.mozPointerLockElement;
       if (el) {
-        var dims = elation.html.dimensions(el);
-        this.mousepos[0] = Math.round(dims.w / 2);
-        this.mousepos[1] = Math.round(dims.h / 2);
+        // Point at the canvas center in viewport coordinates (see mousemove) so picking
+        // lands at the center while locked, regardless of where the canvas sits.
+        var rect = el.getBoundingClientRect();
+        this.mousepos[0] = rect.left + rect.width / 2;
+        this.mousepos[1] = rect.top + rect.height / 2;
         this.pickingactive = true;
       }
     }
@@ -1850,8 +1876,7 @@ console.log('dun it', msaafilter);
     }
     this.updatePickingObject = function(force) {
       if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
-        //var dims = elation.html.dimensions(this.view.container);
-        var dims = {x: this.view.size[0], y: this.view.size[1]};
+        var dims = elation.html.dimensions(this.view.canvas) || {x: 0, y: 0};
         this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
         this.lastmousepos[0] = this.view.mousepos[0];
         this.lastmousepos[1] = this.view.mousepos[1];
@@ -1999,10 +2024,11 @@ console.log('dun it', msaafilter);
     }
     this.updatePickingObject = function(force) {
       if (force || (this.view.picking && this.view.pickingactive)) { // && (this.mousepos[0] != this.lastmousepos[0] || this.mousepos[1] != this.lastmousepos[1] || this.mousepos[2] != this.lastmousepos[2]))) {
-        //var dims = elation.html.dimensions(this.view.container);
-        var dims = {x: 0, y: 0};
-        //var dims = {x: this.view.size[0], y: this.view.size[1]};
-        this.pick(this.view.mousepos[0] - dims.x, this.view.mousepos[1] - dims.y);
+        // mousepos is viewport-relative; subtract the canvas's on-screen position so
+        // picking is correct when the view is offset/constrained by CSS rather than
+        // filling the window. (Its size comes from this.view.size, kept current by getsize.)
+        var rect = this.view.canvas.getBoundingClientRect();
+        this.pick(this.view.mousepos[0] - rect.left, this.view.mousepos[1] - rect.top);
         this.lastmousepos[0] = this.view.mousepos[0];
         this.lastmousepos[1] = this.view.mousepos[1];
         this.lastmousepos[2] = this.view.mousepos[2];
