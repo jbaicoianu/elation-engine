@@ -132,8 +132,11 @@ elation.require([
       //this.render();
     }
     this.render = function(time, frame) {
+      var controls = this.engine.systems.controls;
+      var pllost = controls ? !!(controls.pointerLockWanted && !controls.pointerLockActive) : false;
       for (var k in this.views) {
         this.views[k].updatePickingObject();
+        if (this.views[k].setPointerLockPrompt) this.views[k].setPointerLockPrompt(pllost);
         if (this.views[k].stats) {
           this.views[k].stats.update();
         }
@@ -353,6 +356,11 @@ elation.require([
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
       elation.events.add(document, "pointerlockchange,mozpointerlockchange", elation.bind(this, this.pointerlockchange));
       elation.events.add(this, "dragover,drag,dragenter,dragleave,dragstart,dragend,drop", elation.bind(this, this.proxyEvent));
+
+      // "Click to focus" prompt — shown via the state_pointerlock_lost class on this
+      // view when pointer lock is wanted but not held (toggled in the render loop).
+      this.pointerlockprompt = elation.html.create({tag: 'div', classname: 'engine_view_pointerlock_prompt', append: this});
+      this.pointerlockprompt.innerHTML = '<span>Click to focus</span>';
 
       if (this.rendersystem.renderer.domElement && !this.rendersystem.renderer.domElement.parentNode) {
         this.appendChild(this.rendersystem.renderer.domElement);
@@ -1106,6 +1114,13 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
       return false;
     }
+    setPointerLockPrompt(lost) {
+      lost = !!lost;
+      if (lost === this._pointerLockPromptShown) return;
+      this._pointerLockPromptShown = lost;
+      if (lost) this.addclass('state_pointerlock_lost');
+      else this.removeclass('state_pointerlock_lost');
+    }
     findFillSize() {
       // fullsize means "fill whatever area we're given": climb toward the root and use
       // the first ancestor that has a laid-out height, so we measure the actual
@@ -1167,6 +1182,13 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         this.rendersystem.renderer.setPixelRatio(pixelratio);
       }
       this.rendersystem.renderer.setSize(scaledwidth, scaledheight, false);
+      // Keep the pointer-lock prompt sized to the displayed canvas — the view
+      // element itself can be collapsed (the canvas is absolutely positioned), so
+      // it can't position children by % / inset.
+      if (this.pointerlockprompt) {
+        this.pointerlockprompt.style.width = width + 'px';
+        this.pointerlockprompt.style.height = height + 'px';
+      }
       if (this.composer) {
         this.composer.setSize(scaledwidth, scaledheight);  
       }
@@ -1407,7 +1429,11 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
             bubble = false;
           }
           if (fired[i].returnValue === false || ev.returnValue === false) {
-            ev.preventDefault();
+            // proxyEvent is called both with real DOM events (drag/drop) and with
+            // synthetic plain-object events (the faked click/mouseup/mouseout from
+            // picking), which have no preventDefault. Guard so a cancelled handler
+            // doesn't throw on the synthetic event.
+            if (typeof ev.preventDefault === 'function') ev.preventDefault();
           }
         }
 
