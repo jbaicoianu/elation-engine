@@ -351,6 +351,17 @@ elation.require([
       }
       elation.events.add(window, "resize", this);
       elation.events.add(window, "orientationchange", ev => this.resize(true));
+      // getsize() runs once at init, but a docked/CSS-laid-out view's containing
+      // block may not have its final size yet (grid/flex settling, async
+      // stylesheet) — which freezes the view at a collapsed size until a window
+      // resize. Observe the element and its container so we re-measure when layout
+      // actually settles. ResizeObserver fires after layout, and getsize() no-ops
+      // when the size is unchanged, so redundant callbacks are cheap.
+      if (typeof ResizeObserver !== 'undefined') {
+        this._sizeobserver = new ResizeObserver(() => this.getsize());
+        this._sizeobserver.observe(this);
+        if (this.parentElement) this._sizeobserver.observe(this.parentElement);
+      }
       elation.events.add(document.body, "mouseenter,mouseleave", this);
       elation.events.add(this.canvas, "mouseover,mousedown,mousemove,mouseup,click", this);
       elation.events.add(this.canvas, "mousewheel,touchstart,touchmove,touchend", this);
