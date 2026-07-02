@@ -37,6 +37,30 @@ engine-systems-render-view {
   z-index: 50;
   pointer-events: none;
 }
+/* "Click to focus" prompt — shown (via state_pointerlock_lost on the view) when
+   pointer lock is wanted but not held. Purely visual; clicking the view re-locks. */
+.engine_view_pointerlock_prompt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  pointer-events: none;
+}
+.state_pointerlock_lost .engine_view_pointerlock_prompt {
+  display: flex;
+}
+.engine_view_pointerlock_prompt > span {
+  background: rgba(0, 0, 0, .72);
+  color: #fff;
+  font-family: sans-serif;
+  font-size: 15px;
+  padding: .55em 1.15em;
+  border-radius: 6px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .5);
+}
 .state_cursor .engine_view_crosshair {
 }
 .engine_view_rendermode_oculus .engine_view_crosshair {

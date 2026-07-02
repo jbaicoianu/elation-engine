@@ -627,8 +627,9 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.enablePointerLock = function(enable) {
       this.pointerLockEnabled = enable;
-      if (!this.pointerLockEnabled && this.pointerLockActive) {
-        this.releasePointerLock();
+      if (!this.pointerLockEnabled) {
+        this.pointerLockWanted = false;
+        if (this.pointerLockActive) this.releasePointerLock();
       }
     }
     this.requestPointerLock = function() {
@@ -638,7 +639,23 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
           domel.requestPointerLock = domel.requestPointerLock || domel.mozRequestPointerLock || domel.webkitRequestPointerLock;
         }
         if (domel.requestPointerLock) {
-          domel.requestPointerLock();
+          // This operation wants the lock; the "click to focus" prompt shows until
+          // it's actually held (pointerLockWanted && !pointerLockActive).
+          this.pointerLockWanted = true;
+          this.pointerLockDenied = false;
+          // Chrome returns a promise that rejects during the brief post-exit
+          // cooldown ("user has exited the lock before this request was completed").
+          // Swallow it (the prompt stays up so the user can click again) instead of
+          // letting it surface as an uncaught SecurityError.
+          try {
+            var result = domel.requestPointerLock();
+            if (result && typeof result.catch == 'function') {
+              result.catch(elation.bind(this, function(e) { this.pointerLockDenied = true; this.changes.push('pointerlock'); }));
+            }
+          } catch (e) {
+            this.pointerLockDenied = true;
+            this.changes.push('pointerlock');
+          }
           return true;
         }
       }
@@ -646,6 +663,8 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
     }
     this.releasePointerLock = function() {
       this.pointerLockActive = false;
+      this.pointerLockWanted = false;
+      this.pointerLockDenied = false;
       var lock = this.getPointerLockElement();
       if (lock) {
         document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock || document.webkitExitPointerLock;
@@ -656,6 +675,7 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       var lock = this.getPointerLockElement();
       if (lock && !this.pointerLockActive) {
         this.pointerLockActive = true;
+        this.pointerLockDenied = false;
         this.state['pointerlock'] = this.pointerLockActive;
         this.changes.push('pointerlock');
       } else if (!lock && this.pointerLockActive) {
@@ -830,9 +850,10 @@ elation.require(['ui.window', 'ui.panel', 'ui.toggle', 'ui.slider', 'ui.label', 
       }
       if (ev.button === 0 && !this.getPointerLockElement() && performance.now() - this.mousedowntime <= 500) {
         if (this.requestPointerLock()) {
-          //this.cancelclick = true;
-          //ev.stopPropagation();
-          //ev.preventDefault();
+          // This click re-acquired (or re-requested) the lock — consume it so it
+          // doesn't also fire as a world/UI click. The `click` handler cancels it;
+          // cancelclick resets on the next mousedown.
+          this.cancelclick = true;
         }
       }
     }
