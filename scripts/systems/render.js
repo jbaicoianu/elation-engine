@@ -1133,13 +1133,20 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       else this.removeclass('state_pointerlock_lost');
     }
     findFillSize() {
-      // fullsize means "fill whatever area we're given": climb toward the root and use
-      // the first ancestor that has a laid-out height, so we measure the actual
-      // containing block. Fall back to the window only if nothing in the chain has a
-      // non-zero height (e.g. before layout, or an unconstrained document).
-      var node = this;
-      while (node) {
-        if (node.offsetHeight > 0) return {w: node.offsetWidth, h: node.offsetHeight};
+      // fullsize means "fill whatever area we're given". The view element is
+      // deliberately collapsed in fullsize mode (the canvas is position:absolute, out
+      // of flow), so measure its CONTAINER, not itself -- start the climb at the
+      // parent. Use the nearest ancestor that establishes a real, laid-out height.
+      // A content-collapsed chain (an unconstrained page whose html/body/container
+      // have no established height -- only a few px of in-flow chrome) reports a
+      // sliver far below any usable viewer; in that case fill the window, which is
+      // what a fullsize view wants. The old code started at `this` and accepted the
+      // first offsetHeight > 0, so a few-px collapse short-circuited the window
+      // fallback and sized the canvas to a sliver on resize.
+      var MIN_REAL_H = 64;   // px: below this a container is treated as collapsed, not a real box
+      var node = this.parentElement;
+      while (node && node !== document.documentElement) {
+        if (node.offsetHeight >= MIN_REAL_H) return {w: node.offsetWidth, h: node.offsetHeight};
         node = node.parentElement;
       }
       return {w: window.innerWidth, h: window.innerHeight};
