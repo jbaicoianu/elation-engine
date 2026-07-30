@@ -1069,7 +1069,7 @@ return;
     }
     this.disableKeyboardCapture = function(key) {
       let idx = this.capturekeys.indexOf(key);
-      if (idx == -1) {
+      if (idx != -1) {
         this.capturekeys.splice(idx, 1);
       }
     }
