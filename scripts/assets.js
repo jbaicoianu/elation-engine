@@ -190,6 +190,22 @@ if (!ENV_IS_BROWSER) return;
       if (!url || !elation.engine.assets.corsproxy) return false;
       return url.indexOf(elation.engine.assets.corsproxy) == 0;
     },
+    getProxiedURL: function(url) {
+      // Route a URL through the CORS proxy only when that can actually help:
+      // never for blob/data URLs, already-proxied URLs, or same-origin
+      // content (which the proxy may not even be able to reach - e.g. a dev
+      // server on a LAN address).
+      let proxy = elation.engine.assets.corsproxy;
+      if (!proxy || !url) return url;
+      if (url.indexOf(proxy) == 0 || url.indexOf('blob:') == 0 || url.indexOf('data:') == 0) return url;
+      try {
+        let parsed = new URL(url, self.location.href);
+        if (parsed.origin == self.location.origin) return url;
+        return proxy + parsed.href;
+      } catch (e) {
+        return url;
+      }
+    },
     getFullURL: function(url, baseurl=null) {
       if (!url) url = '';
       if (!baseurl) baseurl = '';
