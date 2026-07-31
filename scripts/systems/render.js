@@ -1268,9 +1268,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.mousepos = [ev.clientX, ev.clientY, document.body.scrollTop];
     }
     mousedown(ev) {
+      this.mousebuttons = ev.buttons;
       if (this.pickingactive && this.picker.pickingobject) {
         this.cancelclick = false;
-        var newev = {type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey};
+        var newev = {type: 'mousedown', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, buttons: ev.buttons, shiftKey: ev.shiftKey, altKey: ev.altKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey};
         /*
         var fired = elation.events.fire(newev);
         for (var i = 0; i < fired.length; i++) {
@@ -1297,6 +1298,10 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
     }
     mousemove(ev, ignorePointerLock) {
+      // Track held-button state so the picker can stamp it onto the
+      // object-level mousemove events it synthesizes (drag interactions on
+      // proxied 2D surfaces depend on seeing buttons while dragging)
+      if (typeof ev.buttons != 'undefined') this.mousebuttons = ev.buttons;
       var el = document.pointerLockElement || document.mozPointerLockElement;
       if (el && !ignorePointerLock) {
         // No cursor while locked: point at the canvas center in viewport coordinates,
@@ -1340,8 +1345,9 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       }
     }
     mouseup(ev) {
+      this.mousebuttons = ev.buttons;
       if (this.pickingactive && this.picker.pickingobject) {
-        var newev = {type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button};
+        var newev = {type: 'mouseup', element: this.getParentThing(this.picker.pickingobject), data: this.getPickingData(this.picker.pickingobject, [ev.clientX, ev.clientY]), clientX: ev.clientX, clientY: ev.clientY, button: ev.button, buttons: ev.buttons};
         /*
         var fired = elation.events.fire(newev);
         for (var i = 0; i < fired.length; i++) {
@@ -2143,7 +2149,7 @@ console.log('dun it', msaafilter);
           }
         }
         if (!this.lastmove || !this.lastmove.equals(hit.point)) {
-          var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
+          var moveevent = {type: "mousemove", element: pickedthing, data: hit, clientX: x, clientY: y, buttons: this.view.mousebuttons || 0, shiftKey: this.keystates.shiftKey, altKey: this.keystates.altKey, ctrlKey: this.keystates.ctrlKey, metaKey: this.keystates.metaKey};
           this.view.proxyEvent(moveevent);
 
           this.lastmove = hit.point;
