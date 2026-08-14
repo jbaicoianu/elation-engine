@@ -1,0 +1,93 @@
+# Local patches to three.js, applied by utils/build-three.sh before bundling.
+# Ported from the patches carried in the old vendored UMD build (git history:
+# 773aa5f serializeImage image.src fallback for assetworker image stubs
+# 61df16b-era VideoTexture null/stub video guards
+# eee6fff PMREMGenerator XR backport (native in newer three; drop on upgrade)
+# d72138c keep ':' in animation track node names
+# 6472d92 silence PropertyBinding missing-node error)
+# Applies cleanly to three@0.150.1 build/three.module.js.
+--- a/three.module.js
++++ b/three.module.js
+@@ -3220,6 +3220,10 @@
+ 				type: image.data.constructor.name
+ 			};
+ 
++		} else if ( image.src ) {
++
++			return image.src;
++
+ 		} else {
+ 
+ 			console.warn( 'THREE.Texture: Unable to serialize Texture.' );
+@@ -15394,6 +15398,7 @@
+ const _flatCamera = /*@__PURE__*/ new OrthographicCamera();
+ const _clearColor = /*@__PURE__*/ new Color();
+ let _oldTarget = null;
++let _oldXrEnabled = false;
+ 
+ // Golden Ratio
+ const PHI = ( 1 + Math.sqrt( 5 ) ) / 2;
+@@ -15459,6 +15464,9 @@
+ 	fromScene( scene, sigma = 0, near = 0.1, far = 100 ) {
+ 
+ 		_oldTarget = this._renderer.getRenderTarget();
++		_oldXrEnabled = this._renderer.xr.enabled;
++
++		this._renderer.xr.enabled = false;
+ 
+ 		this._setSize( 256 );
+ 
+@@ -15572,6 +15580,7 @@
+ 	_cleanup( outputTarget ) {
+ 
+ 		this._renderer.setRenderTarget( _oldTarget );
++		this._renderer.xr.enabled = _oldXrEnabled;
+ 		outputTarget.scissorTest = false;
+ 		_setViewport( outputTarget, 0, 0, outputTarget.width, outputTarget.height );
+ 
+@@ -15590,6 +15599,9 @@
+ 		}
+ 
+ 		_oldTarget = this._renderer.getRenderTarget();
++		_oldXrEnabled = this._renderer.xr.enabled;
++
++		this._renderer.xr.enabled = false;
+ 
+ 		const cubeUVRenderTarget = renderTarget || this._allocateTargets();
+ 		this._textureToCubeUV( texture, cubeUVRenderTarget );
+@@ -31499,7 +31511,7 @@
+ 
+ 		}
+ 
+-		if ( 'requestVideoFrameCallback' in video ) {
++		if ( video && 'requestVideoFrameCallback' in video ) {
+ 
+ 			video.requestVideoFrameCallback( updateVideo );
+ 
+@@ -31516,7 +31528,7 @@
+ 	update() {
+ 
+ 		const video = this.image;
+-		const hasVideoFrameCallback = 'requestVideoFrameCallback' in video;
++		const hasVideoFrameCallback = video && 'requestVideoFrameCallback' in video;
+ 
+ 		if ( hasVideoFrameCallback === false && video.readyState >= video.HAVE_CURRENT_DATA ) {
+ 
+@@ -45174,7 +45186,7 @@
+ }
+ 
+ // Characters [].:/ are reserved for track binding syntax.
+-const _RESERVED_CHARS_RE = '\\[\\]\\.:\\/';
++const _RESERVED_CHARS_RE = '\\[\\]\\.\\/';
+ const _reservedRe = new RegExp( '[' + _RESERVED_CHARS_RE + ']', 'g' );
+ 
+ // Attempts to allow node names from any language. ES5's `\w` regexp matches
+@@ -45611,7 +45623,7 @@
+ 		// ensure there is a value node
+ 		if ( ! targetObject ) {
+ 
+-			console.error( 'THREE.PropertyBinding: Trying to update node for track: ' + this.path + ' but it wasn\'t found.' );
++			//console.error( 'THREE.PropertyBinding: Trying to update node for track: ' + this.path + ' but it wasn\'t found.' );
+ 			return;
+ 
+ 		}
