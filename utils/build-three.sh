@@ -13,12 +13,14 @@ DEST=scripts/external/three/three.js
 WORKDIR=$(mktemp -d -t three-build.XXXXXX)
 trap 'rm -rf -- "$WORKDIR"' EXIT
 
-# Apply local patches to a copy of the ESM build. If a hunk fails after a
-# version bump, patch exits nonzero — resolve the conflict and refresh the
-# patch file rather than shipping an unpatched build.
+# Apply local patches to a copy of the ESM build. Since r181 the build is
+# split: three.module.js re-exports from three.core.js (where the patched
+# classes live); both are copied so relative imports resolve in the workdir.
+# If a hunk fails after a version bump, patch exits nonzero — resolve the
+# conflict and refresh the patch file rather than shipping an unpatched build.
 cp utils/three-entry.js "$WORKDIR/"
-cp node_modules/three/build/three.module.js "$WORKDIR/"
-patch --silent "$WORKDIR/three.module.js" < utils/patches/three.module.js.patch
+cp node_modules/three/build/three.module.js node_modules/three/build/three.core.js "$WORKDIR/"
+patch --silent "$WORKDIR/three.core.js" < utils/patches/three.core.js.patch
 
 # Bundle from inside the work dir so the source paths esbuild embeds as
 # comments are stable relative names, keeping the output deterministic

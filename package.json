@@ -6,20 +6,23 @@
   "author": "James Baicoianu",
   "license": "MIT",
   "scripts": {
-    "build:three": "./utils/build-three.sh"
+    "build:three": "./utils/build-three.sh",
+    "build:addons": "./utils/build-addons.sh"
   },
   "devDependencies": {
+    "@pixiv/three-vrm": "3.5.5",
     "esbuild": "0.21.5",
-    "three": "0.150.1"
+    "three": "0.185.1",
+    "three-icosa": "0.4.2-alpha.18"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/jbaicoianu/elation-engine"
   },
   "dependencies": {
+    "cyclone-physics": "*",
     "elation": ">=2.2.10",
-    "elation-share": "*",
-    "cyclone-physics": "*"
+    "elation-share": "*"
   },
   "keywords": [
     "elation",
