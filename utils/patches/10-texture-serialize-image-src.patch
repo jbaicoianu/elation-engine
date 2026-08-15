@@ -1,0 +1,16 @@
+# serializeImage: fall back to image.src for non-HTMLImageElement stub
+# images, as produced by the assetworker's ImageLoader override.
+# Carried since 773aa5f (pre-r140 era).
+--- a/three.core.js
++++ b/three.core.js
+@@ -7224,6 +7224,10 @@
+ 				type: image.data.constructor.name
+ 			};
+ 
++		} else if ( image.src ) {
++
++			return image.src;
++
+ 		} else {
+ 
+ 			warn( 'Texture: Unable to serialize Texture.' );

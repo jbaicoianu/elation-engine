@@ -1,0 +1,13 @@
+# PropertyBinding: don't strip ':' from animation track node names -
+# Janus content uses colons in bone/object names. Carried since d72138c.
+--- a/three.core.js
++++ b/three.core.js
+@@ -52460,7 +52460,7 @@
+ }
+ 
+ // Characters [].:/ are reserved for track binding syntax.
+-const _RESERVED_CHARS_RE = '\\[\\]\\.:\\/';
++const _RESERVED_CHARS_RE = '\\[\\]\\.\\/';
+ const _reservedRe = new RegExp( '[' + _RESERVED_CHARS_RE + ']', 'g' );
+ 
+ // Attempts to allow node names from any language. ES5's `\w` regexp matches

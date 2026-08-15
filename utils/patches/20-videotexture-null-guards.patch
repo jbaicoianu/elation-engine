@@ -1,0 +1,22 @@
+# VideoTexture: guard against null/stub video objects (assetworker
+# creates textures around fake video stubs). Carried since the r131 era.
+--- a/three.core.js
++++ b/three.core.js
+@@ -28619,7 +28619,7 @@
+ 
+ 		}
+ 
+-		if ( 'requestVideoFrameCallback' in video ) {
++		if ( video && 'requestVideoFrameCallback' in video ) {
+ 
+ 			this._requestVideoFrameCallbackId = video.requestVideoFrameCallback( updateVideo );
+ 
+@@ -28642,7 +28642,7 @@
+ 	update() {
+ 
+ 		const video = this.image;
+-		const hasVideoFrameCallback = 'requestVideoFrameCallback' in video;
++		const hasVideoFrameCallback = video && 'requestVideoFrameCallback' in video;
+ 
+ 		if ( hasVideoFrameCallback === false && video.readyState >= video.HAVE_CURRENT_DATA ) {
+ 

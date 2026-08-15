@@ -16,11 +16,21 @@ trap 'rm -rf -- "$WORKDIR"' EXIT
 # Apply local patches to a copy of the ESM build. Since r181 the build is
 # split: three.module.js re-exports from three.core.js (where the patched
 # classes live); both are copied so relative imports resolve in the workdir.
-# If a hunk fails after a version bump, patch exits nonzero — resolve the
-# conflict and refresh the patch file rather than shipping an unpatched build.
+#
+# Patches live one-per-concern in utils/patches/, applied in filename order
+# (init.d style: NN-description.patch). Each is a -p1 unified diff whose
+# a/<file> header names its target, so the directory can patch any copied
+# file. On a version bump a failing patch aborts the build and names itself -
+# rework or retire just that concern, and regenerate against the pristine
+# source (offsets between patches are absorbed by patch's fuzz handling).
 cp utils/three-entry.js "$WORKDIR/"
 cp node_modules/three/build/three.module.js node_modules/three/build/three.core.js "$WORKDIR/"
-patch --silent "$WORKDIR/three.core.js" < utils/patches/three.core.js.patch
+for P in utils/patches/*.patch; do
+  if ! patch --silent -p1 -d "$WORKDIR" < "$P"; then
+    echo "PATCH FAILED: $P - resolve the conflict or retire the patch" >&2
+    exit 1
+  fi
+done
 
 # Bundle from inside the work dir so the source paths esbuild embeds as
 # comments are stable relative names, keeping the output deterministic

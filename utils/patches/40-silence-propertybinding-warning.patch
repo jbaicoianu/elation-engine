@@ -1,0 +1,13 @@
+# PropertyBinding: silence the missing-node warning - fires per
+# mismatched track on retargeted animations. Carried since 6472d92.
+--- a/three.core.js
++++ b/three.core.js
+@@ -52968,7 +52968,7 @@
+ 		// ensure there is a value node
+ 		if ( ! targetObject ) {
+ 
+-			warn( 'PropertyBinding: No target node found for track: ' + this.path + '.' );
++			//warn( 'PropertyBinding: No target node found for track: ' + this.path + '.' );
+ 			return;
+ 
+ 		}
