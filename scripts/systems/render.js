@@ -47,21 +47,18 @@ elation.require([
     this.system_attach = function(ev) {
       console.log('INIT: render');
 
-      let webglmode = 'webgl';
       let rendererargs = {
         antialias: true,
         logarithmicDepthBuffer: false,
         alpha: true,
         preserveDrawingBuffer: true,
         enableWebXR: false,
-        stencil: false,
+        // r163+ defaults stencil to false; our main render target uses a
+        // stencil buffer and MaskPass-based render modes need it
+        stencil: true,
         powerPreference: 'high-performance',
         //precision: 'lowp',
       };
-      if (webglmode == 'webgl2') {
-        rendererargs.canvas = document.createElement( 'canvas' );
-        rendererargs.context = rendererargs.canvas.getContext( 'webgl2', { antialias: true } );
-      }
       this.renderer = new THREE.WebGLRenderer(rendererargs);
       this.cssrenderer = new THREE.CSS3DRenderer();
       /*
@@ -86,20 +83,9 @@ elation.require([
 
       //this.renderer.setAnimationLoop((ev) => { this.render(); });
 
-      //this.renderer.gammaInput = true;
-      //this.renderer.gammaOutput = false;
-      //this.renderer.outputEncoding = THREE.LinearEncoding;
-      //this.renderer.outputEncoding = THREE.sRGBEncoding;
-      this.renderer.outputEncoding = THREE.sRGBEncoding;
-      this.renderer.gammaFactor = 1.3;
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-/*
-      this.renderer.toneMapping = THREE.CineonToneMapping;
-      this.renderer.toneMappingExposure = 1;
-      this.renderer.toneMappingWhitePoint = 1;
-*/
-
-      this.renderer.debug.checkShaderErrors = false;
+      this.renderer.debug.checkShaderErrors = true;
 
       this.lastframetime = 0;
 
@@ -175,8 +161,8 @@ elation.require([
         let pixeldata = new Uint8Array(4 * size * size);
         let oldrendertarget = renderer.getRenderTarget();
 
-        let oldencoding = texture.encoding;
-        texture.encoding = THREE.LinearEncoding;
+        let oldcolorspace = texture.colorSpace;
+        texture.colorSpace = THREE.NoColorSpace;
 
         renderer.getViewport(oldviewport);
         renderer.setViewport(viewport);
@@ -189,7 +175,7 @@ elation.require([
         renderer.setViewport(oldviewport);
         renderer.xr.enabled = isXR;
 
-        texture.encoding = oldencoding;
+        texture.colorSpace = oldcolorspace;
 
         return pixeldata;
       }
@@ -436,18 +422,23 @@ elation.require([
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
         format: THREE.RGBAFormat,
-        //type: THREE.FloatType,
-        //type: THREE.UnsignedShortType,
+        // The composer chain stores LINEAR values until the final OutputPass
+        // conversion; 8 bits of linear starves the darks and bands badly, so
+        // use half-float like EffectComposer's own r153+ default.
+        type: THREE.HalfFloatType,
         stencilBuffer: true,
         depthBuffer: true,
       });
-      this.rendertarget.texture.encoding = THREE.sRGBEncoding;
       this.rendertarget.depthTexture = new THREE.DepthTexture();
       this.rendertarget.depthTexture.type = THREE.UnsignedInt248Type;
       this.rendertarget.depthTexture.format = THREE.DepthStencilFormat;
       //this.composer = this.createRenderPath(['clear', /*'portals', 'masktest',*/ this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear', 'recording'], this.rendertarget);
       if (this.enablepostprocessing) {
-        this.composer = this.createRenderPath(['clear', this.rendermode,/* 'tonemapping',*/ 'unrealbloom', 'fxaa', 'gamma'], this.rendertarget);
+        // Measured against the r150 production pipeline: its net transfer
+        // curve was exactly one linear->sRGB conversion (the RT encoding dance
+        // and GammaCorrectionShader canceled out), which is what OutputPass
+        // provides - so no legacy gamma pass belongs here.
+        this.composer = this.createRenderPath(['clear', this.rendermode, 'unrealbloom', 'output', 'fxaa'], this.rendertarget);
         //this.composer = this.createRenderPath(['clear', this.rendermode, 'fxaa'/*, 'msaa'*/, 'bloom', 'maskclear'], this.rendertarget);
         //this.effects['msaa'].enabled = false;
         //this.composer = this.createRenderPath([this.rendermode, 'ssao', 'recording']);
@@ -620,14 +611,19 @@ elation.require([
           break;
         case 'unrealbloom':
           pass = new THREE.UnrealBloomPass(this.size, 0, 0, 0);
-
-          pass.renderTargetsHorizontal.forEach(element => {
-              element.texture.type = THREE.FloatType;
-          });
-          pass.renderTargetsVertical.forEach(element => {
-              element.texture.type = THREE.FloatType;
-          });
-
+          // Clamp the prefilter input to [0,1]. Janus worlds tuned their bloom
+          // against the old 8-bit pipeline, where every pixel was hard-clamped
+          // to 1.0 before postprocessing - with the half-float buffer, a single
+          // specular firefly can reach values in the hundreds (or NaN/Inf,
+          // which the blur pyramid smears across the whole frame, even at
+          // strength 0 since 0 * NaN = NaN) and bloom amplifies it into a
+          // giant glow blob. The LDR clamp reproduces legacy bloom semantics
+          // exactly; revisit if we ever want opt-in HDR bloom via a room
+          // threshold property.
+          pass.materialHighPassFilter.fragmentShader = pass.materialHighPassFilter.fragmentShader.replace(
+            'vec4 texel = texture2D( tDiffuse, vUv );',
+            'vec4 texel = texture2D( tDiffuse, vUv );\n\t\t\tif (any(isnan(texel)) || any(isinf(texel))) texel = vec4(0.0);\n\t\t\ttexel = clamp(texel, vec4(0.0), vec4(1.0));');
+          pass.materialHighPassFilter.needsUpdate = true;
           break;
         case 'fxaa':
           pass = new THREE.ShaderPass( THREE.FXAAShader );
@@ -659,8 +655,9 @@ window.maskobj = maskobj;
         case 'gamma':
           pass = new THREE.ShaderPass( THREE.GammaCorrectionShader );
           break;
-        case 'tonemapping':
-          pass = new THREE.AdaptiveToneMappingPass(true, 256);
+        case 'output':
+          // tone mapping + linear-to-sRGB conversion, reading settings from the renderer
+          pass = new THREE.OutputPass();
           break;
       }
       if (pass) this.effects[name] = pass;
@@ -727,7 +724,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       await this.rendersystem.renderer.xr.setSession(session);
       this.rendersystem.renderer.xr.enabled = true;
 
-      this.rendersystem.renderer.outputEncoding = THREE.LinearEncoding;
+      this.rendersystem.renderer.outputColorSpace = THREE.LinearSRGBColorSpace; // FIXME - verify against r185 XR color handling
       this.xrlayer = this.getXRBaseLayer(session);
       if (false && !this.xrscene) {
         // Set up a scene with an ortho camera to clone our XR framebuffer to, for display on the main screen
@@ -738,7 +735,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
         let w = this.xrlayer.framebufferWidth,
             h = this.xrlayer.framebufferHeight;
         let data = new Uint8Array( w * h * 3 );
-        this.xrscenetexture = new THREE.DataTexture( data, w, h, THREE.RGBFormat );
+        this.xrscenetexture = new THREE.DataTexture( data, w, h, THREE.RGBAFormat );
         this.xrscenetexture.minFilter = THREE.NearestFilter;
         this.xrscenetexture.magFilter = THREE.NearestFilter;
 
@@ -773,7 +770,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       this.enabled = false;
       elation.html.removeclass(this, 'webxr_session_active');
       this.xrsession = false;
-      this.rendersystem.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.rendersystem.renderer.outputColorSpace = THREE.SRGBColorSpace;
       setTimeout(() => {
         elation.events.fire({type: 'resize', element: window, data: true });
       }, 100);
@@ -903,12 +900,12 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
                   renderer.state.bindXRFramebuffer(null);
                   renderer.setRenderTarget( renderer.getRenderTarget() );
 
-                  let oldOutputEncoding = renderer.outputEncoding;
-                  renderer.outputEncoding = THREE.sRGBEncoding;
+                  let oldOutputColorSpace = renderer.outputColorSpace;
+                  renderer.outputColorSpace = THREE.SRGBColorSpace;
                   renderer.setViewport(0, 0, layer.framebufferWidth, layer.framebufferHeight);
                   renderer.render(this.xrscene, this.xrscenecam);
                   renderer.xr.enabled = true;
-                  renderer.outputEncoding = oldOutputEncoding;
+                  renderer.outputColorSpace = oldOutputColorSpace;
                 } else {
                   // FIXME - cloning the framebuffer to the main canvas output isn't working right as implemented, so in this codepath we just double-render
                   //this.rendersystem.renderer.setFramebuffer(null);
@@ -1575,7 +1572,7 @@ console.log('toggle render mode: ' + this.rendermode + ' => ' + mode, passidx, l
       var raw = args.raw;
       var format = args.format || 'jpg';
       var renderer = this.rendersystem.renderer;
-      var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( width, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
+      var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( width, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
 
       var cubecam = new THREE.CubeCamera(camera.near, camera.far, cubeRenderTarget);
       cubecam.position.set(0,0,0).applyMatrix4(camera.matrixWorld);
