@@ -9885,6 +9885,10 @@
       if (!Array.isArray(json.materials) || !this.isTiltGltf(json)) return null;
       return super.beforeRoot();
     }
+    afterRoot(glTF) {
+      if (!this.isTiltGltf(this.parser.json)) return null;
+      return super.afterRoot(glTF);
+    }
   };
   Object.assign(globalThis.THREE, three_icosa_module_exports, { GLTFGoogleTiltBrushMaterialExtension });
 })();

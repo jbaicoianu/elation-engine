@@ -9,6 +9,13 @@ class GLTFGoogleTiltBrushMaterialExtension extends ICOSA.GLTFGoogleTiltBrushMate
     if (!Array.isArray(json.materials) || !this.isTiltGltf(json)) return null;
     return super.beforeRoot();
   }
+  afterRoot(glTF) {
+    // upstream 0.4.2-alpha.18 ships this guard commented out, so it processes
+    // (and can replace) materials in every glTF - including avatars and world
+    // geometry with generic material_/ob- names
+    if (!this.isTiltGltf(this.parser.json)) return null;
+    return super.afterRoot(glTF);
+  }
 }
 
 Object.assign(globalThis.THREE, ICOSA, { GLTFGoogleTiltBrushMaterialExtension });
