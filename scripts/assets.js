@@ -1404,7 +1404,6 @@ console.log('set up hls', hlsConfig);
     },
     copyMaterial: function(oldmat) {
       var m = new THREE.MeshPhongMaterial();
-      m.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       m.name = oldmat.name;
       m.map = oldmat.map;
       m.normalMap = oldmat.normalMap;
