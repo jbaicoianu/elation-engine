@@ -39239,7 +39239,7 @@
         setTextureParameters(textureType, texture);
         let mipmap;
         const mipmaps = texture.mipmaps;
-        const useTexStorage = texture.isVideoTexture !== true && (typeof HTMLCanvasElement === "undefined" || texture.image instanceof HTMLCanvasElement === false);
+        const useTexStorage = false;
         const allocateMemory = sourceProperties.__version === void 0 || forceUpload === true;
         const dataReady = source.dataReady;
         const levels = getMipLevels(texture, image);
@@ -39496,7 +39496,7 @@
           cubeImage[i] = verifyColorSpace(texture, cubeImage[i]);
         }
         const image = cubeImage[0], glFormat = utils.convert(texture.format, texture.colorSpace), glType = utils.convert(texture.type), glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.normalized, texture.colorSpace);
-        const useTexStorage = texture.isVideoTexture !== true && (typeof HTMLCanvasElement === "undefined" || texture.image instanceof HTMLCanvasElement === false);
+        const useTexStorage = false;
         const allocateMemory = sourceProperties.__version === void 0 || forceUpload === true;
         const dataReady = source.dataReady;
         let levels = getMipLevels(texture, image);

@@ -1,8 +1,10 @@
-# WebGLTextures: don't use immutable texStorage2D for canvas-backed textures.
-# janusweb resizes canvases in place (text labels, placeholder->image swaps);
-# with texStorage the re-upload overflows the original allocation
-# (GL_INVALID_VALUE, texture stays incomplete and samples black). Mutable
-# texImage2D reallocates on resize, matching pre-r15x behavior.
+# WebGLTextures: use mutable texImage2D allocation for all textures.
+# The engine mutates texture sources in place everywhere (canvas resize for
+# labels, placeholder-canvas -> loaded-image swaps in the asset system, per
+# r150-era idiom). Immutable texStorage2D allocations make any re-upload at a
+# different size fail with GL_INVALID_VALUE, leaving the texture stuck on its
+# placeholder (sampled as opaque black). Mutable allocation reallocates on
+# resize, restoring pre-r15x semantics.
 --- a/three.module.js
 +++ b/three.module.js
 @@ -11949,7 +11949,7 @@
@@ -10,7 +12,7 @@
  			const mipmaps = texture.mipmaps;
  
 -			const useTexStorage = ( texture.isVideoTexture !== true );
-+			const useTexStorage = ( texture.isVideoTexture !== true ) && ( typeof HTMLCanvasElement === 'undefined' || ( texture.image instanceof HTMLCanvasElement ) === false );
++			const useTexStorage = false;
  			const allocateMemory = ( sourceProperties.__version === undefined ) || ( forceUpload === true );
  			const dataReady = source.dataReady;
  			const levels = getMipLevels( texture, image );
@@ -19,7 +21,7 @@
  				glInternalFormat = getInternalFormat( texture.internalFormat, glFormat, glType, texture.normalized, texture.colorSpace );
  
 -			const useTexStorage = ( texture.isVideoTexture !== true );
-+			const useTexStorage = ( texture.isVideoTexture !== true ) && ( typeof HTMLCanvasElement === 'undefined' || ( texture.image instanceof HTMLCanvasElement ) === false );
++			const useTexStorage = false;
  			const allocateMemory = ( sourceProperties.__version === undefined ) || ( forceUpload === true );
  			const dataReady = source.dataReady;
  			let levels = getMipLevels( texture, image );
