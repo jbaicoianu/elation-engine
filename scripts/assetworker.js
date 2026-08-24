@@ -530,7 +530,7 @@ elation.require([
             color: 0xffffff, 
             size: 0.02, 
             sizeAttenuation: true, 
-            vertexColors: (geometry.attributes.color && geometry.attributes.color.length > 0 ? THREE.VertexColors : THREE.NoColors)
+            vertexColors: !!(geometry.attributes.color && geometry.attributes.color.length > 0)
           }));
           encoded = points.toJSON();
         } else {

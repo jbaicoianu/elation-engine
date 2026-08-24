@@ -137,7 +137,7 @@ elation.require([], function() {
         cylgeo.applyMatrix4(mat4);
         mat4.setPosition(new THREE.Vector3(0, length, 0));
         cap2.applyMatrix4(mat4);
-        let capsulegeo = THREE.BufferGeometryUtils.mergeBufferGeometries([cylgeo, cap, cap2], false);
+        let capsulegeo = THREE.BufferGeometryUtils.mergeGeometries([cylgeo, cap, cap2], false);
 
         if (offset) {
           capsulegeo.applyMatrix4(mat4.makeTranslation(offset.x, offset.y, offset.z));

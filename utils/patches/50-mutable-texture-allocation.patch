@@ -1,0 +1,27 @@
+# WebGLTextures: use mutable texImage2D allocation for all textures.
+# The engine mutates texture sources in place everywhere (canvas resize for
+# labels, placeholder-canvas -> loaded-image swaps in the asset system, per
+# r150-era idiom). Immutable texStorage2D allocations make any re-upload at a
+# different size fail with GL_INVALID_VALUE, leaving the texture stuck on its
+# placeholder (sampled as opaque black). Mutable allocation reallocates on
+# resize, restoring pre-r15x semantics.
+--- a/three.module.js
++++ b/three.module.js
+@@ -11949,7 +11949,7 @@
+ 			let mipmap;
+ 			const mipmaps = texture.mipmaps;
+ 
+-			const useTexStorage = ( texture.isVideoTexture !== true );
++			const useTexStorage = false;
+ 			const allocateMemory = ( sourceProperties.__version === undefined ) || ( forceUpload === true );
+ 			const dataReady = source.dataReady;
+ 			const levels = getMipLevels( texture, image );
+@@ -12459,7 +12459,7 @@
+ 				glType = utils.convert( texture.type ),
+ 				glInternalFormat = getInternalFormat( texture.internalFormat, glFormat, glType, texture.normalized, texture.colorSpace );
+ 
+-			const useTexStorage = ( texture.isVideoTexture !== true );
++			const useTexStorage = false;
+ 			const allocateMemory = ( sourceProperties.__version === undefined ) || ( forceUpload === true );
+ 			const dataReady = source.dataReady;
+ 			let levels = getMipLevels( texture, image );

@@ -6,7 +6,8 @@ elation.require(['engine.things.light'], function() {
       });
     }
     this.createObject3D = function() {
-      this.lightobj = new THREE.AmbientLight(this.properties.color);
+      // x PI bridges the r165 removal of legacy (non-physical) light mode
+      this.lightobj = new THREE.AmbientLight(this.properties.color, Math.PI);
       return this.lightobj;
     }
     this.updateLight = function() {

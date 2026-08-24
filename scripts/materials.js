@@ -52,23 +52,9 @@ elation.require(['utils.template', 'engine.external.three.three'], function() {
           //this.texturecache[url].flipY = false;
           */
         } else {
-          THREE.ImageUtils.crossOrigin = '';
-          var texture = this.texturecache[url] = THREE.ImageUtils.loadTexture(url, undefined, elation.bind(this, function() {
-            var image = texture.image;
-            image.crossOrigin = '';
-            if (!this.isPowerOfTwo(image.width) || !this.isPowerOfTwo(image.height)) {
-              // Scale up the texture to the next highest power of two dimensions.
-              var canvas = document.createElement("canvas");
-              canvas.width = this.nextHighestPowerOfTwo(image.width);
-              canvas.height = this.nextHighestPowerOfTwo(image.height);
-              var ctx = canvas.getContext("2d");
-              ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
-              texture.image = canvas;
-              //texture.needsUpdate = true;
-            }
-
-            elation.events.fire({element: texture, type: 'engine_texture_load'}); 
-          }));
+          var texture = this.texturecache[url] = new THREE.TextureLoader().setCrossOrigin('').load(url, function() {
+            elation.events.fire({element: texture, type: 'engine_texture_load'});
+          });
           //elation.events.fire({ type: 'resource_load_start', data: { type: 'image', image: this.texturecache[url].image } });
         }
         if (!this.texturecache[url]) {

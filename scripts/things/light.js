@@ -41,7 +41,8 @@ elation.require(['engine.things.generic'], function() {
           //this.lightobj.add(helper);
           break;
         case 'ambient':
-          this.lightobj = new THREE.AmbientLight(this.properties.color);
+          // x PI bridges the r165 removal of legacy (non-physical) light mode
+          this.lightobj = new THREE.AmbientLight(this.properties.color, Math.PI);
           break;
       } 
 

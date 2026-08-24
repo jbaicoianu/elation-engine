@@ -82,12 +82,10 @@ elation.require(['utils.workerpool', 'engine.external.three.three', 'engine.exte
     initTextureLoaders: function(rendersystem, libpath) {
       this.rendersystem = rendersystem;
       let renderer = rendersystem.renderer;
-/*
       let basisloader = new THREE.BasisTextureLoader();
       basisloader.setTranscoderPath(libpath);
       basisloader.detectSupport(renderer);
       this.basisloader = basisloader;
-*/
 
       this.ktx2loader = new THREE.KTX2Loader();
       this.ktx2loader.setTranscoderPath(libpath);
@@ -571,7 +569,9 @@ if (!ENV_IS_BROWSER) return;
     invert: false,
     imagetype: '',
     tex_linear: true,
-    srgb: false,
+    // Color images are sRGB; with r152+ color management this tags them for
+    // correct decode (and unlit images round-trip to their source pixels)
+    srgb: true,
     equi: false,
     hasalpha: null,
     rawimage: null,
@@ -595,7 +595,7 @@ if (!ENV_IS_BROWSER) return;
         texture.sourceFile = this.src;
         //texture.needsUpdate = true;
         texture.flipY = (this.flipy === true || this.flipy === 'true');
-        texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
+        texture.colorSpace = (this.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace);
         if (this.equi) {
           texture.mapping = THREE.EquirectangularReflectionMapping;
         }
@@ -630,7 +630,6 @@ if (!ENV_IS_BROWSER) return;
                 // TODO - this should probably done off-thread if possible, it currently locks rendering for a noticable amount of time
                 let loader = new THREE.EXRLoader();
                 if (loader) {
-                  loader.setDataType( THREE.UnsignedByteType );
                   loader.load(fullurl, (exrtexture) => {
                     let exrCubeRenderTarget = elation.engine.assets.pmremGenerator.fromEquirectangular( exrtexture );
                     let exrBackground = exrCubeRenderTarget.texture;
@@ -645,10 +644,16 @@ if (!ENV_IS_BROWSER) return;
 
                   });
                 }
+              } else if (imagetype == 'ktx2') {
+                let loader = elation.engine.assets.ktx2loader;
+                let blob = events[0].target.response;
+                blob.arrayBuffer()
+                  .then(buffer => new Promise((resolve, reject) => loader.parse(buffer, resolve, reject)))
+                  .then(texture => this.handleLoadBasis(texture));
               } else if (imagetype == 'dds') {
                 let loader = new THREE.DDSLoader();
                 loader.load(this.getProxiedURL(this.src), data => {
-                  data.encoding = THREE.sRGBEncoding;
+                  data.colorSpace = THREE.SRGBColorSpace;
                   this._texture = data;
                   this.loaded = true;
                   this.uploaded = false;
@@ -738,6 +743,7 @@ if (!ENV_IS_BROWSER) return;
       //console.log('loaded Basis texture', this, texture);
       this._texture = texture;
       this._texture.generateMipmaps = false;
+      texture.colorSpace = (this.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace);
       texture.needsUpdate = true;
       texture.wrapS = texture.wrapT = (this.tex_linear ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping);
       texture.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
@@ -1064,7 +1070,7 @@ newcanvas.style.left = 0;
       }
       //this._texture.minFilter = THREE.LinearFilter;
       //this._texture.magFilter = THREE.LinearFilter;
-      this._texture.encoding = (this.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding);
+      this._texture.colorSpace = (this.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace);
 
       elation.events.add(video, 'loadeddata', elation.bind(this, this.handleLoad));
       elation.events.add(video, 'error', elation.bind(this, this.handleError));
@@ -1398,7 +1404,6 @@ console.log('set up hls', hlsConfig);
     },
     copyMaterial: function(oldmat) {
       var m = new THREE.MeshPhongMaterial();
-      m.anisotropy = elation.config.get('engine.assets.image.anisotropy', 4);
       m.name = oldmat.name;
       m.map = oldmat.map;
       m.normalMap = oldmat.normalMap;
@@ -1556,6 +1561,7 @@ console.log('set up hls', hlsConfig);
       if (elation.engine.assets.icosapath) {
         loader.register(parser => new THREE.GLTFGoogleTiltBrushMaterialExtension(parser, elation.engine.assets.icosapath));
       }
+      loader.register(parser => new THREE.VRMLoaderPlugin(parser));
       loader.setMeshoptDecoder(MeshoptDecoder);
       this._model = new THREE.Group();
       this._model.userData.loaded = false;
@@ -1574,13 +1580,13 @@ console.log('set up hls', hlsConfig);
             }
           });
 
-          if (modeldata.userData && modeldata.userData.gltfExtensions && modeldata.userData.gltfExtensions.VRM) {
-            THREE.VRM.from(modeldata).then(vrm => {
-              this.vrm = vrm;
-              this.complete(vrm.scene);
-            });
+          if (modeldata.userData && modeldata.userData.vrm) {
+            this.vrm = modeldata.userData.vrm;
+            THREE.VRMUtils.rotateVRM0(this.vrm); // VRM 0.x models face Z-, normalize to three convention
+            this.complete(this.vrm.scene);
+          } else {
+            this.complete(modeldata.scene);
           }
-          this.complete(modeldata.scene);
         }
       }));
     },
@@ -1696,7 +1702,7 @@ console.log('set up hls', hlsConfig);
                       hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
                       baseurl: this.baseurl,
                       flipy: tex.flipY,
-                      srgb: (tex.encoding == THREE.sRGBEncoding),
+                      srgb: (tex.colorSpace == THREE.SRGBColorSpace),
                       invert: (texname == 'specularMap')
                     });
                   }
@@ -1709,7 +1715,7 @@ console.log('set up hls', hlsConfig);
                       hasalpha: (texname == 'map' ? null : false), // We only care about alpha channel for our diffuse map. (null means autodetect)
                       baseurl: this.baseurl,
                       flipy: tex.flipY,
-                      srgb: (tex.encoding == THREE.sRGBEncoding),
+                      srgb: (tex.colorSpace == THREE.SRGBColorSpace),
                       invert: (texname == 'specularMap')
                     });
                   }
